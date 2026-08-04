@@ -1,0 +1,322 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 520" fill="none">
+<defs>
+  <!-- Gradiente dourado principal — metálico champagne -->
+  <linearGradient id="gMain" x1="15%" y1="5%" x2="85%" y2="95%">
+    <stop offset="0%"   stop-color="#F5E28A"/>
+    <stop offset="22%"  stop-color="#D4AF5A"/>
+    <stop offset="48%"  stop-color="#C9A84C"/>
+    <stop offset="72%"  stop-color="#B58835"/>
+    <stop offset="100%" stop-color="#8C6A1E"/>
+  </linearGradient>
+  <!-- Gradiente horizontal para flores e folhas -->
+  <linearGradient id="gFloral" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%"   stop-color="#EAC96A"/>
+    <stop offset="50%"  stop-color="#C9A84C"/>
+    <stop offset="100%" stop-color="#B07A28"/>
+  </linearGradient>
+  <!-- Gradiente vertical para o monograma TT -->
+  <linearGradient id="gTT" x1="0%" y1="0%" x2="10%" y2="100%">
+    <stop offset="0%"   stop-color="#F0DA80"/>
+    <stop offset="35%"  stop-color="#D4AF5A"/>
+    <stop offset="65%"  stop-color="#C0982E"/>
+    <stop offset="100%" stop-color="#9C7820"/>
+  </linearGradient>
+  <!-- Brilho sutil no centro do escudo -->
+  <radialGradient id="gShieldGlow" cx="50%" cy="40%" r="50%">
+    <stop offset="0%"   stop-color="rgba(255,245,210,0.18)"/>
+    <stop offset="100%" stop-color="rgba(255,245,210,0)"/>
+  </radialGradient>
+</defs>
+
+<!-- ═══════════════════════════════════════════════
+     ESCUDO HERÁLDICO — Borda externa
+═══════════════════════════════════════════════ -->
+<path stroke="url(#gMain)" stroke-width="2.6" stroke-linejoin="round"
+  d="
+  M 250,62
+  C 258,63 275,68 300,78
+  L 368,78
+  Q 392,78 392,108
+  L 390,285
+  Q 387,370 250,450
+  Q 113,370 110,285
+  L 108,108
+  Q 108,78 132,78
+  L 200,78
+  C 225,68 242,63 250,62
+  Z"/>
+
+<!-- Entalhe decorativo no topo (losango/chevron) -->
+<path fill="url(#gMain)"
+  d="M 250,62 L 263,78 L 250,92 L 237,78 Z"/>
+<!-- Face interna clara do entalhe (efeito 3D) -->
+<path fill="rgba(255,248,220,0.28)"
+  d="M 250,68 L 259,79 L 250,88 L 241,79 Z"/>
+
+<!-- ═══════════════════════════════════════════════
+     ESCUDO HERÁLDICO — Borda interna (offset)
+═══════════════════════════════════════════════ -->
+<path stroke="url(#gMain)" stroke-width="1.8" stroke-linejoin="round" opacity="0.92"
+  d="
+  M 250,80
+  C 257,81 270,85 292,94
+  L 354,94
+  Q 373,94 373,120
+  L 371,284
+  Q 368,357 250,430
+  Q 132,357 129,284
+  L 127,120
+  Q 127,94 146,94
+  L 208,94
+  C 230,85 243,81 250,80
+  Z"/>
+
+<!-- Brilho interno do escudo -->
+<path fill="url(#gShieldGlow)"
+  d="M 250,80 C 280,85 360,95 370,120 L 368,284 Q 365,355 250,428 Q 135,355 132,284 L 130,120 Q 140,95 250,80 Z"/>
+
+<!-- Linhas verticais no terço inferior do escudo (detalhe heráldico) -->
+<path stroke="url(#gMain)" stroke-width="1.2" stroke-linecap="round" opacity="0.45"
+  d="M 234,380 L 250,428 M 266,380 L 250,428"/>
+<path stroke="url(#gMain)" stroke-width="1" stroke-linecap="round" opacity="0.35"
+  d="M 234,365 L 234,405 M 266,365 L 266,405"/>
+
+<!-- ═══════════════════════════════════════════════
+     MONOGRAMA TT — dois T sobrepostos
+═══════════════════════════════════════════════ -->
+<!-- T de trás (levemente deslocado para a esquerda, menor opacidade) -->
+<text x="228" y="318"
+  font-family="'Cinzel Decorative','Cinzel',Georgia,'Times New Roman',serif"
+  font-size="122" font-weight="400" font-style="normal"
+  fill="url(#gTT)" opacity="0.75"
+  letter-spacing="-2">T</text>
+<!-- T da frente (principal) -->
+<text x="250" y="312"
+  font-family="'Cinzel Decorative','Cinzel',Georgia,'Times New Roman',serif"
+  font-size="122" font-weight="400" font-style="normal"
+  fill="url(#gTT)"
+  letter-spacing="-2">T</text>
+
+<!-- ═══════════════════════════════════════════════
+     FLORAIS — LADO ESQUERDO
+═══════════════════════════════════════════════ -->
+
+<!-- Caule principal esquerdo (curva superior) -->
+<path stroke="url(#gMain)" stroke-width="1.5" stroke-linecap="round" fill="none"
+  d="M 110,248 C 102,232 90,210 80,182 C 72,158 74,132 82,110"/>
+<!-- Caule principal esquerdo (curva inferior) -->
+<path stroke="url(#gMain)" stroke-width="1.5" stroke-linecap="round" fill="none"
+  d="M 110,262 C 100,284 87,308 82,334 C 78,352 82,372 90,386"/>
+
+<!-- Ramificações secundárias esquerda -->
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 88,174 C 78,162 64,148 50,142"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 80,200 C 68,192 52,186 40,182"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 84,150 C 80,134 76,116 80,100"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 94,312 C 82,302 68,296 55,294"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 88,348 C 76,336 62,332 50,334"/>
+
+<!-- ▶ FLOR 1 esquerda — grande, parte superior (~50,142) -->
+<g transform="translate(50,142)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(45)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(90)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(135)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(225)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(270)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(315)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <circle r="6" fill="url(#gMain)"/>
+  <circle r="3" fill="#F0DA80" opacity="0.6"/>
+</g>
+
+<!-- ▶ FLOR 2 esquerda — pequena, meio (~40,182) -->
+<g transform="translate(40,182)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(60)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(120)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(240)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(300)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <circle r="4.5" fill="url(#gMain)"/>
+</g>
+
+<!-- ▶ FLOR 3 esquerda — grande, inferior (~55,294) -->
+<g transform="translate(55,294) rotate(15)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(45)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(90)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(135)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(225)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(270)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(315)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <circle r="6" fill="url(#gMain)"/>
+</g>
+
+<!-- Folhas esquerda -->
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 82,195 C 68,186 60,170 68,152 C 76,160 80,177 82,195 Z"/>
+<line x1="75" y1="174" x2="82" y2="195" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 78,218 C 62,208 56,190 66,174 C 74,183 78,200 78,218 Z"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 76,164 C 64,154 60,136 70,120 C 76,130 78,148 76,164 Z"/>
+<line x1="73" y1="143" x2="76" y2="164" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 88,362 C 74,352 70,334 80,318 C 87,328 90,345 88,362 Z"/>
+<line x1="84" y1="341" x2="88" y2="362" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 84,388 C 72,376 70,358 80,344 C 86,354 86,372 84,388 Z"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 93,318 C 79,308 76,290 86,276 C 92,286 95,302 93,318 Z"/>
+<line x1="90" y1="298" x2="93" y2="318" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+
+<!-- Bagas/botões esquerda — superior -->
+<path stroke="url(#gMain)" stroke-width="0.8" fill="none" d="M 68,150 C 60,138 54,122 54,108"/>
+<circle cx="54" cy="108" r="3.2" fill="url(#gMain)"/>
+<path stroke="url(#gMain)" stroke-width="0.7" fill="none" d="M 54,108 C 48,100 46,90 48,82"/>
+<circle cx="60" cy="100" r="2.5" fill="url(#gMain)"/>
+<circle cx="48" cy="82"  r="2.2" fill="url(#gMain)"/>
+<circle cx="40" cy="92"  r="2"   fill="url(#gMain)"/>
+
+<!-- Bagas/botões esquerda — inferior -->
+<path stroke="url(#gMain)" stroke-width="0.8" fill="none" d="M 50,334 C 44,320 40,304 40,288"/>
+<circle cx="40" cy="288" r="3" fill="url(#gMain)"/>
+<circle cx="46" cy="276" r="2.5" fill="url(#gMain)"/>
+<circle cx="38" cy="266" r="2"   fill="url(#gMain)"/>
+<path stroke="url(#gMain)" stroke-width="0.7" fill="none" d="M 38,266 C 35,258 36,250 40,244"/>
+
+<!-- ═══════════════════════════════════════════════
+     FLORAIS — LADO DIREITO (espelhado)
+═══════════════════════════════════════════════ -->
+
+<!-- Caule principal direito (curva superior) -->
+<path stroke="url(#gMain)" stroke-width="1.5" stroke-linecap="round" fill="none"
+  d="M 390,248 C 398,232 410,210 420,182 C 428,158 426,132 418,110"/>
+<!-- Caule principal direito (curva inferior) -->
+<path stroke="url(#gMain)" stroke-width="1.5" stroke-linecap="round" fill="none"
+  d="M 390,262 C 400,284 413,308 418,334 C 422,352 418,372 410,386"/>
+
+<!-- Ramificações secundárias direita -->
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 412,174 C 422,162 436,148 450,142"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 420,200 C 432,192 448,186 460,182"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 416,150 C 420,134 424,116 420,100"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 406,312 C 418,302 432,296 445,294"/>
+<path stroke="url(#gMain)" stroke-width="0.9" stroke-linecap="round" fill="none" d="M 412,348 C 424,336 438,332 450,334"/>
+
+<!-- ▶ FLOR 1 direita — grande (~450,142) -->
+<g transform="translate(450,142)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(45)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(90)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(135)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(225)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(270)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(315)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <circle r="6" fill="url(#gMain)"/>
+  <circle r="3" fill="#F0DA80" opacity="0.6"/>
+</g>
+
+<!-- ▶ FLOR 2 direita — pequena (~460,182) -->
+<g transform="translate(460,182)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(60)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(120)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(240)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(300)"
+    d="M 0,-6 C -4,-11 -4,-18 0,-21 C 4,-18 4,-11 0,-6 Z"/>
+  <circle r="4.5" fill="url(#gMain)"/>
+</g>
+
+<!-- ▶ FLOR 3 direita — grande (~445,294) -->
+<g transform="translate(445,294) rotate(-15)">
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(45)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(90)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(135)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(180)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(225)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(270)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.5" transform="rotate(315)"
+    d="M 0,-8 C -5,-15 -5,-23 0,-27 C 5,-23 5,-15 0,-8 Z"/>
+  <circle r="6" fill="url(#gMain)"/>
+</g>
+
+<!-- Folhas direita -->
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 418,195 C 432,186 440,170 432,152 C 424,160 420,177 418,195 Z"/>
+<line x1="425" y1="174" x2="418" y2="195" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 422,218 C 438,208 444,190 434,174 C 426,183 422,200 422,218 Z"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 424,164 C 436,154 440,136 430,120 C 424,130 422,148 424,164 Z"/>
+<line x1="427" y1="143" x2="424" y2="164" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 412,362 C 426,352 430,334 420,318 C 413,328 410,345 412,362 Z"/>
+<line x1="416" y1="341" x2="412" y2="362" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 416,388 C 428,376 430,358 420,344 C 414,354 414,372 416,388 Z"/>
+<path fill="url(#gFloral)" stroke="url(#gMain)" stroke-width="0.7"
+  d="M 407,318 C 421,308 424,290 414,276 C 408,286 405,302 407,318 Z"/>
+<line x1="410" y1="298" x2="407" y2="318" stroke="url(#gMain)" stroke-width="0.5" opacity="0.7"/>
+
+<!-- Bagas/botões direita — superior -->
+<path stroke="url(#gMain)" stroke-width="0.8" fill="none" d="M 432,150 C 440,138 446,122 446,108"/>
+<circle cx="446" cy="108" r="3.2" fill="url(#gMain)"/>
+<path stroke="url(#gMain)" stroke-width="0.7" fill="none" d="M 446,108 C 452,100 454,90 452,82"/>
+<circle cx="440" cy="100" r="2.5" fill="url(#gMain)"/>
+<circle cx="452" cy="82"  r="2.2" fill="url(#gMain)"/>
+<circle cx="460" cy="92"  r="2"   fill="url(#gMain)"/>
+
+<!-- Bagas/botões direita — inferior -->
+<path stroke="url(#gMain)" stroke-width="0.8" fill="none" d="M 450,334 C 456,320 460,304 460,288"/>
+<circle cx="460" cy="288" r="3" fill="url(#gMain)"/>
+<circle cx="454" cy="276" r="2.5" fill="url(#gMain)"/>
+<circle cx="462" cy="266" r="2"   fill="url(#gMain)"/>
+<path stroke="url(#gMain)" stroke-width="0.7" fill="none" d="M 462,266 C 465,258 464,250 460,244"/>
+
+</svg>

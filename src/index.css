@@ -1,0 +1,176 @@
+@import './old-styles.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper-offWhite text-wine-deep font-serif antialiased;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .text-fluid-h1 {
+    font-size: clamp(3.5rem, 8vw + 1rem, 6rem);
+  }
+  .text-fluid-h2 {
+    font-size: clamp(2rem, 5vw + 1rem, 3.5rem);
+  }
+  .text-fluid-h3 {
+    font-size: clamp(1.25rem, 3vw + 0.5rem, 2rem);
+  }
+  .text-fluid-p {
+    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.15rem);
+  }
+}
+
+/* =====================================================================
+   LUXURY EDITORIAL OVERRIDES
+   Forcing removal of shadows, rounded borders, and backgrounds 
+   to achieve a Letterpress/Fine Art aesthetic.
+   ===================================================================== */
+
+/* 1. Global Spacing */
+:root {
+  --section-gap: 160px !important;
+  --card-radius: 0px !important;
+}
+
+/* 2. Info Cards (Letterpress style) */
+.info-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(200, 161, 90, 0.15) !important;
+  padding: 40px 20px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.info-card::before { display: none !important; }
+.info-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+}
+
+/* 3. Action Cards (Buttons) */
+.action-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(200, 161, 90, 0.25) !important;
+}
+.action-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: rgba(200, 161, 90, 0.02) !important;
+}
+
+/* 4. Timeline */
+.tl-dot-outer {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(200, 161, 90, 0.4) !important;
+}
+.tl-dot-inner {
+  background: #C8A15A !important;
+  box-shadow: none !important;
+}
+.tl-dot-inner i { display: none !important; }
+.timeline-item { margin-bottom: 72px !important; }
+
+/* 5. Countdown */
+.cd-flip-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+  border-radius: 0 !important;
+  backdrop-filter: none !important;
+}
+.cd-flip-wrapper::before, .cd-flip-wrapper::after { display: none !important; }
+
+/* 6. Gallery */
+.gallery-photo-box {
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+.editorial-gallery {
+  gap: 80px !important;
+}
+.gallery-item:hover .gallery-photo-box {
+  transform: none !important;
+  box-shadow: none !important;
+}
+.gallery-item:hover img {
+  transform: scale(1.02) !important;
+}
+
+/* 7. Modals */
+#pix-modal-wrapper {
+  background: #FAF7F2 !important;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.1) !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+  backdrop-filter: none !important;
+}
+.pix-qrcode-wrapper {
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+}
+
+/* 8. Gift Button */
+.gift-action-btn {
+  background: transparent !important;
+  color: #2C1A1A !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: 1px solid #C8A15A !important;
+}
+.gift-action-btn:hover {
+  background: rgba(200, 161, 90, 0.05) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* 9. Music Button */
+#music-btn {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(200, 161, 90, 0.3) !important;
+  backdrop-filter: none !important;
+}
+#music-btn:hover {
+  background: rgba(255,255,255,0.5) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Fixing centering for section titles and dividers */
+.sec-title {
+  text-align: center !important;
+  width: 100% !important;
+  display: block !important;
+  margin: 0 auto 40px auto !important;
+}
+.section-divider {
+  text-align: center !important;
+  width: 100% !important;
+  display: block !important;
+  margin: var(--section-gap) auto !important;
+}
+
+/* Fix Footer Color */
+.signature-name {
+  color: #3A352F !important;
+  text-shadow: none !important;
+}
