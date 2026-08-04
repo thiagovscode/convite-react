@@ -132,23 +132,26 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
               <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
             </div>
             
-            {/* Wax Seal - Preso à Aba Superior */}
-            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100px] h-[100px] flex items-center justify-center" style={{ transform: 'translate3d(-50%, -50%, 1px)' }}>
-              
-              {/* Sombra de contato concentrada na base */}
-              <div className="absolute inset-4 rounded-full bg-black/40 blur-md translate-y-1 pointer-events-none"></div>
+            {/* Selo (Letterpress / Hot Foil Emboss) */}
+            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90px] h-[90px] flex items-center justify-center" style={{ transform: 'translate3d(-50%, -50%, 1px)' }}>
               
               <img 
                 src={seloSvg} 
-                alt="Selo de Cera" 
+                alt="Brasão em Relevo" 
                 className="w-full h-full object-contain pointer-events-none relative z-10" 
                 style={{ 
-                  filter: 'drop-shadow(0px 2px 2px rgba(0,0,0,0.6)) drop-shadow(0px 10px 15px rgba(0,0,0,0.15))' 
+                  /* Letterpress Deboss Effect: 
+                     1. White drop shadow below (highlight on paper edge)
+                     2. Dark drop shadow above (shadow from paper edge) 
+                     3. Multiply blend mode to merge with paper texture */
+                  filter: 'drop-shadow(0px 1.5px 1px rgba(255, 255, 255, 0.8)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.15)) brightness(0.92) contrast(1.1)',
+                  mixBlendMode: 'multiply',
+                  opacity: 0.9
                 }}
               />
               
-              {/* Reflexo sutil do papel sobre a borda inferior do selo */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-t from-[#F8F5EF]/15 to-transparent pointer-events-none z-20"></div>
+              {/* Reflexo metálico fosco sobre o brasão */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-[#FFF]/10 to-transparent pointer-events-none z-20 mix-blend-overlay"></div>
             </div>
           </div>
         </div>

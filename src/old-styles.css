@@ -1150,7 +1150,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   .tl-dot-inner { width: 18px; height: 18px; }
 
   .section-divider { margin: 50px 0; }
-  --section-gap: 120px;
+  :root { --section-gap: 120px; }
 }
 
 /* Mobile muito pequeno */
