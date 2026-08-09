@@ -8,35 +8,35 @@ export default {
     extend: {
       colors: {
         champagne: {
-          light: '#FBF1E2',
-          DEFAULT: '#F7E7CE',
-          dark: '#E8D4AF',
+          light: '#F3EFE6',
+          DEFAULT: '#EAE3D5',
+          dark: '#D8CDBB',
         },
-        'rose-gold': '#B76E79',
+        'rose-gold': '#B8AA95',
         roseGold: {
-          light: '#D4A0AA',
-          DEFAULT: '#B76E79',
-          dark: '#8A4F59',
+          light: '#D8CDBB',
+          DEFAULT: '#B8AA95',
+          dark: '#5F574D',
         },
         gold: {
-          light: '#DFC17A',
-          DEFAULT: '#C9A84C',
-          dark: '#9E7A2F',
+          light: '#EAE3D5',
+          DEFAULT: '#D8CDBB',
+          dark: '#B8AA95',
         },
-        'dark-wine': '#6B2D3E',
+        'dark-wine': '#5F574D',
         wine: {
-          DEFAULT: '#6B2D3E',
-          deep: '#3D1525',
+          DEFAULT: '#5F574D',
+          deep: '#2F2B27',
         },
         blush: {
-          light: '#F2D4D7',
-          DEFAULT: '#E8C0C5',
+          light: '#F3EFE6',
+          DEFAULT: '#EAE3D5',
         },
-        'off-white': '#FAF7F2',
+        'off-white': '#F8F5EE',
         paper: {
-          offWhite: '#FAF7F2',
-          cream: '#F5F0E8',
-          creamDark: '#EDE7DA',
+          offWhite: '#F8F5EE',
+          cream: '#F3EFE6',
+          creamDark: '#EAE3D5',
         }
       },
       fontFamily: {

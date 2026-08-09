@@ -32,12 +32,16 @@ export default function OldLayout() {
         </button>
 
         <HeroSection />
-        <CountdownSection />
-        <InfoSection />
-        <TimelineSection />
-        <ActionsSection />
-        <GallerySection />
-        <Footer />
+        
+        {/* Wrapper to maintain padding for the rest of the page since #invitation-card is now full-bleed */}
+        <div className="w-full px-6 md:px-12 max-w-[1200px] mx-auto flex flex-col items-center">
+          <CountdownSection />
+          <InfoSection />
+          <TimelineSection />
+          <ActionsSection />
+          <GallerySection />
+          <Footer />
+        </div>
       </main>
       <Modals />
     </>

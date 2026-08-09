@@ -96,6 +96,7 @@ function fillContent() {
    ============================================================ */
 function buildTimeline() {
   const container = document.getElementById('timeline');
+  if (container) container.innerHTML = '';
 
   wedding.timeline.forEach((item, i) => {
     const el = document.createElement('div');
@@ -126,6 +127,7 @@ function buildTimeline() {
    ============================================================ */
 function buildGallery() {
   const grid = document.getElementById('gallery-grid');
+  if (grid) grid.innerHTML = '';
 
   wedding.photos.forEach((photo, i) => {
     const item = document.createElement('div');

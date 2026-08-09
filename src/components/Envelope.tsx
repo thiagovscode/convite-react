@@ -121,12 +121,12 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
           {/* Top Flap Wrapper (rotates in 3D) */}
           <div ref={flapRef} className="absolute top-0 left-0 w-full h-[55%] origin-top z-40 will-change-transform drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)] drop-shadow-[0_6px_20px_rgba(0,0,0,0.12)]" style={{ transformStyle: 'preserve-3d' }}>
             
-            {/* Aba Superior - #F8F5EF (Marfim mais claro, mais iluminada) */}
+            {/* Aba Superior - #F8F5EE (Marfim mais claro, mais iluminada) */}
             <div 
               className="absolute top-0 left-0 w-full h-full"
               style={{
                 clipPath: "polygon(0 0, 100% 0, 50% 100%)",
-                background: `radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.7) 0%, transparent 70%), linear-gradient(to bottom, #F8F5EF 0%, #F4EFE6 70%, #E3D9C9 100%)`
+                background: `radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.7) 0%, transparent 70%), linear-gradient(to bottom, #F8F5EE 0%, #F4EFE6 70%, #E3D9C9 100%)`
               }}
             >
               <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
@@ -151,7 +151,7 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
               />
               
               {/* Reflexo metálico fosco sobre o brasão */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-[#FFF]/10 to-transparent pointer-events-none z-20 mix-blend-overlay"></div>
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-[#F3EFE6]/10 to-transparent pointer-events-none z-20 mix-blend-overlay"></div>
             </div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
         >
           {/* Animação sutil de pulso para indicar clique sem texto agressivo */}
           <div className="w-1 h-1 rounded-full bg-[#D4C394]/40 animate-ping"></div>
-          <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#CBAA71] text-[0.7rem] tracking-[0.4em] opacity-35 uppercase drop-shadow-sm font-light">
+          <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#D8CDBB] text-[0.7rem] tracking-[0.4em] opacity-35 uppercase drop-shadow-sm font-light">
             Toque para abrir
           </p>
         </div>

@@ -80,7 +80,7 @@
   border: 1px solid rgba(200, 161, 90, 0.4) !important;
 }
 .tl-dot-inner {
-  background: #C8A15A !important;
+  background: #D8CDBB !important;
   box-shadow: none !important;
 }
 .tl-dot-inner i { display: none !important; }
@@ -115,7 +115,7 @@
 
 /* 7. Modals */
 #pix-modal-wrapper {
-  background: #FAF7F2 !important;
+  background: #F8F5EE !important;
   box-shadow: 0 40px 100px rgba(0,0,0,0.1) !important;
   border-radius: 0 !important;
   border: 1px solid rgba(200, 161, 90, 0.2) !important;
@@ -130,10 +130,10 @@
 /* 8. Gift Button */
 .gift-action-btn {
   background: transparent !important;
-  color: #2C1A1A !important;
+  color: #2F2B27 !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid #C8A15A !important;
+  border: 1px solid #D8CDBB !important;
 }
 .gift-action-btn:hover {
   background: rgba(200, 161, 90, 0.05) !important;
@@ -171,7 +171,7 @@
 
 /* Fix Footer Color */
 .signature-name {
-  color: #3A352F !important;
+  color: #2F2B27 !important;
   text-shadow: none !important;
 }
 
@@ -268,3 +268,7 @@
   opacity: 0.4;
   margin: 120px auto !important;
 }
+
+/* Make the whole card full bleed */
+#invitation-card { padding: 0 !important; margin: 0 !important; max-width: 100% !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+#invitation-card::before { display: none !important; }

@@ -29,6 +29,11 @@ export default function InfoSection() {
         </div>
 
       </div>
+      
+      {/* Hidden elements to prevent script.js crash */}
+      <div id="info-date" style={{ display: 'none' }}></div>
+      <div id="info-time" style={{ display: 'none' }}></div>
+
     </section>
 
     <div className="section-divider" aria-hidden="true">✦</div>

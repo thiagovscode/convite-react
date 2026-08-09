@@ -7,31 +7,31 @@
    1. DESIGN TOKENS
    ============================================================ */
 :root {
-  /* Cores principais */
-  --champagne:       #F7E7CE;
-  --champagne-light: #FBF1E2;
-  --champagne-dark:  #E8D4AF;
-  --rose-gold:       #B76E79;
-  --rose-gold-light: #D4A0AA;
-  --rose-gold-dark:  #8A4F59;
-  --gold:            #C9A84C;
-  --gold-light:      #DFC17A;
-  --gold-dark:       #9E7A2F;
-  --off-white:       #FAF7F2;
-  --cream:           #F5F0E8;
-  --cream-dark:      #EDE7DA;
-  --dark-wine:       #6B2D3E;
-  --dark-wine-deep:  #3D1525;
-  --blush:           #F2D4D7;
-  --blush-dark:      #E8C0C5;
-  --text-dark:       #2C1A1A;
-  --text-medium:     #4A3028;
-  --text-light:      #7A5C55;
-  --text-pale:       #A8918C;
+  /* Cores principais (Monocromático Off-White/Ivory) */
+  --champagne:       #EAE3D5;
+  --champagne-light: #F3EFE6;
+  --champagne-dark:  #D8CDBB;
+  --rose-gold:       #B8AA95;
+  --rose-gold-light: #D8CDBB;
+  --rose-gold-dark:  #5F574D;
+  --gold:            #D8CDBB;
+  --gold-light:      #EAE3D5;
+  --gold-dark:       #B8AA95;
+  --off-white:       #F8F5EE;
+  --cream:           #F3EFE6;
+  --cream-dark:      #EAE3D5;
+  --dark-wine:       #5F574D;
+  --dark-wine-deep:  #2F2B27;
+  --blush:           #F3EFE6;
+  --blush-dark:      #EAE3D5;
+  --text-dark:       #2F2B27;
+  --text-medium:     #5F574D;
+  --text-light:      #B8AA95;
+  --text-pale:       #D8CDBB;
 
-  /* Fundo escuro do envelope */
-  --env-bg-1:  #1C1008;
-  --env-bg-2:  #2A1810;
+  /* Envelope Colors */
+  --env-bg-1:  #F3EFE6;
+  --env-bg-2:  #EAE3D5;
 
   /* Tipografia */
   --font-script:  'Great Vibes', cursive;
@@ -47,7 +47,7 @@
 
   /* Espaçamento */
   --section-gap: 160px;
-  --card-radius: 14px;
+  --card-radius: 0px;
 
   /* Transições */
   --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -216,7 +216,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
       rgba(201,168,76,0.015) 9px,
       rgba(201,168,76,0.015) 11px
     ),
-    linear-gradient(145deg, #FEFCF8 0%, #FAF7F2 25%, #F5F0E8 55%, #EFEAD8 85%, #EAE3D0 100%);
+    linear-gradient(145deg, #FEFCF8 0%, #F8F5EE 25%, #EAE3D5 55%, #EFEAD8 85%, #EAE3D0 100%);
   box-shadow: none;
 }
 
@@ -248,7 +248,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   height: 75%;
   background:
     repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.008) 3px, rgba(0,0,0,0.008) 4px),
-    linear-gradient(160deg, #FEFDFB, #FAF7F2);
+    linear-gradient(160deg, #FEFDFB, #F8F5EE);
   border-radius: 2px;
   display: flex;
   align-items: center;
@@ -296,9 +296,9 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   position: absolute;
   inset: 0;
   background: 
-      radial-gradient(ellipse at center, transparent 40%, rgba(250, 247, 242, 0.7) 90%, #FAF7F2 100%),
-      linear-gradient(to right, #FAF7F2 0%, transparent 6%, transparent 94%, #FAF7F2 100%),
-      linear-gradient(to bottom, #FAF7F2 0%, transparent 6%, transparent 94%, #FAF7F2 100%);
+      radial-gradient(ellipse at center, transparent 40%, rgba(250, 247, 242, 0.7) 90%, #F8F5EE 100%),
+      linear-gradient(to right, #F8F5EE 0%, transparent 6%, transparent 94%, #F8F5EE 100%),
+      linear-gradient(to bottom, #F8F5EE 0%, transparent 6%, transparent 94%, #F8F5EE 100%);
     box-shadow: none;
 }
 
@@ -583,7 +583,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .card-icon-wrap i {
   font-size: 1.45rem;
-  color: #C8A15A;
+  color: #D8CDBB;
 }
 
 .card-title {
@@ -751,7 +751,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .action-icon {
   font-size: 1.28rem;
-  color: #C8A15A;
+  color: #D8CDBB;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -790,7 +790,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .arrow-indicator {
   font-size: 0.8rem;
-  color: #C8A15A;
+  color: #D8CDBB;
   transition: transform 0.25s ease;
 }
 
