@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import HeroSection from "./sections/HeroSection";
 import CountdownSection from "./sections/CountdownSection";
 import InfoSection from "./sections/InfoSection";
-import TimelineSection from "./sections/TimelineSection";
 import ActionsSection from "./sections/ActionsSection";
 import GallerySection from "./sections/GallerySection";
 import Footer from "./sections/Footer";
@@ -37,7 +36,6 @@ export default function OldLayout() {
         <div className="w-full px-6 md:px-12 max-w-[1200px] mx-auto flex flex-col items-center">
           <CountdownSection />
           <InfoSection />
-          <TimelineSection />
           <ActionsSection />
           <GallerySection />
           <Footer />

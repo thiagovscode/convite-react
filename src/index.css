@@ -272,3 +272,91 @@
 /* Make the whole card full bleed */
 #invitation-card { padding: 0 !important; margin: 0 !important; max-width: 100% !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; }
 #invitation-card::before { display: none !important; }
+
+/* =====================================================================
+   UX/UI ACCESSIBILITY & RESPONSIVENESS PATCHES
+   ===================================================================== */
+
+/* Accessibility Focus States */
+:focus-visible {
+  outline: 2px solid var(--gold-dark);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Responsive Countdown for Small Screens */
+@media (max-width: 480px) {
+  #countdown {
+    gap: 6px;
+  }
+  .cd-unit {
+    min-width: 60px;
+    gap: 6px;
+  }
+  .cd-flip-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+  .cd-number {
+    font-size: 1.5rem !important;
+  }
+  .cd-label {
+    font-size: 0.6rem !important;
+  }
+  .cd-sep {
+    font-size: 1.2rem !important;
+    margin: 0 2px !important;
+  }
+}
+
+/* Hover/Active Feedback for Actions */
+.editorial-link:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+.editorial-link:hover .ed-link-arrow {
+  transform: translateX(6px);
+  transition: transform 0.3s ease;
+}
+.ed-link-arrow {
+  transition: transform 0.3s ease;
+}
+
+/* Fix InfoSection Spacing */
+@media (max-width: 768px) {
+  .editorial-row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 32px 0;
+  }
+  .ed-value {
+    text-align: center;
+  }
+}
+
+
+/* Gallery Affordance */
+.gallery-item {
+  cursor: pointer;
+}
+.gallery-photo-box::after {
+  content: '\f00e';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  opacity: 0;
+  color: white;
+  font-size: 2rem;
+  transition: all 0.3s ease;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.gallery-item:hover .gallery-photo-box::after {
+  opacity: 0.8;
+  transform: translate(-50%, -50%) scale(1);
+}
+

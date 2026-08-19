@@ -35,25 +35,25 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
 
     const tl = gsap.timeline();
 
-    // Movimentos mais lentos e naturais, simulando o peso do papel físico
-    tl.to(instructionRef.current, { opacity: 0, duration: 1.5, ease: "power2.inOut" }, 0);
-    tl.to(envelopeRef.current, { scale: 0.985, duration: 0.6, ease: "power2.out" }, 0);
-    tl.to(envelopeRef.current, { scale: 1, duration: 1.2, ease: "power2.inOut" }, 0.6);
+    // Movimentos acelerados para uma experiência mais dinâmica
+    tl.to(instructionRef.current, { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 0);
+    tl.to(envelopeRef.current, { scale: 0.985, duration: 0.3, ease: "power2.out" }, 0);
+    tl.to(envelopeRef.current, { scale: 1, duration: 0.6, ease: "power2.inOut" }, 0.3);
       
-    tl.to(flapRef.current, { rotateX: 180, duration: 4.0, ease: "power2.inOut" }, 1.2);
+    tl.to(flapRef.current, { rotateX: 180, duration: 1.5, ease: "power2.inOut" }, 0.6);
     
-    tl.set(flapRef.current, { zIndex: 0 }, 3.2);
+    tl.set(flapRef.current, { zIndex: 0 }, 1.5);
 
-    tl.to(letterWrapperRef.current, { y: "-60vh", duration: 5.0, ease: "power2.inOut" }, 4.5);
+    tl.to(letterWrapperRef.current, { y: "-60vh", duration: 1.8, ease: "power2.inOut" }, 1.8);
     
-    tl.to(envelopeRef.current, { y: "120vh", opacity: 0, duration: 4.0, ease: "power2.inOut" }, 7.5);
+    tl.to(envelopeRef.current, { y: "120vh", opacity: 0, duration: 1.5, ease: "power2.inOut" }, 3.0);
     
-    tl.to(letterRef.current, { scale: 1, duration: 4.5, ease: "power3.inOut" }, 7.5);
+    tl.to(letterRef.current, { scale: 1, duration: 1.8, ease: "power3.inOut" }, 3.0);
     
-    tl.to(containerRef.current, { scale: 1.03, duration: 12.0, ease: "power1.inOut" }, 0);
+    tl.to(containerRef.current, { scale: 1.03, duration: 4.5, ease: "power1.inOut" }, 0);
 
-    tl.set(containerRef.current, { display: "none" }, 12.5);
-    tl.call(onAnimationComplete, undefined, 12.5);
+    tl.set(containerRef.current, { display: "none" }, 4.8);
+    tl.call(onAnimationComplete, undefined, 4.8);
   };
 
   return (
@@ -156,17 +156,21 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
           </div>
         </div>
 
-        <div 
-          ref={instructionRef}
-          className="absolute bottom-[8%] left-0 w-full text-center flex flex-col items-center gap-2"
-        >
-          {/* Animação sutil de pulso para indicar clique sem texto agressivo */}
-          <div className="w-1 h-1 rounded-full bg-[#D4C394]/40 animate-ping"></div>
-          <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#D8CDBB] text-[0.7rem] tracking-[0.4em] opacity-35 uppercase drop-shadow-sm font-light">
-            Toque para abrir
-          </p>
+          <div 
+            ref={instructionRef}
+            className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-50 pointer-events-none"
+          >
+            {/* Animação clara para indicar clique */}
+            <div className="w-8 h-8 rounded-full border-2 border-[#D4C394]/60 flex items-center justify-center animate-bounce bg-black/10 backdrop-blur-sm shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-[#D4C394]"></div>
+            </div>
+            <div className="bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm border border-white/5">
+              <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#F6F2EA] text-[0.85rem] tracking-[0.2em] uppercase font-medium drop-shadow-md">
+                Toque para abrir
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
     </>
   );
 }

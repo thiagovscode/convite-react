@@ -44,9 +44,9 @@ export default function HeroSection() {
 
           {/* Names */}
           <div className="flex flex-col items-center gap-2 mb-10" data-aos="fade-up" data-aos-delay="300">
-            <h1 id="bride-name" className="name-script text-7xl md:text-8xl lg:text-[7rem] text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h1>
+            <h1 id="bride-name" className="name-script text-fluid-h1 text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h1>
             <span className="font-serif italic text-3xl md:text-4xl text-[#D8CDBB] opacity-70 my-3">&amp;</span>
-            <h2 id="groom-name" className="name-script text-7xl md:text-8xl lg:text-[7rem] text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h2>
+            <h2 id="groom-name" className="name-script text-fluid-h1 text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h2>
           </div>
 
           {/* Gold Ornament */}

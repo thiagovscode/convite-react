@@ -18,7 +18,10 @@ export default function ActionsSection() {
           <span className="ed-link-arrow">&rarr;</span>
         </a>
 
-        <button id="btn-gifts" className="editorial-link" data-aos="fade-up" data-aos-delay="120">
+        <button id="btn-gifts-react" className="editorial-link" data-aos="fade-up" data-aos-delay="120" onClick={(e) => {
+          e.preventDefault();
+          window.dispatchEvent(new Event('open-gifts-modal'));
+        }}>
           <span className="ed-link-text">Presentes</span>
           <span className="ed-link-arrow">&rarr;</span>
         </button>

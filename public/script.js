@@ -45,33 +45,33 @@ window.initOldConvite = () => {
    ============================================================ */
 function fillContent() {
   /* Nomes */
-  document.getElementById('bride-name').textContent  = wedding.bride;
-  document.getElementById('groom-name').textContent  = wedding.groom;
-  document.getElementById('footer-bride').textContent = wedding.bride;
-  document.getElementById('footer-groom').textContent = wedding.groom;
-  document.getElementById('footer-date').textContent  = wedding.dateShort;
+  if (document.getElementById('bride-name')) document.getElementById('bride-name').textContent  = wedding.bride;
+  if (document.getElementById('groom-name')) document.getElementById('groom-name').textContent  = wedding.groom;
+  if (document.getElementById('footer-bride')) document.getElementById('footer-bride').textContent = wedding.bride;
+  if (document.getElementById('footer-groom')) document.getElementById('footer-groom').textContent = wedding.groom;
+  if (document.getElementById('footer-date')) document.getElementById('footer-date').textContent  = wedding.dateShort;
 
   /* Versículo */
-  document.getElementById('verse-text').innerHTML =
+  if (document.getElementById('verse-text')) document.getElementById('verse-text').innerHTML =
     wedding.verse.text.replace(/\n/g, '<br>');
-  document.getElementById('verse-ref').textContent = wedding.verse.reference;
+  if (document.getElementById('verse-ref')) document.getElementById('verse-ref').textContent = wedding.verse.reference;
 
   /* Cards de informação */
-  document.getElementById('info-date').innerHTML =
+  if (document.getElementById('info-date')) document.getElementById('info-date').innerHTML =
     `${wedding.date}<br><em>${wedding.day}</em>`;
-  document.getElementById('info-time').innerHTML =
+  if (document.getElementById('info-time')) document.getElementById('info-time').innerHTML =
     `Cerimônia às ${wedding.time}`;
-  document.getElementById('info-ceremony').innerHTML =
+  if (document.getElementById('info-ceremony')) document.getElementById('info-ceremony').innerHTML =
     `${wedding.ceremony.name}<br><em>${wedding.ceremony.address}</em>`;
-  document.getElementById('info-reception').innerHTML =
+  if (document.getElementById('info-reception')) document.getElementById('info-reception').innerHTML =
     wedding.reception.description.replace(/\n/g, '<br>');
-  document.getElementById('info-dress').textContent   = wedding.dresscode;
-  document.getElementById('info-parking').textContent = wedding.parking;
+  if (document.getElementById('info-dress')) document.getElementById('info-dress').textContent   = wedding.dresscode;
+  if (document.getElementById('info-parking')) document.getElementById('info-parking').textContent = wedding.parking;
 
   /* Links dos botões */
-  document.getElementById('btn-rsvp').href     = wedding.rsvp;
-  document.getElementById('btn-maps').href     = wedding.maps;
-  document.getElementById('gifts-list-link').href = wedding.gifts;
+  if (document.getElementById('btn-rsvp')) document.getElementById('btn-rsvp').href     = wedding.rsvp;
+  if (document.getElementById('btn-maps')) document.getElementById('btn-maps').href     = wedding.maps;
+  if (document.getElementById('gifts-list-link')) document.getElementById('gifts-list-link').href = wedding.gifts;
   document.getElementById('btn-calendar').href = buildCalendarUrl();
 
   /* Foto do casal */
@@ -86,9 +86,9 @@ function fillContent() {
   buildGallery();
 
   /* Pix */
-  document.getElementById('pix-key-text').textContent = wedding.pix.key;
-  document.getElementById('pix-name-text').textContent = wedding.pix.name;
-  document.getElementById('pix-qr-img').src = wedding.pix.qrCode;
+  if (document.getElementById('pix-key-text')) document.getElementById('pix-key-text').textContent = wedding.pix.key;
+  if (document.getElementById('pix-name-text')) document.getElementById('pix-name-text').textContent = wedding.pix.name;
+  if (document.getElementById('pix-qr-img')) document.getElementById('pix-qr-img').src = wedding.pix.qrCode;
 }
 
 /* ============================================================
@@ -96,7 +96,8 @@ function fillContent() {
    ============================================================ */
 function buildTimeline() {
   const container = document.getElementById('timeline');
-  if (container) container.innerHTML = '';
+  if (!container) return;
+  container.innerHTML = '';
 
   wedding.timeline.forEach((item, i) => {
     const el = document.createElement('div');

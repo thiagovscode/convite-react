@@ -103,3 +103,5 @@ const wedding = {
   }
 
 };
+
+window.wedding = wedding;
