@@ -49,8 +49,8 @@ const wedding = {
   ---------------------------------------------------------- */
   maps:  "https://maps.google.com/?q=Espa%C3%A7o+Balboa+Mairipora+SP",
   rsvp:  "https://wa.me/5511999999999?text=Ol%C3%A1!+Confirmo+minha+presen%C3%A7a+no+casamento+de+Tainara+e+Thiago+%F0%9F%A4%8D",
-  gifts: "https://www.amazon.com.br/hz/wishlist/ls/EXEMPLO", // Link da Lista Amazon
-  giftsFun: "https://site.com/presentes-divertidos",         // Link da Lista de Presentes Divertidos
+  gifts: "https://www.amazon.com.br/hz/wishlist/ls/M9WM0ECW56XX?ref_=wl_share", // Link da Lista Amazon
+  giftsFun: "https://noivos.casar.com/tainara-thiago#/presentes",         // Link da Lista de Presentes Divertidos
   pix: {
     key: "tainaraethiago2027@email.com",
     name: "Tainara e Thiago",
