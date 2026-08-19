@@ -133,25 +133,21 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
             </div>
             
             {/* Selo (Letterpress / Hot Foil Emboss) */}
-            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90px] h-[90px] flex items-center justify-center" style={{ transform: 'translate3d(-50%, -50%, 1px)' }}>
+            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90px] h-[90px] flex items-center justify-center">
               
               <img 
                 src={seloSvg} 
                 alt="Brasão em Relevo" 
                 className="w-full h-full object-contain pointer-events-none relative z-10" 
                 style={{ 
-                  /* Letterpress Deboss Effect: 
-                     1. White drop shadow below (highlight on paper edge)
-                     2. Dark drop shadow above (shadow from paper edge) 
-                     3. Multiply blend mode to merge with paper texture */
-                  filter: 'drop-shadow(0px 1.5px 1px rgba(255, 255, 255, 0.8)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.15)) brightness(0.92) contrast(1.1)',
-                  mixBlendMode: 'multiply',
-                  opacity: 0.9
+                  /* Simplified for Android compatibility */
+                  filter: 'drop-shadow(0px 1px 1px rgba(255, 255, 255, 0.7)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.1))',
+                  opacity: 0.95
                 }}
               />
               
               {/* Reflexo metálico fosco sobre o brasão */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-[#F3EFE6]/10 to-transparent pointer-events-none z-20 mix-blend-overlay"></div>
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none z-20"></div>
             </div>
           </div>
         </div>
