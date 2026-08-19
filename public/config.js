@@ -49,7 +49,8 @@ const wedding = {
   ---------------------------------------------------------- */
   maps:  "https://maps.google.com/?q=Espa%C3%A7o+Balboa+Mairipora+SP",
   rsvp:  "https://wa.me/5511999999999?text=Ol%C3%A1!+Confirmo+minha+presen%C3%A7a+no+casamento+de+Tainara+e+Thiago+%F0%9F%A4%8D",
-  gifts: "https://www.example.com/lista-de-presentes",
+  gifts: "https://www.amazon.com.br/hz/wishlist/ls/EXEMPLO", // Link da Lista Amazon
+  giftsFun: "https://site.com/presentes-divertidos",         // Link da Lista de Presentes Divertidos
   pix: {
     key: "tainaraethiago2027@email.com",
     name: "Tainara e Thiago",
@@ -63,17 +64,6 @@ const wedding = {
     text: '"Grandes coisas fez o Senhor por nós,\ne por isso estamos alegres."',
     reference: "Salmos 126:3"
   },
-
-  /* ----------------------------------------------------------
-     PROGRAMAÇÃO DO DIA
-  ---------------------------------------------------------- */
-  timeline: [
-    { time: "15h30", event: "Recepção dos Convidados",  icon: "fa-door-open"  },
-    
-    { time: "17h30", event: "Sessão de Fotos",          icon: "fa-camera"     },
-    { time: "18h00", event: "Jantar",                   icon: "fa-utensils"   },
-    { time: "20h00", event: "Festa",                    icon: "fa-music"      }
-  ],
 
   /* ----------------------------------------------------------
      FOTOS DA GALERIA

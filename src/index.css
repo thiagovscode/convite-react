@@ -11,7 +11,7 @@
   }
 
   body {
-    @apply bg-paper-offWhite text-wine-deep font-serif antialiased;
+    @apply bg-paper-offWhite text-[#4A2C24] font-serif antialiased;
     overflow-x: hidden;
   }
 }
@@ -130,7 +130,7 @@
 /* 8. Gift Button */
 .gift-action-btn {
   background: transparent !important;
-  color: #2F2B27 !important;
+  color: #3A211B !important;
   box-shadow: none !important;
   border-radius: 0 !important;
   border: 1px solid #D8CDBB !important;
@@ -171,7 +171,7 @@
 
 /* Fix Footer Color */
 .signature-name {
-  color: #2F2B27 !important;
+  color: #3A211B !important;
   text-shadow: none !important;
 }
 

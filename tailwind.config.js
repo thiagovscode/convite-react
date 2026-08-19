@@ -12,21 +12,21 @@ export default {
           DEFAULT: '#EAE3D5',
           dark: '#D8CDBB',
         },
-        'rose-gold': '#B8AA95',
+        'rose-gold': '#8A6658',
         roseGold: {
           light: '#D8CDBB',
-          DEFAULT: '#B8AA95',
-          dark: '#5F574D',
+          DEFAULT: '#8A6658',
+          dark: '#6B4638',
         },
         gold: {
           light: '#EAE3D5',
           DEFAULT: '#D8CDBB',
-          dark: '#B8AA95',
+          dark: '#8A6658',
         },
-        'dark-wine': '#5F574D',
+        'dark-wine': '#4A2C24',
         wine: {
-          DEFAULT: '#5F574D',
-          deep: '#2F2B27',
+          DEFAULT: '#4A2C24',
+          deep: '#3A211B',
         },
         blush: {
           light: '#F3EFE6',

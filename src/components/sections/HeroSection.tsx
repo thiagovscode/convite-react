@@ -38,15 +38,15 @@ export default function HeroSection() {
         <div className="w-full max-w-[600px] flex flex-col items-center text-center relative z-10 pt-16 px-6">
           
           {/* Date */}
-          <p className="font-sans uppercase tracking-[0.35em] text-[0.7rem] text-[#B8AA95] mb-8 font-medium" data-aos="fade-up" data-aos-delay="200">
+          <p className="font-sans uppercase tracking-[0.35em] text-[0.7rem] text-[#8A6658] mb-8 font-medium" data-aos="fade-up" data-aos-delay="200">
             24 de Janeiro de 2027
           </p>
 
           {/* Names */}
           <div className="flex flex-col items-center gap-2 mb-10" data-aos="fade-up" data-aos-delay="300">
-            <h1 id="bride-name" className="name-script text-fluid-h1 text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h1>
+            <h1 id="bride-name" className="name-script text-fluid-h1 text-[#3A211B] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h1>
             <span className="font-serif italic text-3xl md:text-4xl text-[#D8CDBB] opacity-70 my-3">&amp;</span>
-            <h2 id="groom-name" className="name-script text-fluid-h1 text-[#2F2B27] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h2>
+            <h2 id="groom-name" className="name-script text-fluid-h1 text-[#3A211B] leading-[0.8] m-0" style={{ fontFamily: 'var(--font-script)' }}></h2>
           </div>
 
           {/* Gold Ornament */}
@@ -54,16 +54,16 @@ export default function HeroSection() {
 
           {/* Bible Verse */}
           <div className="max-w-[380px] mb-12" data-aos="fade-up" data-aos-delay="500">
-            <blockquote id="verse-text" className="font-serif italic text-[#5F574D] text-[1.1rem] leading-relaxed mb-4">
+            <blockquote id="verse-text" className="font-serif italic text-[#6B4638] text-[1.1rem] leading-relaxed mb-4">
             </blockquote>
-            <cite id="verse-ref" className="font-sans uppercase tracking-widest text-[0.65rem] text-[#B8AA95] font-semibold not-italic">
+            <cite id="verse-ref" className="font-sans uppercase tracking-widest text-[0.65rem] text-[#8A6658] font-semibold not-italic">
             </cite>
           </div>
 
           {/* Invite Text */}
-          <div className="font-serif text-[#5F574D] text-[0.95rem] leading-loose max-w-[380px]" data-aos="fade-up" data-aos-delay="600">
+          <div className="font-serif text-[#6B4638] text-[0.95rem] leading-loose max-w-[380px]" data-aos="fade-up" data-aos-delay="600">
             <p>Com muita alegria, convidamos você para celebrar o início da nossa nova história.</p>
-            <p className="mt-5 italic text-[#B8AA95] text-[0.95rem]">Sua presença tornará este dia ainda mais especial.</p>
+            <p className="mt-5 italic text-[#8A6658] text-[0.95rem]">Sua presença tornará este dia ainda mais especial.</p>
           </div>
 
         </div>

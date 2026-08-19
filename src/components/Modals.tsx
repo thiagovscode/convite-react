@@ -18,6 +18,7 @@ export default function Modals() {
   const [pixName, setPixName] = useState('carregando...');
   const [pixQr, setPixQr] = useState('assets/images/pix_qr.png');
   const [amazonLink, setAmazonLink] = useState('#');
+  const [funLink, setFunLink] = useState('#');
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export default function Modals() {
         setPixKey(w.pix.key);
         setPixName(w.pix.name);
         setPixQr(w.pix.qrCode);
-        setAmazonLink(w.gifts);
+        setAmazonLink(w.gifts || '#');
+        setFunLink(w.giftsFun || '#');
         clearInterval(checkWedding);
       }
     }, 100);
@@ -118,12 +120,12 @@ export default function Modals() {
                 </button>
               )}
               <i className="fas fa-gift text-3xl text-[#C9A84C] mb-3 animate-pulse"></i>
-              <h3 className="font-display text-xl text-[#2F2B27] tracking-widest uppercase mb-2">
+              <h3 className="font-display text-xl text-[#3A211B] tracking-widest uppercase mb-2">
                 {view === 'menu' && 'Presentear os Noivos'}
                 {view === 'fun' && 'Presentes Divertidos'}
                 {view === 'pix' && 'Contribuição via PIX'}
               </h3>
-              <p className="font-serif text-[#5F574D] text-sm leading-relaxed">
+              <p className="font-serif text-[#6B4638] text-sm leading-relaxed">
                 {view === 'menu' && 'Escolha a forma como deseja nos presentear. Agradecemos imensamente pelo carinho!'}
                 {view === 'fun' && 'Ajude-nos a criar memórias incríveis com esses mimos especiais!'}
                 {view === 'pix' && 'Caso prefira, você pode contribuir com qualquer valor.'}
@@ -143,31 +145,31 @@ export default function Modals() {
                     rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center text-center p-6 border border-[#C9A84C]/20 hover:bg-[#C9A84C]/5 transition-colors rounded-xl group"
                   >
-                    <i className="fab fa-amazon text-2xl text-[#5F574D] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
-                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#2F2B27] uppercase mb-2">Lista Amazon</h4>
-                    <p className="font-serif text-[#5F574D] text-xs">Presentes para o nosso novo lar</p>
+                    <i className="fab fa-amazon text-2xl text-[#6B4638] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
+                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#3A211B] uppercase mb-2">Lista Amazon</h4>
+                    <p className="font-serif text-[#6B4638] text-xs">Presentes para o nosso novo lar</p>
                   </a>
 
                   {/* Fun Gifts - Now an external link */}
                   <a 
-                    href="#" 
+                    href={funLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center text-center p-6 border border-[#C9A84C]/20 hover:bg-[#C9A84C]/5 transition-colors rounded-xl group"
                   >
-                    <i className="fas fa-plane-departure text-2xl text-[#5F574D] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
-                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#2F2B27] uppercase mb-2">Divertidos</h4>
-                    <p className="font-serif text-[#5F574D] text-xs">Acesse nossa lista externa</p>
+                    <i className="fas fa-plane-departure text-2xl text-[#6B4638] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
+                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#3A211B] uppercase mb-2">Divertidos</h4>
+                    <p className="font-serif text-[#6B4638] text-xs">Acesse nossa lista externa</p>
                   </a>
 
                   {/* PIX */}
                   <button 
                     onClick={() => setView('pix')}
-                    className="flex flex-col items-center justify-center text-center p-6 border border-[#C9A84C]/20 hover:bg-[#C9A84C]/5 transition-colors rounded-xl group"
+                    className="flex flex-col items-center justify-center text-center p-6 border border-solid border-[#C9A84C]/20 hover:bg-[#C9A84C]/5 transition-colors rounded-xl group"
                   >
-                    <i className="fab fa-pix text-2xl text-[#5F574D] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
-                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#2F2B27] uppercase mb-2">Via PIX</h4>
-                    <p className="font-serif text-[#5F574D] text-xs">Contribua com qualquer valor</p>
+                    <i className="fab fa-pix text-2xl text-[#6B4638] group-hover:text-[#C9A84C] mb-3 transition-colors"></i>
+                    <h4 className="font-display text-[0.8rem] tracking-widest text-[#3A211B] uppercase mb-2">Via PIX</h4>
+                    <p className="font-serif text-[#6B4638] text-xs">Contribua com qualquer valor</p>
                   </button>
                 </div>
               )}
@@ -185,17 +187,17 @@ export default function Modals() {
                     <span className="font-display text-[0.7rem] tracking-widest text-[#C9A84C] uppercase block mb-2">Chave Pix</span>
                     
                     <div className="flex items-center justify-between border border-[#D8CDBB] bg-white rounded overflow-hidden mb-3">
-                      <span className="font-mono text-sm text-[#5F574D] px-3 py-2 flex-1 truncate text-left">{pixKey}</span>
+                      <span className="font-mono text-sm text-[#6B4638] px-3 py-2 flex-1 truncate text-left">{pixKey}</span>
                       <button 
                         onClick={copyPix}
-                        className="bg-[#F8F5EE] hover:bg-[#D8CDBB]/30 text-[#5F574D] px-4 py-2 border-l border-[#D8CDBB] transition-colors"
+                        className="bg-[#F8F5EE] hover:bg-[#D8CDBB]/30 text-[#6B4638] px-4 py-2 border-l border-solid border-[#D8CDBB] transition-colors"
                         aria-label="Copiar chave Pix"
                       >
                         <i className="far fa-copy"></i>
                       </button>
                     </div>
                     
-                    <span className="font-serif text-[#5F574D] text-sm">Titular: <strong>{pixName}</strong></span>
+                    <span className="font-serif text-[#6B4638] text-sm">Titular: <strong>{pixName}</strong></span>
                   </div>
                 </div>
               )}
@@ -204,7 +206,7 @@ export default function Modals() {
 
             {/* Toast Notification */}
             {showToast && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#2F2B27] text-white px-4 py-2 rounded-full text-sm font-sans flex items-center gap-2 animate-fade-in z-30">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#3A211B] text-white px-4 py-2 rounded-full text-sm font-sans flex items-center gap-2 animate-fade-in z-30">
                 <i className="fas fa-check-circle text-green-400"></i> Chave Copiada!
               </div>
             )}
