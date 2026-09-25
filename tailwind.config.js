@@ -7,36 +7,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        champagne: {
-          light: '#F3EFE6',
-          DEFAULT: '#EAE3D5',
-          dark: '#D8CDBB',
+        taupe: {
+          dark: '#68564A',
+          DEFAULT: '#8F7968',
+          light: '#A18D7C',
         },
-        'rose-gold': '#8A6658',
-        roseGold: {
-          light: '#D8CDBB',
-          DEFAULT: '#8A6658',
-          dark: '#6B4638',
+        champagne: {
+          light: '#F1EAE0',
+          DEFAULT: '#E8DDD0',
+          dark: '#A88F72',
         },
         gold: {
-          light: '#EAE3D5',
-          DEFAULT: '#D8CDBB',
-          dark: '#8A6658',
+          light: '#E8DDD0',
+          DEFAULT: '#D8CDC0',
+          dark: '#A88F72',
         },
-        'dark-wine': '#4A2C24',
-        wine: {
-          DEFAULT: '#4A2C24',
-          deep: '#3A211B',
-        },
-        blush: {
-          light: '#F3EFE6',
-          DEFAULT: '#EAE3D5',
-        },
-        'off-white': '#F8F5EE',
         paper: {
-          offWhite: '#F8F5EE',
-          cream: '#F3EFE6',
-          creamDark: '#EAE3D5',
+          offWhite: '#F8F4EC',
+          cream: '#F1EAE0',
+          creamDark: '#E8DDD0',
+        },
+        border: {
+          subtle: '#D8CDC0',
         }
       },
       fontFamily: {

@@ -11,44 +11,46 @@
   }
 
   body {
-    @apply bg-paper-offWhite text-[#4A2C24] font-serif antialiased;
+    font-family: var(--font-serif);
+    background: var(--off-white);
+    color: var(--text-dark);
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer utilities {
   .text-fluid-h1 {
-    font-size: clamp(3.5rem, 8vw + 1rem, 6rem);
+    font-size: clamp(4rem, 9vw + 1rem, 6.5rem);
   }
   .text-fluid-h2 {
-    font-size: clamp(2rem, 5vw + 1rem, 3.5rem);
+    font-size: clamp(2.2rem, 5vw + 1rem, 3.8rem);
   }
   .text-fluid-h3 {
-    font-size: clamp(1.25rem, 3vw + 0.5rem, 2rem);
+    font-size: clamp(1.3rem, 3vw + 0.5rem, 2.1rem);
   }
   .text-fluid-p {
-    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.15rem);
+    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.2rem);
   }
 }
 
 /* =====================================================================
    LUXURY EDITORIAL OVERRIDES
-   Forcing removal of shadows, rounded borders, and backgrounds 
-   to achieve a Letterpress/Fine Art aesthetic.
    ===================================================================== */
 
 /* 1. Global Spacing */
 :root {
-  --section-gap: 160px !important;
+  --section-gap: 130px !important;
   --card-radius: 0px !important;
 }
 
-/* 2. Info Cards (Letterpress style) */
+/* 2. Info Cards */
 .info-card {
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid rgba(200, 161, 90, 0.15) !important;
+  border: 1px solid #B8A594 !important;
   padding: 40px 20px !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -57,30 +59,30 @@
 .info-card:hover {
   transform: none !important;
   box-shadow: none !important;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
-/* 3. Action Cards (Buttons) */
+/* 3. Action Cards */
 .action-card {
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid rgba(200, 161, 90, 0.25) !important;
+  border: 1px solid #B8A594 !important;
 }
 .action-card:hover {
   transform: none !important;
   box-shadow: none !important;
-  background: rgba(200, 161, 90, 0.02) !important;
+  background: rgba(184, 165, 148, 0.15) !important;
 }
 
 /* 4. Timeline */
 .tl-dot-outer {
   background: transparent !important;
   box-shadow: none !important;
-  border: 1px solid rgba(200, 161, 90, 0.4) !important;
+  border: 1px solid #B8A594 !important;
 }
 .tl-dot-inner {
-  background: #D8CDBB !important;
+  background: #B8A594 !important;
   box-shadow: none !important;
 }
 .tl-dot-inner i { display: none !important; }
@@ -90,7 +92,7 @@
 .cd-flip-wrapper {
   background: transparent !important;
   box-shadow: none !important;
-  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+  border: 1px solid #B8A594 !important;
   border-radius: 0 !important;
   backdrop-filter: none !important;
 }
@@ -115,28 +117,28 @@
 
 /* 7. Modals */
 #pix-modal-wrapper {
-  background: #F8F5EE !important;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.1) !important;
+  background: var(--off-white) !important;
+  box-shadow: 0 40px 100px rgba(46, 30, 23, 0.12) !important;
   border-radius: 0 !important;
-  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+  border: 1px solid #B8A594 !important;
   backdrop-filter: none !important;
 }
 .pix-qrcode-wrapper {
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid rgba(200, 161, 90, 0.2) !important;
+  border: 1px solid #B8A594 !important;
 }
 
 /* 8. Gift Button */
 .gift-action-btn {
   background: transparent !important;
-  color: #3A211B !important;
+  color: #2E1E17 !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid #D8CDBB !important;
+  border: 1px solid #B8A594 !important;
 }
 .gift-action-btn:hover {
-  background: rgba(200, 161, 90, 0.05) !important;
+  background: rgba(184, 165, 148, 0.2) !important;
   box-shadow: none !important;
   transform: none !important;
 }
@@ -146,44 +148,53 @@
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  border: 1px solid rgba(200, 161, 90, 0.3) !important;
+  border: 1px solid #B8A594 !important;
   backdrop-filter: none !important;
 }
 #music-btn:hover {
-  background: rgba(255,255,255,0.5) !important;
+  background: rgba(248, 244, 236, 0.9) !important;
   box-shadow: none !important;
   transform: none !important;
 }
 
-/* Fixing centering for section titles and dividers */
+/* Títulos de seção nítidos e firmes */
 .sec-title {
   text-align: center !important;
   width: 100% !important;
   display: block !important;
   margin: 0 auto 40px auto !important;
+  font-family: var(--font-display) !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.38em !important;
+  text-transform: uppercase !important;
+  color: #4A352B !important;
+  font-weight: 500 !important;
 }
 .section-divider {
   text-align: center !important;
   width: 100% !important;
   display: block !important;
-  margin: var(--section-gap) auto !important;
+  margin: 80px auto !important;
+  color: #7A5E44 !important;
+  opacity: 0.75 !important;
+  font-size: 1.1rem !important;
 }
 
 /* Fix Footer Color */
 .signature-name {
-  color: #3A211B !important;
+  color: #2E1E17 !important;
   text-shadow: none !important;
 }
 
 /* =====================================================================
    FINE ART EDITORIAL COMPOSITION
    ===================================================================== */
-   
+
 .editorial-list {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   margin: 0 auto;
 }
 
@@ -192,7 +203,7 @@
   justify-content: space-between;
   align-items: baseline;
   padding: 24px 0;
-  border-bottom: 1px solid rgba(200, 161, 90, 0.2);
+  border-bottom: 1px solid #B8A594;
 }
 
 .editorial-row:last-child {
@@ -201,17 +212,20 @@
 
 .ed-label {
   font-family: var(--font-display);
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--gold-dark);
+  color: #5C4437;
+  font-weight: 500;
 }
 
 .ed-value {
   font-family: var(--font-serif);
-  font-size: 1.1rem;
-  color: var(--text-dark);
+  font-size: 1.2rem;
+  color: #2E1E17;
   text-align: right;
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 /* Links Textuais */
@@ -219,12 +233,12 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 32px 0;
-  border-bottom: 1px solid rgba(200, 161, 90, 0.2);
+  padding: 30px 0;
+  border-bottom: 1px solid #B8A594;
   text-decoration: none;
   background: transparent !important;
-  color: var(--text-dark);
-  transition: opacity 1s ease;
+  color: #2E1E17;
+  transition: opacity 0.3s ease;
   cursor: pointer;
   width: 100%;
   border-top: none !important;
@@ -235,24 +249,27 @@
 }
 
 .editorial-link:hover {
-  opacity: 0.5;
+  opacity: 0.65;
   background: transparent !important;
 }
 
 .ed-link-text {
   font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.25em;
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
+  color: #2E1E17;
+  font-weight: 500;
 }
 
 .ed-link-arrow {
   font-family: var(--font-serif);
-  font-size: 1.2rem;
-  color: var(--gold-dark);
+  font-size: 1.3rem;
+  color: #7A5E44;
+  opacity: 0.85;
 }
 
-/* Esconder IDs antigos de icones e action grids, se existirem vestigios */
+/* Esconder IDs antigos */
 #info-grid, #action-grid {
   display: none !important;
 }
@@ -279,7 +296,7 @@
 
 /* Accessibility Focus States */
 :focus-visible {
-  outline: 2px solid var(--gold-dark);
+  outline: 2px solid #A88F72;
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -287,25 +304,31 @@
 /* Responsive Countdown for Small Screens */
 @media (max-width: 480px) {
   #countdown {
-    gap: 6px;
+    gap: 8px;
   }
   .cd-unit {
-    min-width: 60px;
-    gap: 6px;
+    min-width: 68px;
+    gap: 8px;
   }
   .cd-flip-wrapper {
-    width: 60px;
-    height: 60px;
+    width: 68px;
+    height: 68px;
+    border: 1px solid #D8CDC0 !important;
   }
   .cd-number {
-    font-size: 1.5rem !important;
+    font-size: 1.85rem !important;
+    color: #68564A !important;
+    font-weight: 300 !important;
   }
   .cd-label {
-    font-size: 0.6rem !important;
+    font-size: 0.62rem !important;
+    letter-spacing: 0.22em !important;
+    color: #8F7968 !important;
   }
   .cd-sep {
-    font-size: 1.2rem !important;
-    margin: 0 2px !important;
+    font-size: 1.3rem !important;
+    margin: 0 1px !important;
+    color: #A88F72 !important;
   }
 }
 

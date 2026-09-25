@@ -17,6 +17,7 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
   const instructionRef = useRef<HTMLDivElement>(null);
   
   const [isOpened, setIsOpened] = useState(false);
+  const [announced, setAnnounced] = useState('');
 
   // Textura de papel algodão extremamente sutil (noise orgânico, sem padrão visível)
   const noiseTexture = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E")`;
@@ -32,6 +33,7 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
   const handleOpen = () => {
     if (isOpened) return;
     setIsOpened(true);
+    setAnnounced('Abrindo o convite de casamento de Tainara e Thiago…');
 
     const tl = gsap.timeline();
 
@@ -56,8 +58,26 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
     tl.call(onAnimationComplete, undefined, 4.8);
   };
 
+  // Suporte completo a teclado: Enter e Espaço ativam o envelope
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOpen();
+    }
+  };
+
   return (
     <>
+      {/* Anúncio semântico para leitores de tela (visualmente oculto) */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announced}
+      </div>
+
       <div className="fixed inset-0 z-[40] pointer-events-none flex items-center justify-center overflow-hidden">
         <div ref={letterWrapperRef} className="absolute flex justify-center items-center w-full h-full">
           <div ref={letterRef} className="w-screen h-[100dvh] shadow-2xl overflow-hidden pointer-events-auto bg-[#F6F2EA] will-change-transform rounded-sm">
@@ -71,20 +91,27 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
         className="fixed inset-0 z-[60] flex flex-col items-center justify-center will-change-transform"
         style={{ background: "radial-gradient(circle at center, #23211f 0%, #080808 100%)" }}
       >
+        {/* Envelope interativo — Tela cheia vertical no mobile, adaptado no desktop */}
         <div 
           ref={envelopeRef}
-          className="relative w-[92vw] max-w-[480px] h-[85dvh] max-h-[780px] cursor-pointer drop-shadow-[0_40px_80px_rgba(0,0,0,0.6)] will-change-transform"
+          role="button"
+          tabIndex={0}
+          aria-label="Envelope do convite de casamento de Tainara e Thiago. Pressione Enter ou Espaço para abrir."
+          aria-disabled={isOpened}
+          aria-pressed={isOpened}
+          className="relative w-full h-[100dvh] md:w-[720px] md:h-[480px] lg:w-[780px] lg:h-[520px] md:max-w-[90vw] md:max-h-[82vh] cursor-pointer drop-shadow-[0_40px_80px_rgba(0,0,0,0.6)] will-change-transform rounded-none md:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8A15A] focus-visible:ring-offset-4 focus-visible:ring-offset-black"
           onClick={handleOpen}
+          onKeyDown={handleKeyDown}
         >
-          {/* Fundo interno do envelope (Corpo) - Off-white #F6F2EA */}
-          <div className="absolute inset-0 overflow-hidden rounded-md" style={{ backgroundColor: "#F6F2EA" }}>
+          {/* Fundo interno do envelope (Corpo) — decorativo */}
+          <div aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-none md:rounded-md" style={{ backgroundColor: "#F6F2EA" }}>
              <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
-             {/* Sombra de profundidade interna para dar dimensão à cavidade */}
              <div className="absolute inset-0 shadow-[inset_0_30px_60px_rgba(0,0,0,0.15)] mix-blend-multiply pointer-events-none"></div>
           </div>
           
-          {/* Aba Esquerda - #F4EFE6 (Quente, recebe luz direta) */}
+          {/* Aba Esquerda — decorativo */}
           <div 
+            aria-hidden="true"
             className="absolute top-0 left-0 w-[55%] h-full z-10 pointer-events-none drop-shadow-[1px_0_1px_rgba(255,255,255,0.7)] drop-shadow-[4px_0_12px_rgba(0,0,0,0.06)]"
             style={{
               clipPath: "polygon(0 0, 100% 50%, 0 100%)",
@@ -94,8 +121,9 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
              <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
           </div>
 
-          {/* Aba Direita - #EFE8DB (Ligeiramente mais escura, na sombra) */}
+          {/* Aba Direita — decorativo */}
           <div 
+            aria-hidden="true"
             className="absolute top-0 right-0 w-[55%] h-full z-10 pointer-events-none drop-shadow-[-1px_0_0_rgba(255,255,255,0.3)] drop-shadow-[-4px_0_12px_rgba(0,0,0,0.08)]"
             style={{
               clipPath: "polygon(100% 0, 0 50%, 100% 100%)",
@@ -105,8 +133,9 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
              <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
           </div>
 
-          {/* Aba Inferior (Frente) - Mistura para transição suave */}
+          {/* Aba Inferior — decorativo */}
           <div 
+            aria-hidden="true"
             className="absolute bottom-0 left-0 w-full h-[65%] z-20 pointer-events-none drop-shadow-[0_-1px_1px_rgba(255,255,255,0.5)] drop-shadow-[0_-6px_15px_rgba(0,0,0,0.07)]"
             style={{
               clipPath: "polygon(0 100%, 50% 0, 100% 100%)",
@@ -114,14 +143,16 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
             }}
           >
             <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
-            {/* Sombra de oclusão sutil vinda da aba superior */}
             <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-black/5"></div>
           </div>
 
-          {/* Top Flap Wrapper (rotates in 3D) */}
-          <div ref={flapRef} className="absolute top-0 left-0 w-full h-[55%] origin-top z-40 will-change-transform drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)] drop-shadow-[0_6px_20px_rgba(0,0,0,0.12)]" style={{ transformStyle: 'preserve-3d' }}>
-            
-            {/* Aba Superior - #F8F5EE (Marfim mais claro, mais iluminada) */}
+          {/* Aba Superior (anima em 3D ao abrir) — decorativo */}
+          <div
+            ref={flapRef}
+            aria-hidden="true"
+            className="absolute top-0 left-0 w-full h-[55%] origin-top z-40 will-change-transform drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)] drop-shadow-[0_6px_20px_rgba(0,0,0,0.12)]"
+            style={{ transformStyle: 'preserve-3d' }}
+          >
             <div 
               className="absolute top-0 left-0 w-full h-full"
               style={{
@@ -132,41 +163,39 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
               <div className="absolute inset-0 mix-blend-multiply" style={{ backgroundImage: noiseTexture }}></div>
             </div>
             
-            {/* Selo (Letterpress / Hot Foil Emboss) */}
+            {/* Selo — decorativo */}
             <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90px] h-[90px] flex items-center justify-center">
-              
               <img 
                 src={seloSvg} 
-                alt="Brasão em Relevo" 
+                alt=""
+                aria-hidden="true"
                 className="w-full h-full object-contain pointer-events-none relative z-10" 
                 style={{ 
-                  /* Simplified for Android compatibility */
                   filter: 'drop-shadow(0px 1px 1px rgba(255, 255, 255, 0.7)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.1))',
                   opacity: 0.95
                 }}
               />
-              
-              {/* Reflexo metálico fosco sobre o brasão */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none z-20"></div>
             </div>
           </div>
         </div>
 
-          <div 
-            ref={instructionRef}
-            className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-50 pointer-events-none"
-          >
-            {/* Animação clara para indicar clique */}
-            <div className="w-8 h-8 rounded-full border-2 border-[#D4C394]/60 flex items-center justify-center animate-bounce bg-black/10 backdrop-blur-sm shadow-lg">
-              <div className="w-2 h-2 rounded-full bg-[#D4C394]"></div>
-            </div>
-            <div className="bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm border border-white/5">
-              <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#F6F2EA] text-[0.85rem] tracking-[0.2em] uppercase font-medium drop-shadow-md">
-                Toque para abrir
-              </p>
-            </div>
+        {/* Instrução visual — decorativo, oculto para leitores de tela */}
+        <div 
+          ref={instructionRef}
+          aria-hidden="true"
+          className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-50 pointer-events-none"
+        >
+          <div className="w-8 h-8 rounded-full border-2 border-[#D4C394]/60 flex items-center justify-center animate-bounce bg-black/10 backdrop-blur-sm shadow-lg">
+            <div className="w-2 h-2 rounded-full bg-[#D4C394]"></div>
+          </div>
+          <div className="bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm border border-white/5">
+            <p style={{ fontFamily: "var(--font-serif), Georgia, serif" }} className="text-[#F6F2EA] text-[0.85rem] tracking-[0.2em] uppercase font-medium drop-shadow-md">
+              Toque para abrir
+            </p>
           </div>
         </div>
+      </div>
     </>
   );
 }

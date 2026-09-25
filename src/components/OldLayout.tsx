@@ -6,6 +6,8 @@ import ActionsSection from "./sections/ActionsSection";
 import GallerySection from "./sections/GallerySection";
 import Footer from "./sections/Footer";
 import Modals from "./Modals";
+import RsvpModal from "./RsvpModal";
+import CheckinModal from "./CheckinModal";
 
 export default function OldLayout() {
   useEffect(() => {
@@ -42,6 +44,8 @@ export default function OldLayout() {
         </div>
       </main>
       <Modals />
+      <RsvpModal />
+      <CheckinModal />
     </>
   );
 }

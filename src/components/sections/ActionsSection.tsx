@@ -8,10 +8,20 @@ export default function ActionsSection() {
 
       <div className="editorial-list">
 
-        <a id="btn-rsvp" href="#" className="editorial-link" target="_blank" rel="noopener noreferrer" data-aos="fade-up" data-aos-delay="0">
+        <button 
+          id="btn-rsvp-modal" 
+          type="button"
+          className="editorial-link" 
+          data-aos="fade-up" 
+          data-aos-delay="0"
+          onClick={(e) => {
+            e.preventDefault();
+            window.dispatchEvent(new Event('open-rsvp-modal'));
+          }}
+        >
           <span className="ed-link-text">Confirmar Presença</span>
           <span className="ed-link-arrow">&rarr;</span>
-        </a>
+        </button>
 
         <a id="btn-maps" href="#" className="editorial-link" target="_blank" rel="noopener noreferrer" data-aos="fade-up" data-aos-delay="60">
           <span className="ed-link-text">Como Chegar</span>

@@ -1,0 +1,70 @@
+name: MongoDB Backup on RSVP
+
+on:
+  repository_dispatch:
+    types: [novo_rsvp]
+  workflow_dispatch:
+  schedule:
+    # Backup de seguranca diário as 03:00 Brasilia (06:00 UTC)
+    - cron: '0 6 * * *'
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar MongoDB Database Tools
+        run: |
+          wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.11.0.tgz
+          tar -zxvf mongodb-database-tools-*.tgz
+          sudo cp mongodb-database-tools-*/bin/* /usr/local/bin/
+          rm -rf mongodb-database-tools-*
+
+      - name: Gerar Timestamp e Nome do Arquivo
+        id: date
+        run: |
+          DATE=$(date +'%Y-%m-%d-%H-%M')
+          echo "filename=mongodb-backup-casamento-$DATE.archive.gz" >> $GITHUB_ENV
+          echo "date_br=$(TZ='America/Sao_Paulo' date +'%d/%m/%Y %H:%M')" >> $GITHUB_ENV
+
+      - name: Executar mongodump
+        run: |
+          echo "✓ Conectando ao MongoDB e gerando backup..."
+          mongodump --uri="${{ secrets.MONGODB_URI }}" --archive=${{ env.filename }} --gzip
+          echo "✓ Backup gerado e compactado com sucesso!"
+
+      - name: Calcular Tamanho do Backup
+        id: size
+        run: |
+          SIZE=$(du -sh ${{ env.filename }} | cut -f1)
+          echo "filesize=$SIZE" >> $GITHUB_ENV
+          echo "✓ Tamanho do backup: $SIZE"
+
+      - name: Enviar E-mail com Anexo (Sucesso)
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: 'Backup MongoDB — Casamento Tainara & Thiago — ${{ env.date_br }}'
+          body: |
+            Backup do MongoDB realizado com sucesso.
+            
+            Motivo: Novo RSVP registrado / Rotina de segurança
+            Data: ${{ env.date_br }}
+            Banco: Casamento Tainara & Thiago
+            Arquivo: ${{ env.filename }}
+            Tamanho: ${{ env.filesize }}
+            
+            O arquivo compactado está anexado a este e-mail.
+          to: ${{ secrets.BACKUP_EMAIL_TO }}
+          from: ${{ secrets.BACKUP_EMAIL_FROM }}
+          attachments: ${{ env.filename }}
+        continue-on-error: true
+        id: send_mail
+
+      - name: Limpar Arquivos Temporarios
+        if: always()
+        run: |
+          rm -f *.archive.gz
+          echo "✓ Limpeza concluida."

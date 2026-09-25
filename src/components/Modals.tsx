@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 
 const funGifts = [
-  { id: 1, title: 'Jantar Romântico nas Maldivas', price: 'R$ 500,00', icon: '🍽️' },
-  { id: 2, title: 'Passeio de Camelo', price: 'R$ 200,00', icon: '🐪' },
-  { id: 3, title: 'Drink na Beira da Praia', price: 'R$ 80,00', icon: '🍹' },
-  { id: 4, title: 'Massagem Relaxante para o Casal', price: 'R$ 350,00', icon: '💆‍♂️' },
-  { id: 5, title: 'Cota Lua de Mel', price: 'R$ 1.000,00', icon: '✈️' },
-  { id: 6, title: 'Café da Manhã no Quarto', price: 'R$ 150,00', icon: '🥞' },
+  { id: 1, title: 'Jantar Romântico nas Maldivas', price: 'R$ 500,00', icon: '✦' },
+  { id: 2, title: 'Passeio a Dois', price: 'R$ 200,00', icon: '✦' },
+  { id: 3, title: 'Brinde Especial na Beira da Praia', price: 'R$ 80,00', icon: '✦' },
+  { id: 4, title: 'Momento Relaxante para o Casal', price: 'R$ 350,00', icon: '✦' },
+  { id: 5, title: 'Cota Lua de Mel', price: 'R$ 1.000,00', icon: '✦' },
+  { id: 6, title: 'Café da Manhã Especial', price: 'R$ 150,00', icon: '✦' },
 ];
 
 export default function Modals() {

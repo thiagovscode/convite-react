@@ -7,31 +7,48 @@
    1. DESIGN TOKENS
    ============================================================ */
 :root {
-  /* Cores principais (Monocromático Off-White/Ivory) */
-  --champagne:       #EAE3D5;
-  --champagne-light: #F3EFE6;
-  --champagne-dark:  #D8CDBB;
-  --rose-gold:       #8A6658;
-  --rose-gold-light: #D8CDBB;
-  --rose-gold-dark:  #6B4638;
-  --gold:            #D8CDBB;
-  --gold-light:      #EAE3D5;
-  --gold-dark:       #8A6658;
-  --off-white:       #F8F5EE;
-  --cream:           #F3EFE6;
-  --cream-dark:      #EAE3D5;
-  --dark-wine:       #4A2C24;
-  --dark-wine-deep:  #3A211B;
-  --blush:           #F3EFE6;
-  --blush-dark:      #EAE3D5;
-  --text-dark:       #3A211B;
-  --text-medium:     #6B4638;
-  --text-light:      #8A6658;
-  --text-pale:       #D8CDBB;
+  /* ── PALETA DE ALTO CONTRASTE E ELEGÂNCIA ────────────────────
+     Fundo:               #F8F4EC (Off-white quente suave)
+     Principal / Números: #2E1E17 (Marrom profundo de alto contraste)
+     Secundários/Títulos: #523D32 (Marrom encorpado bem visível)
+     Labels e detalhes:   #614B3E (Marrom médio firme e nítido)
+     Bordas / Divisórias: #BAA794 (Bordas nítidas e visíveis)
+     Accent decorativo:   #7A5E44 (Bronze/champagne escuro)
+  ──────────────────────────────────────────────────────────── */
+
+  /* Backgrounds */
+  --off-white:       #F8F4EC;
+  --cream:           #EFE7DC;
+  --cream-dark:      #E4D9CA;
+  --blush:           #EFE7DC;
+  --blush-dark:      #E4D9CA;
+
+  /* Accent — Detalhes decorativos / Champagne */
+  --gold:            #BAA794;
+  --gold-light:      #D5C6B5;
+  --gold-dark:       #7A5E44;
+  --champagne:       #E4D9CA;
+  --champagne-light: #EFE7DC;
+  --champagne-dark:  #BAA794;
+
+  /* Rose Gold / Accent decorativo */
+  --rose-gold:       #7A5E44;
+  --rose-gold-light: #BAA794;
+  --rose-gold-dark:  #523D32;
+
+  /* Tipografia & Hierarquia de Cores (Alto Contraste) */
+  --text-dark:       #2E1E17; /* Números da contagem e informações principais */
+  --text-medium:     #523D32; /* Textos secundários e títulos de seção */
+  --text-light:      #614B3E; /* Labels menores e pequenos títulos */
+  --text-pale:       #7A5E44; /* Detalhes */
+
+  /* Dark wine (alias para compatibilidade) */
+  --dark-wine:       #2E1E17;
+  --dark-wine-deep:  #20140F;
 
   /* Envelope Colors */
-  --env-bg-1:  #F3EFE6;
-  --env-bg-2:  #EAE3D5;
+  --env-bg-1:  #EFE7DC;
+  --env-bg-2:  #E4D9CA;
 
   /* Tipografia */
   --font-script:  'Great Vibes', cursive;
@@ -467,44 +484,25 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   position: relative;
   width: 88px;
   height: 88px;
-  background:
-    linear-gradient(160deg, rgba(255,255,255,0.85) 0%, rgba(250,247,242,0.7) 100%);
-  border: 1px solid rgba(201,168,76,0.22);
+  background: transparent;
+  border: 1px solid var(--gold);
   border-radius: 0px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: none;
-  
   overflow: hidden;
-}
-
-.cd-flip-wrapper::after {
-  content: '';
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 50%;
-  height: 1px;
-  background: rgba(201,168,76,0.18);
-}
-
-.cd-flip-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(0,0,0,0.04) 100%);
-  pointer-events: none;
 }
 
 .cd-number {
   font-family: var(--font-display);
-  font-size: 2.4rem; /* Aumentado 20% */
-  font-weight: 400;
-  color: var(--dark-wine);
+  font-size: 2.6rem;
+  font-weight: 300;
+  color: var(--text-dark);
   line-height: 1;
   position: relative;
   z-index: 1;
+  letter-spacing: 0.04em;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -521,16 +519,18 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .cd-label {
   font-family: var(--font-display);
-  font-size: 0.52rem;
+  font-size: 0.65rem;
   letter-spacing: 0.28em;
-  color: var(--gold);
+  color: var(--text-light);
   text-transform: uppercase;
+  font-weight: 400;
 }
 
 .cd-sep {
   font-family: var(--font-display);
   font-size: 2rem;
-  color: rgba(201,168,76,0.45);
+  color: var(--gold-dark);
+  opacity: 0.6;
   margin-top: -28px;
   line-height: 1;
   user-select: none;
@@ -923,24 +923,27 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 #inv-footer p {
   font-family: var(--font-serif);
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: var(--text-medium);
-  line-height: 2;
+  line-height: 2.1;
   font-weight: 300;
+  letter-spacing: 0.01em;
 }
 
 .footer-divider {
   width: 70px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
   margin: 22px auto;
 }
 
 .footer-sub {
   font-style: italic !important;
   color: var(--text-light) !important;
-  font-size: 0.92rem !important;
+  font-size: 0.95rem !important;
   margin-bottom: 2px !important;
+  font-weight: 300 !important;
+  letter-spacing: 0.03em !important;
 }
 
 .footer-signature {
@@ -953,26 +956,28 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 
 .signature-name {
   font-family: var(--font-script);
-  font-size: 3.4rem;
-  color: var(--dark-wine);
+  font-size: 3.6rem;
+  color: var(--text-dark);
   line-height: 1;
-  text-shadow: 0 2px 8px rgba(107,45,62,0.1);
+  text-shadow: none;
 }
 
 .signature-amp {
   font-family: var(--font-script);
-  font-size: 1.8rem;
-  color: var(--gold);
+  font-size: 1.9rem;
+  color: var(--gold-dark);
+  opacity: 0.55;
   line-height: 1;
 }
 
 .footer-date {
   font-family: var(--font-display);
-  font-size: 0.6rem;
-  letter-spacing: 0.35em;
-  color: var(--gold);
-  margin-top: 10px;
+  font-size: 0.62rem;
+  letter-spacing: 0.4em;
+  color: var(--text-light);
+  margin-top: 12px;
   text-transform: uppercase;
+  font-weight: 400;
 }
 
 /* ============================================================
