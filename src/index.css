@@ -20,6 +20,25 @@
   }
 }
 
+/* Scrollbar minimalista e discreta para o Modal de RSVP */
+.custom-rsvp-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #D8CDC0 transparent;
+}
+.custom-rsvp-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-rsvp-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-rsvp-scroll::-webkit-scrollbar-thumb {
+  background: #D8CDC0;
+  border-radius: 9999px;
+}
+.custom-rsvp-scroll::-webkit-scrollbar-thumb:hover {
+  background: #B8A594;
+}
+
 @layer utilities {
   .text-fluid-h1 {
     font-size: clamp(4rem, 9vw + 1rem, 6.5rem);
