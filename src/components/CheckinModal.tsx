@@ -87,17 +87,33 @@ export default function CheckinModal() {
 
     const checkUrl = () => {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("checkin") === "true" || window.location.hash.includes("checkin=true")) {
+      const isParam = params.get("checkin") === "true" ||
+        params.get("recepcao") === "true" ||
+        params.get("portaria") === "true";
+      const isHash = window.location.hash.includes("checkin") ||
+        window.location.hash.includes("recepcao") ||
+        window.location.hash.includes("portaria");
+
+      if (isParam || isHash) {
         setIsOpen(true);
         document.body.style.overflow = "hidden";
       }
     };
 
+    const handleOpenRecepcaoEvent = () => {
+      setIsOpen(true);
+      document.body.style.overflow = "hidden";
+    };
+
     checkUrl();
     window.addEventListener("popstate", checkUrl);
+    window.addEventListener("open-recepcao-modal", handleOpenRecepcaoEvent);
+    window.addEventListener("open-checkin-modal", handleOpenRecepcaoEvent);
 
     return () => {
       window.removeEventListener("popstate", checkUrl);
+      window.removeEventListener("open-recepcao-modal", handleOpenRecepcaoEvent);
+      window.removeEventListener("open-checkin-modal", handleOpenRecepcaoEvent);
     };
   }, []);
 
@@ -106,6 +122,8 @@ export default function CheckinModal() {
     document.body.style.overflow = "";
     const url = new URL(window.location.href);
     url.searchParams.delete("checkin");
+    url.searchParams.delete("recepcao");
+    url.searchParams.delete("portaria");
     window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
   };
 

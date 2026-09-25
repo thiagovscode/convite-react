@@ -215,7 +215,7 @@ export default function Modals() {
       )}
 
       {/* Legacy background audio */}
-      <audio id="bg-music" loop preload="none" aria-hidden="true">
+      <audio id="bg-music" src="assets/music/background.mp3" loop preload="auto" aria-hidden="true">
          <source src="assets/music/background.mp3" type="audio/mpeg" />
       </audio>
 

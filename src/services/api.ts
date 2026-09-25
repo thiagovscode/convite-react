@@ -59,29 +59,12 @@ export interface AdminRsvpResponse {
 }
 
 export const getApiBaseUrl = (): string => {
-  // 1. Variável de ambiente do Vite (configurada via VITE_API_URL no .env ou no GitHub Secrets / CI)
+  // Variável de ambiente do Vite (configurada via VITE_API_URL no GitHub Secrets / CI)
   const viteApiUrl = import.meta.env.VITE_API_URL;
   if (viteApiUrl) {
     return String(viteApiUrl).trim().replace(/\/$/, '');
   }
-
-  // 2. Sobrescrita manual opcional em tempo de execução (painel admin / localStorage)
-  if (typeof window !== 'undefined') {
-    const customUrl = localStorage.getItem('CONVITE_API_URL');
-    if (customUrl) {
-      return customUrl.trim().replace(/\/$/, '');
-    }
-  }
-
   return '';
-};
-
-export const setCustomApiUrl = (url: string) => {
-  if (url) {
-    localStorage.setItem('CONVITE_API_URL', url);
-  } else {
-    localStorage.removeItem('CONVITE_API_URL');
-  }
 };
 
 /**

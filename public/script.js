@@ -605,10 +605,14 @@ function initMusicButton() {
 
 function startMusic() {
   const audio = document.getElementById('bg-music');
-  if (!audio.src || audio.src === window.location.href) return;
+  if (!audio) return;
+  const currentSrc = audio.src || audio.currentSrc || audio.querySelector('source')?.src;
+  if (!currentSrc || currentSrc === window.location.href) return;
   audio.play()
     .then(() => { musicPlaying = true; syncMusicIcon(); })
-    .catch(() => { /* autoplay bloqueado */ });
+    .catch((err) => { 
+      console.warn('Autoplay bloqueado pelo navegador ou arquivo ainda não carregado:', err);
+    });
 }
 
 function pauseMusic() {

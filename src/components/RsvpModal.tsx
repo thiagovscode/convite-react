@@ -3,8 +3,7 @@ import {
   enviarRsvpCasamento,
   autenticarAdmin,
   buscarRelatorioRsvpAdmin,
-  getApiBaseUrl,
-  setCustomApiUrl
+  getApiBaseUrl
 } from "../services/api";
 import type {
   AcompanhanteRequest,
@@ -100,8 +99,6 @@ export default function RsvpModal() {
   const [adminData, setAdminData] = useState<AdminRsvpResponse | null>(null);
   const [isLoggedAdmin, setIsLoggedAdmin] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showConfigApi, setShowConfigApi] = useState(false);
-  const [tempApiUrl, setTempApiUrl] = useState(getApiBaseUrl());
 
   const aplicarDadosDoConvite = (c: ConvitePreDefinido) => {
     setConvitePreDefinido(c);
@@ -393,14 +390,6 @@ export default function RsvpModal() {
     localStorage.removeItem("CONVITE_ADMIN_TOKEN");
     setIsLoggedAdmin(false);
     setAdminData(null);
-  };
-
-  const handleSaveApiUrl = () => {
-    setCustomApiUrl(tempApiUrl.trim());
-    setShowConfigApi(false);
-    if (isLoggedAdmin) {
-      carregarRelatorioAdmin();
-    }
   };
 
   if (!isOpen) return null;
@@ -790,7 +779,18 @@ export default function RsvpModal() {
               </span>
               
               {isLoggedAdmin && (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      window.dispatchEvent(new CustomEvent("open-recepcao-modal"));
+                    }}
+                    className="font-display text-[0.72rem] tracking-wider uppercase text-[#543D30] hover:text-[#261811] underline underline-offset-2 transition-colors font-bold"
+                  >
+                    Portaria / Recepção
+                  </button>
+                  <span className="text-[#967D67]">|</span>
                   <button
                     type="button"
                     onClick={() => carregarRelatorioAdmin()}
@@ -799,6 +799,7 @@ export default function RsvpModal() {
                   >
                     Atualizar Dados
                   </button>
+                  <span className="text-[#967D67]">|</span>
                   <button
                     type="button"
                     onClick={handleAdminLogout}
@@ -862,36 +863,21 @@ export default function RsvpModal() {
                   {adminLoading ? "Autenticando..." : "Entrar no Painel"}
                 </button>
 
-                <div className="text-center pt-2">
+                <div className="text-center pt-3 border-t border-[#967D67]/30">
                   <button
                     type="button"
-                    onClick={() => setShowConfigApi(!showConfigApi)}
-                    className="text-[0.72rem] text-[#543D30] underline font-semibold"
+                    onClick={() => {
+                      close();
+                      window.dispatchEvent(new CustomEvent("open-recepcao-modal"));
+                    }}
+                    className="inline-flex items-center gap-1.5 text-[0.75rem] text-[#543D30] hover:text-[#261811] underline underline-offset-4 font-sans tracking-wide font-medium cursor-pointer transition-colors"
                   >
-                    Configurar URL do backend ({getApiBaseUrl()})
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Acessar Tela de Recepção / Portaria
                   </button>
                 </div>
-
-                {showConfigApi && (
-                  <div className="p-3 border border-[#967D67] bg-[#FAF7F0] space-y-2 text-xs">
-                    <label className="block text-[0.68rem] font-display text-[#543D30] uppercase font-bold">
-                      Endereço da API Backend
-                    </label>
-                    <input
-                      type="text"
-                      value={tempApiUrl}
-                      onChange={(e) => setTempApiUrl(e.target.value)}
-                      className="w-full p-1.5 border border-[#967D67] text-xs font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSaveApiUrl}
-                      className="px-3 py-1 bg-[#261811] text-[#F8F4EC] text-xs font-display uppercase tracking-wider font-bold"
-                    >
-                      Salvar URL
-                    </button>
-                  </div>
-                )}
               </form>
             ) : (
               /* SE ESTIVER AUTENTICADO: RELATÓRIO COMPLETO COM ALTO CONTRASTE */
