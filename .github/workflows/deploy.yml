@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # ou master, dependendo do nome da sua branch principal
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,6 +36,8 @@ jobs:
         
       - name: Build project
         run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
