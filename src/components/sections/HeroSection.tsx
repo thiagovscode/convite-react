@@ -26,13 +26,6 @@ export default function HeroSection() {
               className="w-full h-auto object-cover block"
             />
           </div>
-          
-          {/* Brasão */}
-          <div className="absolute top-10 md:top-14 left-1/2 -translate-x-1/2 w-[20%] md:w-[18%] lg:w-[16%] z-20">
-            <div data-aos="zoom-in" data-aos-duration="1200" data-aos-delay="200">
-              <img src="assets/images/brasao.png" alt="Brasão" className="w-full h-auto drop-shadow-md" />
-            </div>
-          </div>
         </div>
 
         {/* Typography & Content */}

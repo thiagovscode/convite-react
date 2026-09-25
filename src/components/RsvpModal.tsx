@@ -17,12 +17,15 @@ import QrCodePass from "./QrCodePass";
 function WeddingCheckbox({
   checked,
   onChange,
+  size = "md",
   ariaLabel
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  size?: "sm" | "md";
   ariaLabel?: string;
 }) {
+  const isSm = size === "sm";
   return (
     <button
       type="button"
@@ -33,17 +36,31 @@ function WeddingCheckbox({
         e.stopPropagation();
         onChange(!checked);
       }}
-      className={`w-[17px] h-[17px] rounded-[3px] border transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer ${
-        checked
-          ? "bg-[#261811] border-[#261811] text-[#FAF7F2]"
-          : "bg-[#FCFBF8] border-[#C4B5A5] hover:border-[#73563E]"
-      }`}
+      className="relative p-1 -m-1 flex items-center justify-center cursor-pointer focus:outline-none"
     >
-      {checked && (
-        <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="2.5 6.5 5 9 9.5 3.5" />
-        </svg>
-      )}
+      <span
+        className={`flex items-center justify-center transition-all duration-150 rounded-[4px] border ${
+          isSm ? "w-[18px] h-[18px]" : "w-[20px] h-[20px]"
+        } ${
+          checked
+            ? "bg-[#261811] border-[#261811] text-white shadow-sm"
+            : "bg-[#FAF7F2] border-[#8C7A6B] hover:border-[#261811]"
+        }`}
+      >
+        {checked && (
+          <svg
+            className={isSm ? "w-3 h-3" : "w-3.5 h-3.5"}
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="2.5 6.5 5 9 9.5 3.5" />
+          </svg>
+        )}
+      </span>
     </button>
   );
 }
@@ -584,17 +601,12 @@ export default function RsvpModal() {
                 {/* Seção de Membros da Família */}
                 {presenca && (
                   <div className="pt-2 space-y-3.5">
-                    <div className="flex justify-between items-baseline border-b border-[#E8DFD5] pb-2">
-                      <div>
-                        <span className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium">
-                          Membros da Família Autorizados
-                        </span>
-                        <span className="text-[0.78rem] text-[#8C7A6B] font-serif italic">
-                          Para crianças, informe a idade.
-                        </span>
-                      </div>
-                      <span className="font-sans text-[0.62rem] tracking-[0.14em] uppercase text-[#8C7A6B]">
-                        Lista Nominal
+                    <div className="border-b border-[#E8DFD5] pb-2">
+                      <span className="block font-sans text-[0.7rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium">
+                        MEMBROS DA FAMÍLIA AUTORIZADOS
+                      </span>
+                      <span className="text-[0.78rem] text-[#8C7A6B] font-serif italic">
+                        Para crianças, informe a idade.
                       </span>
                     </div>
 
@@ -607,48 +619,53 @@ export default function RsvpModal() {
                           return (
                             <div
                               key={m.id}
-                              className={`py-3.5 px-1 space-y-2 transition-colors ${
-                                vai ? "bg-transparent" : "opacity-60"
+                              className={`py-3 px-2 -mx-2 rounded-[3px] transition-colors ${
+                                vai ? "hover:bg-[#F3EDE4]/50" : "opacity-65 hover:opacity-85 hover:bg-[#F3EDE4]/30"
                               }`}
                             >
                               <div
                                 onClick={() => {
                                   setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
                                 }}
-                                className="flex items-center justify-between cursor-pointer group"
+                                className="flex items-center justify-between cursor-pointer select-none group"
                               >
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3.5">
                                   <WeddingCheckbox
+                                    size="md"
                                     checked={vai}
                                     onChange={(checked) => setMembrosPresenca(prev => ({ ...prev, [m.id]: checked }))}
                                     ariaLabel={`Presença de ${m.nome}`}
                                   />
-                                  <p className="font-serif text-[1.02rem] text-[#261811] group-hover:text-[#543D30] transition-colors">
+                                  <p className="font-serif text-[1.05rem] text-[#261811] font-medium group-hover:text-[#543D30] transition-colors">
                                     {m.nome}
                                   </p>
                                 </div>
                                 
                                 <span className={`text-[0.74rem] font-sans transition-colors ${
                                   vai
-                                    ? "text-[#4F634A] font-medium"
+                                    ? "text-[#52634C] font-medium tracking-wide"
                                     : "text-[#A8988B]"
                                 }`}>
                                   {vai ? "✓ Confirmado" : "Não irá"}
                                 </span>
                               </div>
 
-                              {/* Marcação discreta de criança */}
+                              {/* Marcação de faixa etária (Menor de 7 anos) */}
                               {vai && (
-                                <div className="pl-7 pt-1 flex items-center gap-2.5">
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMembrosCrianca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
+                                  }}
+                                  className="pl-8 pt-2 pb-0.5 flex items-center gap-2.5 cursor-pointer select-none group/crianca"
+                                >
                                   <WeddingCheckbox
+                                    size="sm"
                                     checked={isMenor7}
                                     onChange={(checked) => setMembrosCrianca(prev => ({ ...prev, [m.id]: checked }))}
                                     ariaLabel={`Menor de 7 anos: ${m.nome}`}
                                   />
-                                  <span
-                                    onClick={() => setMembrosCrianca(prev => ({ ...prev, [m.id]: !prev[m.id] }))}
-                                    className="text-[0.78rem] font-serif text-[#786455] cursor-pointer select-none"
-                                  >
+                                  <span className="text-[0.82rem] font-serif text-[#786455] group-hover/crianca:text-[#261811] transition-colors">
                                     Menor de 7 anos (0 a 6 anos)
                                   </span>
                                 </div>
@@ -668,10 +685,10 @@ export default function RsvpModal() {
 
                       return (
                         <div className="py-2.5 px-3.5 bg-[#F4EEE6]/50 border-l-2 border-[#8C7A6B]/50 flex items-center justify-between gap-3 text-[#261811] rounded-[1px]">
-                          <span className="font-serif text-[0.88rem] text-[#261811]">
+                          <span className="font-serif text-[0.9rem] text-[#261811]">
                             <strong>{totalQtd}</strong> {totalQtd === 1 ? "convidado confirmado" : "convidados confirmados"}
                           </span>
-                          <span className="text-[0.8rem] font-serif text-[#786455]">
+                          <span className="text-[0.82rem] font-serif text-[#786455]">
                             {adultosQtd} {adultosQtd === 1 ? "adulto" : "adultos"}
                             {criancasQtd > 0 && ` · ${criancasQtd} ${criancasQtd === 1 ? "criança" : "crianças"}`}
                           </span>
