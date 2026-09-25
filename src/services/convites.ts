@@ -39,6 +39,7 @@ export interface FornecedorCasamento {
   nome: string; // Responsável principal (ex: Luciano)
   responsavel?: string;
   papel?: string; // "Fornecedor"
+  categoria?: string; // Ex: Música & Som, Foto & Vídeo, Buffet & Gastronomia, Decoração, Cerimonial & Staff
   servico: string; // Orquestra, Fotografia, Som e DJ, Cerimonial, Buffet, etc.
   empresa: string; // Ex: Harmonia Musical
   telefone?: string; // Contato de emergência da equipe
@@ -173,6 +174,21 @@ export async function buscarConvitePorCodigo(codigo: string): Promise<ConvitePre
   return lista.find(c => c.codigo.toLowerCase() === limpo) || null;
 }
 
+export const RECEPCAO_JWT_STORAGE_KEY = "CASAMENTO_RECEPCAO_JWT_TOKEN";
+
+export function getRecepcaoAuthHeaders(): Record<string, string> {
+  const token = typeof window !== "undefined"
+    ? (localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
+    : null;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json"
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 // 2. Login da equipe de recepção
 export async function loginRecepcaoBackend(username: string, password: string): Promise<{ success: boolean; token?: string; message?: string }> {
   const baseUrl = getApiBaseUrl();
@@ -184,6 +200,9 @@ export async function loginRecepcaoBackend(username: string, password: string): 
     });
     if (res.ok) {
       const data = await res.json();
+      if (data.token) {
+        localStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
+      }
       return { success: true, token: data.token };
     }
     const err = await res.json().catch(() => ({}));
@@ -191,7 +210,9 @@ export async function loginRecepcaoBackend(username: string, password: string): 
   } catch {
     // Autenticação local offline
     if (username.trim().toLowerCase() === "recepcao" && (password === "recepcao2027" || password === "admin123")) {
-      return { success: true, token: "TOKEN_OFFLINE_RECEPCAO" };
+      const offlineToken = "TOKEN_OFFLINE_RECEPCAO";
+      localStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, offlineToken);
+      return { success: true, token: offlineToken };
     }
     return { success: false, message: "Não foi possível conectar ao servidor." };
   }
@@ -208,7 +229,7 @@ export async function registrarCheckinBackend(
   try {
     const res = await fetch(`${baseUrl}/api/recepcao/checkin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify({
         codigo,
         presencas,
@@ -247,7 +268,9 @@ export async function buscarRelatorioAuditoriaBackend(): Promise<RelatorioAudito
   const baseUrl = getApiBaseUrl();
 
   try {
-    const res = await fetch(`${baseUrl}/api/recepcao/auditoria`);
+    const res = await fetch(`${baseUrl}/api/recepcao/auditoria`, {
+      headers: getRecepcaoAuthHeaders()
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -362,7 +385,9 @@ export function salvarParticipantesOffline(lista: ParticipanteCerimonia[]) {
 export async function buscarParticipantesCerimoniaBackend(): Promise<{ total: number; confirmadosRsvp: number; presentes: number; participantes: ParticipanteCerimonia[] }> {
   const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/api/recepcao/participantes`);
+    const res = await fetch(`${baseUrl}/api/recepcao/participantes`, {
+      headers: getRecepcaoAuthHeaders()
+    });
     if (res.ok) {
       const data = await res.json();
       return data;
@@ -385,7 +410,7 @@ export async function checkinParticipanteBackend(id: string, presente?: boolean)
   try {
     const res = await fetch(`${baseUrl}/api/recepcao/participantes/${encodeURIComponent(id)}/checkin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify(presente !== undefined ? { presente } : {})
     });
     if (res.ok) {
@@ -418,7 +443,8 @@ const fornecedoresPadrao: FornecedorCasamento[] = [
     nome: "Luciano",
     responsavel: "Luciano",
     papel: "Fornecedor",
-    servico: "Orquestra",
+    categoria: "Música & Som",
+    servico: "Orquestra da Cerimônia",
     empresa: "Harmonia Musical",
     telefone: "(11) 98111-2233",
     horarioPrevisto: "14:00",
@@ -436,6 +462,7 @@ const fornecedoresPadrao: FornecedorCasamento[] = [
     nome: "Camila",
     responsavel: "Camila",
     papel: "Fornecedor",
+    categoria: "Foto & Vídeo",
     servico: "Fotografia & Vídeo",
     empresa: "Studio Lumière",
     telefone: "(11) 98222-3344",
@@ -453,6 +480,7 @@ const fornecedoresPadrao: FornecedorCasamento[] = [
     nome: "DJ Rodrigo",
     responsavel: "DJ Rodrigo",
     papel: "Fornecedor",
+    categoria: "Música & Som",
     servico: "Som e Iluminação",
     empresa: "Beat & Light",
     telefone: "(11) 98333-4455",
@@ -462,6 +490,24 @@ const fornecedoresPadrao: FornecedorCasamento[] = [
     equipe: [
       { id: "f3-1", nome: "DJ Rodrigo", funcao: "DJ e Operador", presente: false },
       { id: "f3-2", nome: "Tiago", funcao: "Técnico de Som", presente: false }
+    ]
+  },
+  {
+    id: "forn-4",
+    nome: "Marcelo",
+    responsavel: "Marcelo",
+    papel: "Fornecedor",
+    categoria: "Buffet & Gastronomia",
+    servico: "Buffet Completo & Bar",
+    empresa: "Gastronomia Imperial",
+    telefone: "(11) 98444-5566",
+    horarioPrevisto: "12:00",
+    instrucaoChegada: "Cozinha e bar liberados a partir das 12:00 para preparo e mise en place",
+    chegadaAntecipada: true,
+    equipe: [
+      { id: "f4-1", nome: "Marcelo", funcao: "Chef Executivo", presente: false },
+      { id: "f4-2", nome: "Renata", funcao: "Maître", presente: false },
+      { id: "f4-3", nome: "Gustavo", funcao: "Chefe de Bar", presente: false }
     ]
   }
 ];
@@ -492,7 +538,9 @@ export async function buscarFornecedoresBackend(): Promise<{
 }> {
   const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/api/recepcao/fornecedores`);
+    const res = await fetch(`${baseUrl}/api/recepcao/fornecedores`, {
+      headers: getRecepcaoAuthHeaders()
+    });
     if (res.ok) {
       const data = await res.json();
       return data;
@@ -528,7 +576,7 @@ export async function checkinMembroFornecedorBackend(
   try {
     const res = await fetch(`${baseUrl}/api/recepcao/fornecedores/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}/checkin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify(presente !== undefined ? { presente } : {})
     });
     if (res.ok) {
@@ -561,7 +609,7 @@ export async function adicionarMembroFornecedorBackend(
   try {
     const res = await fetch(`${baseUrl}/api/recepcao/fornecedores/${encodeURIComponent(fornecedorId)}/membros`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify(novoMembro)
     });
     if (res.ok) {
@@ -595,7 +643,7 @@ export async function cadastrarFornecedorBackend(novo: Partial<FornecedorCasamen
   try {
     const res = await fetch(`${baseUrl}/api/recepcao/fornecedores`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify(novo)
     });
     if (res.ok) {

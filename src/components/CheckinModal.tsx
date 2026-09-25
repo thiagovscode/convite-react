@@ -57,11 +57,13 @@ export default function CheckinModal() {
   // Fornecedores & Staff
   const [fornecedores, setFornecedores] = useState<FornecedorCasamento[]>([]);
   const [carregandoFornecedores, setCarregandoFornecedores] = useState(false);
+  const [filtroCategoriaFornecedor, setFiltroCategoriaFornecedor] = useState<string>("TODAS");
   const [modalNovoFornecedor, setModalNovoFornecedor] = useState(false);
   const [membroExtraNome, setMembroExtraNome] = useState<Record<string, string>>({});
   const [membroExtraFuncao, setMembroExtraFuncao] = useState<Record<string, string>>({});
   const [novoFornecedor, setNovoFornecedor] = useState({
     nome: "",
+    categoria: "Música & Som",
     servico: "Orquestra",
     empresa: "",
     telefone: "",
@@ -169,6 +171,7 @@ export default function CheckinModal() {
       setModalNovoFornecedor(false);
       setNovoFornecedor({
         nome: "",
+        categoria: "Música & Som",
         servico: "Orquestra",
         empresa: "",
         telefone: "",
@@ -243,6 +246,7 @@ export default function CheckinModal() {
 
   const handleLogoutRecepcao = () => {
     localStorage.removeItem(RECEPCAO_AUTH_KEY);
+    localStorage.removeItem("CASAMENTO_RECEPCAO_JWT_TOKEN");
     setIsAutenticado(false);
     setConviteAtual(null);
   };
@@ -884,17 +888,40 @@ export default function CheckinModal() {
                       Contatos de Fornecedores &amp; Chegada da Equipe
                     </h3>
                     <p className="font-serif italic text-xs text-[#543D30]">
-                      Telefones rápidos e check-in nominal por profissional da equipe.
+                      Telefones rápidos, categorias macro e check-in nominal por profissional da equipe.
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setModalNovoFornecedor(true)}
-                    className="bg-[#261811] hover:bg-[#3D281E] text-[#F8F4EC] px-3 py-1.5 font-display text-[0.68rem] tracking-wider uppercase font-bold rounded-sm transition-colors cursor-pointer"
-                  >
-                    + Adicionar Fornecedor
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-display uppercase tracking-wider text-[#453126]">
+                        Categoria:
+                      </span>
+                      <select
+                        value={filtroCategoriaFornecedor}
+                        onChange={(e) => setFiltroCategoriaFornecedor(e.target.value)}
+                        className="bg-[#FAF7F0] border border-[#967D67] text-xs font-serif px-2 py-1 text-[#261811] focus:outline-none"
+                      >
+                        <option value="TODAS">Todas as Categorias</option>
+                        <option value="Música & Som">Música &amp; Som</option>
+                        <option value="Foto & Vídeo">Foto &amp; Filmagem</option>
+                        <option value="Buffet & Gastronomia">Buffet &amp; Gastronomia</option>
+                        <option value="Decoração & Cenografia">Decoração &amp; Flores</option>
+                        <option value="Cerimonial & Assessoria">Cerimonial &amp; Staff</option>
+                        <option value="Estrutura & Iluminação">Estrutura &amp; Iluminação</option>
+                        <option value="Beleza & Estilo">Beleza &amp; Vestimenta</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalNovoFornecedor(true)}
+                      className="bg-[#261811] hover:bg-[#3D281E] text-[#F8F4EC] px-3 py-1 font-display text-[0.68rem] tracking-wider uppercase font-bold rounded-sm transition-colors cursor-pointer"
+                    >
+                      + Cadastrar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Métricas de Fornecedores */}
@@ -943,11 +970,28 @@ export default function CheckinModal() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[0.65rem] font-display uppercase text-[#543D30] font-bold mb-0.5">Serviço / Categoria</label>
+                        <label className="block text-[0.65rem] font-display uppercase text-[#543D30] font-bold mb-0.5">Categoria Principal</label>
+                        <select
+                          value={novoFornecedor.categoria}
+                          onChange={e => setNovoFornecedor({...novoFornecedor, categoria: e.target.value})}
+                          className="w-full bg-[#FAF7F0] border border-[#967D67] px-2 py-1 text-[#261811] focus:outline-none"
+                        >
+                          <option value="Música & Som">Música &amp; Som</option>
+                          <option value="Foto & Vídeo">Foto &amp; Filmagem</option>
+                          <option value="Buffet & Gastronomia">Buffet &amp; Gastronomia</option>
+                          <option value="Decoração & Cenografia">Decoração &amp; Flores</option>
+                          <option value="Cerimonial & Assessoria">Cerimonial &amp; Staff</option>
+                          <option value="Estrutura & Iluminação">Estrutura &amp; Iluminação</option>
+                          <option value="Beleza & Estilo">Beleza &amp; Vestimenta</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[0.65rem] font-display uppercase text-[#543D30] font-bold mb-0.5">Especialidade / Serviço</label>
                         <input
                           type="text"
                           required
-                          placeholder="Ex: Orquestra, Fotógrafo, Som"
+                          placeholder="Ex: Orquestra da Cerimônia, DJ, Bar"
                           value={novoFornecedor.servico}
                           onChange={e => setNovoFornecedor({...novoFornecedor, servico: e.target.value})}
                           className="w-full bg-[#FAF7F0] border border-[#967D67] px-2 py-1 text-[#261811]"
@@ -984,11 +1028,11 @@ export default function CheckinModal() {
                           className="w-full bg-[#FAF7F0] border border-[#967D67] px-2 py-1 text-[#261811]"
                         />
                       </div>
-                      <div>
+                      <div className="sm:col-span-2">
                         <label className="block text-[0.65rem] font-display uppercase text-[#543D30] font-bold mb-0.5">Instrução / Chegada Antecipada</label>
                         <input
                           type="text"
-                          placeholder="Ex: Chegada antecipada para afinação e montagem"
+                          placeholder="Ex: Chegada antecipada para afinação e montagem de som"
                           value={novoFornecedor.instrucaoChegada}
                           onChange={e => setNovoFornecedor({...novoFornecedor, instrucaoChegada: e.target.value, chegadaAntecipada: !!e.target.value})}
                           className="w-full bg-[#FAF7F0] border border-[#967D67] px-2 py-1 text-[#261811]"
@@ -1008,16 +1052,18 @@ export default function CheckinModal() {
 
                 {/* Lista de Fornecedores com Equipe Nominal */}
                 <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1">
-                  {fornecedores.map((f: FornecedorCasamento) => {
+                  {fornecedores
+                    .filter((f: FornecedorCasamento) => filtroCategoriaFornecedor === "TODAS" || (f.categoria && f.categoria.toLowerCase() === filtroCategoriaFornecedor.toLowerCase()))
+                    .map((f: FornecedorCasamento) => {
                     const equipe = f.equipe || [];
                     const totalPresentes = equipe.filter((m: MembroEquipeFornecedor) => m.presente).length;
 
                     return (
                       <div
                         key={f.id || f.empresa}
-                        className="p-3.5 border-2 border-[#967D67] bg-[#FAF7F0] space-y-3"
+                        className="p-3.5 border-2 border-[#967D67] bg-[#FAF7F0] space-y-3 rounded-xs"
                       >
-                        {/* Linha 1: Luciano > Fornecedor > Orquestra -> Harmonia Musical */}
+                        {/* Linha 1: Luciano > Fornecedor [Categoria] > Orquestra -> Harmonia Musical */}
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#967D67]/40 pb-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-serif text-base font-bold text-[#261811]">
@@ -1027,8 +1073,13 @@ export default function CheckinModal() {
                             <span className="px-2 py-0.5 font-display text-[0.65rem] uppercase font-bold tracking-wider bg-[#261811] text-[#F8F4EC] rounded-xs border border-[#967D67]">
                               {f.papel || "Fornecedor"}
                             </span>
+                            {f.categoria && (
+                              <span className="px-2 py-0.5 font-display text-[0.62rem] uppercase font-bold tracking-wider bg-[#EAE0D2] text-[#453126] rounded-xs border border-[#967D67]/60">
+                                📁 {f.categoria}
+                              </span>
+                            )}
                             <span className="text-[#967D67] font-sans font-light">&gt;</span>
-                            <span className="px-2 py-0.5 font-display text-[0.65rem] uppercase font-bold tracking-wider bg-[#EAE0D2] text-[#261811] rounded-xs border border-[#967D67]">
+                            <span className="px-2 py-0.5 font-display text-[0.65rem] uppercase font-semibold tracking-wider bg-white text-[#261811] rounded-xs border border-[#967D67]/50">
                               {f.servico}
                             </span>
                             <span className="text-[#967D67] font-sans font-light">&rarr;</span>
