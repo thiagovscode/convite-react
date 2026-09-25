@@ -176,6 +176,13 @@ export default function RsvpModal() {
           }
         });
       }
+
+      // 3. Abre direto o formulário se tiver ?rsvp=true ou #rsvp
+      if (params.get("rsvp") === "true" || window.location.hash.includes("rsvp")) {
+        setIsOpen(true);
+        setMode("guest");
+        document.body.style.overflow = "hidden";
+      }
     };
 
     checkUrlParams();

@@ -5,7 +5,21 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 
 function App() {
-  const [isOpened, setIsOpened] = useState(false);
+  const [isOpened, setIsOpened] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    return (
+      params.get("recepcao") === "true" ||
+      params.get("checkin") === "true" ||
+      params.get("portaria") === "true" ||
+      params.get("admin") === "true" ||
+      hash.includes("recepcao") ||
+      hash.includes("checkin") ||
+      hash.includes("portaria") ||
+      hash.includes("admin")
+    );
+  });
 
   useEffect(() => {
     // Initialize AOS only after the envelope opens, to avoid animations triggering while hidden

@@ -61,9 +61,15 @@ export interface AdminRsvpResponse {
 export const getApiBaseUrl = (): string => {
   // Variável de ambiente do Vite (configurada via VITE_API_URL no GitHub Secrets / CI)
   const viteApiUrl = import.meta.env.VITE_API_URL;
-  if (viteApiUrl) {
+  if (viteApiUrl && String(viteApiUrl).trim() !== '') {
     return String(viteApiUrl).trim().replace(/\/$/, '');
   }
+
+  // Garantia de produção: se estiver no GitHub Pages e a variável não foi injetada no build
+  if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+    return 'https://casamento.southiagovasconcelos.workers.dev';
+  }
+
   return '';
 };
 
