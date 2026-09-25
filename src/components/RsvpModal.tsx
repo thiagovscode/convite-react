@@ -33,7 +33,13 @@ export default function RsvpModal() {
   const [codigoConviteUrl, setCodigoConviteUrl] = useState("");
   const [convitePreDefinido, setConvitePreDefinido] = useState<ConvitePreDefinido | null>(null);
   const [membrosPresenca, setMembrosPresenca] = useState<Record<string, boolean>>({});
+  const [membrosCrianca, setMembrosCrianca] = useState<Record<string, boolean>>({});
   const [passeInfo, setPasseInfo] = useState<any>(null);
+
+  // Localização manual de convite caso acesse sem o parâmetro na URL
+  const [termoBuscaConvite, setTermoBuscaConvite] = useState("");
+  const [buscandoConvite, setBuscandoConvite] = useState(false);
+  const [erroConviteNaoEncontrado, setErroConviteNaoEncontrado] = useState("");
 
   // Admin State
   const [adminUsername, setAdminUsername] = useState("admin");
@@ -45,6 +51,52 @@ export default function RsvpModal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showConfigApi, setShowConfigApi] = useState(false);
   const [tempApiUrl, setTempApiUrl] = useState(getApiBaseUrl());
+
+  const aplicarDadosDoConvite = (c: ConvitePreDefinido) => {
+    setConvitePreDefinido(c);
+    setCodigoConviteUrl(c.codigo);
+    setErroConviteNaoEncontrado("");
+
+    const titular = c.membros.find(m => m.titular) || c.membros[0];
+    if (titular) setNome(titular.nome);
+    if (c.telefone) setTelefone(c.telefone);
+
+    const mapP: Record<string, boolean> = {};
+    const mapC: Record<string, boolean> = {};
+
+    c.membros.forEach(m => {
+      mapP[m.id] = true;
+      mapC[m.id] = !!m.criancaAte6Anos;
+    });
+
+    setMembrosPresenca(mapP);
+    setMembrosCrianca(mapC);
+
+    const outros = c.membros.filter(m => m.id !== titular?.id);
+    setAcompanhantes(outros.map(m => ({
+      nome: m.nome,
+      criancaAte6Anos: Boolean(m.criancaAte6Anos)
+    })));
+  };
+
+  const handleBuscarConviteManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const termo = termoBuscaConvite.trim();
+    if (!termo) return;
+
+    setBuscandoConvite(true);
+    setErroConviteNaoEncontrado("");
+
+    const c = await buscarConvitePorCodigo(termo);
+    setBuscandoConvite(false);
+
+    if (c) {
+      aplicarDadosDoConvite(c);
+      setTermoBuscaConvite("");
+    } else {
+      setErroConviteNaoEncontrado(`Não encontramos convite com o código ou nome "${termo}". O RSVP deste casamento é restrito aos convidados da lista oficial. Por favor, verifique com os noivos.`);
+    }
+  };
 
   // Acesso exclusivo do noivo via URL com ?admin=true ou #admin=true
   useEffect(() => {
@@ -72,24 +124,7 @@ export default function RsvpModal() {
         setCodigoConviteUrl(cod);
         buscarConvitePorCodigo(cod).then((c) => {
           if (c) {
-            setConvitePreDefinido(c);
-            const titular = c.membros.find(m => m.titular) || c.membros[0];
-            if (titular) setNome(titular.nome);
-            if (c.telefone) setTelefone(c.telefone);
-
-            // Mapeia presença padrão (true para todos)
-            const mapP: Record<string, boolean> = {};
-            c.membros.forEach(m => {
-              mapP[m.id] = true;
-            });
-            setMembrosPresenca(mapP);
-
-            // Popula lista inicial de acompanhantes autorizados (excluindo o titular)
-            const outros = c.membros.filter(m => m.id !== titular?.id);
-            setAcompanhantes(outros.map(m => ({
-              nome: m.nome,
-              criancaAte6Anos: m.criancaAte6Anos
-            })));
+            aplicarDadosDoConvite(c);
           }
         });
       }
@@ -210,7 +245,7 @@ export default function RsvpModal() {
           .filter(m => !!membrosPresenca[m.id])
           .map(m => ({
             nome: m.nome,
-            criancaAte6Anos: m.criancaAte6Anos
+            criancaAte6Anos: Boolean(membrosCrianca[m.id])
           }));
         
         listaAcompanhantesEnvio.forEach(a => nomesConfirmadosParaPasse.push(a.nome));
@@ -351,116 +386,183 @@ export default function RsvpModal() {
         </div>
 
         {/* ========================================================================= */}
-        {/* MODO GUEST: FORMULÁRIO DE CONFIRMAÇÃO DE PRESENÇA (SEM LINKS DE ADMIN)   */}
+        {/* MODO GUEST: EXIGE CONVITE OFICIAL E SELETOR DE IDADE PARA O BUFFET        */}
         {/* ========================================================================= */}
         {mode === "guest" && (
-          <form onSubmit={handleSubmit} className="overflow-y-auto overscroll-contain pr-1 space-y-4 sm:space-y-5 flex-1">
-            <p className="font-serif italic text-[0.98rem] sm:text-[1.05rem] text-[#453126] leading-relaxed">
-              Será uma grande honra celebrar este dia inesquecível ao seu lado. Confirme sua resposta abaixo.
-            </p>
+          <div className="overflow-y-auto overscroll-contain pr-1 flex-1">
+            {!convitePreDefinido ? (
+              <div className="space-y-4 py-2">
+                <div className="bg-[#EAE0D2] border-2 border-[#967D67] p-4 text-left rounded-sm space-y-3">
+                  <span className="font-display text-[0.68rem] tracking-widest uppercase text-[#543D30] font-bold block">
+                    Confirmação Exclusiva da Lista Oficial
+                  </span>
+                  <h3 className="font-serif text-xl font-bold text-[#261811]">
+                    Localize o seu Convite
+                  </h3>
+                  <p className="font-serif italic text-xs text-[#453126]">
+                    A confirmação de presença é restrita aos convidados da lista dos noivos.
+                    Por favor, informe o código do seu convite ou o sobrenome da sua família:
+                  </p>
 
-            {errorMsg && (
-              <div className="bg-[#EAE0D2] border border-[#967D67] p-3 text-[0.9rem] text-[#261811] rounded-sm font-sans flex items-center gap-2">
-                <span className="font-bold text-red-900">[Atenção]</span>
-                <span>{errorMsg}</span>
+                  <form onSubmit={handleBuscarConviteManual} className="pt-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        required
+                        value={termoBuscaConvite}
+                        onChange={(e) => setTermoBuscaConvite(e.target.value)}
+                        placeholder="Ex: fulana, silva, vasconcelos"
+                        className="flex-1 bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={buscandoConvite}
+                        className="bg-[#261811] hover:bg-[#3D281E] text-[#F8F4EC] px-4 py-2 font-display text-xs tracking-wider uppercase font-bold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {buscandoConvite ? "Buscando..." : "Localizar"}
+                      </button>
+                    </div>
+                  </form>
+
+                  {erroConviteNaoEncontrado && (
+                    <div className="p-3 bg-red-100 border border-red-500 text-xs text-red-950 font-semibold mt-2">
+                      {erroConviteNaoEncontrado}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center pt-2">
+                  <p className="font-serif italic text-xs text-[#543D30]">
+                    Dúvidas ou não localizou seu convite? Entre em contato diretamente com os noivos.
+                  </p>
+                </div>
               </div>
-            )}
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                {/* Banner de Boas-vindas à Família */}
+                <div className="bg-[#EAE0D2] border-2 border-[#967D67] p-3 text-left rounded-sm">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-display text-[0.65rem] tracking-widest uppercase text-[#543D30] font-bold block">
+                        Convite Nominal Confirmado
+                      </span>
+                      <h3 className="font-serif text-lg font-bold text-[#261811]">
+                        {convitePreDefinido.familia}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConvitePreDefinido(null)}
+                      className="text-[0.68rem] text-[#543D30] underline hover:text-[#261811] font-serif"
+                    >
+                      Trocar convite
+                    </button>
+                  </div>
+                  <p className="font-serif italic text-xs text-[#453126] mt-1">
+                    Será uma grande honra celebrar este dia com vocês. Confirme abaixo a presença da sua família:
+                  </p>
+                </div>
 
-            {/* Alternador de Presença */}
-            <div>
-              <label className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-2">
-                Você comparecerá ao casamento? *
-              </label>
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPresenca(true)}
-                  className={`min-h-[46px] py-3 px-2 border text-center transition-all text-[0.88rem] sm:text-[0.95rem] font-serif font-semibold ${
-                    presenca
-                      ? "border-[#261811] bg-[#261811] text-[#F8F4EC] shadow-sm"
-                      : "border-[#967D67] bg-[#EFE7DC] text-[#261811] hover:border-[#543D30]"
-                  }`}
-                >
-                  Sim, confirmo presença
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPresenca(false)}
-                  className={`min-h-[46px] py-3 px-2 border text-center transition-all text-[0.88rem] sm:text-[0.95rem] font-serif font-semibold ${
-                    !presenca
-                      ? "border-[#261811] bg-[#261811] text-[#F8F4EC] shadow-sm"
-                      : "border-[#967D67] bg-[#EFE7DC] text-[#261811] hover:border-[#543D30]"
-                  }`}
-                >
-                  Não poderei ir
-                </button>
-              </div>
-            </div>
+                {errorMsg && (
+                  <div className="bg-[#EAE0D2] border border-[#967D67] p-3 text-[0.9rem] text-[#261811] rounded-sm font-sans flex items-center gap-2">
+                    <span className="font-bold text-red-900">[Atenção]</span>
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
 
-            {/* Nome Completo */}
-            <div>
-              <label htmlFor="rsvp-nome" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
-                Seu Nome Completo *
-              </label>
-              <input
-                id="rsvp-nome"
-                type="text"
-                required
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Ana Maria Silva"
-                className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
-              />
-            </div>
+                {/* Alternador de Presença Geral */}
+                <div>
+                  <label className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-2">
+                    Vocês comparecerão ao casamento? *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPresenca(true)}
+                      className={`min-h-[46px] py-3 px-2 border text-center transition-all text-[0.88rem] sm:text-[0.95rem] font-serif font-semibold ${
+                        presenca
+                          ? "border-[#261811] bg-[#261811] text-[#F8F4EC] shadow-sm"
+                          : "border-[#967D67] bg-[#EFE7DC] text-[#261811] hover:border-[#543D30]"
+                      }`}
+                    >
+                      Sim, confirmamos presença
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresenca(false)}
+                      className={`min-h-[46px] py-3 px-2 border text-center transition-all text-[0.88rem] sm:text-[0.95rem] font-serif font-semibold ${
+                        !presenca
+                          ? "border-[#261811] bg-[#261811] text-[#F8F4EC] shadow-sm"
+                          : "border-[#967D67] bg-[#EFE7DC] text-[#261811] hover:border-[#543D30]"
+                      }`}
+                    >
+                      Infelizmente não poderemos ir
+                    </button>
+                  </div>
+                </div>
 
-            {/* Telefone / WhatsApp */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label htmlFor="rsvp-telefone" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
-                  WhatsApp / Celular *
-                </label>
-                <input
-                  id="rsvp-telefone"
-                  type="tel"
-                  required
-                  value={telefone}
-                  onChange={handleTelefoneChange}
-                  placeholder="(11) 99999-9999"
-                  className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
-                />
-              </div>
+                {/* Nome do Titular */}
+                <div>
+                  <label htmlFor="rsvp-nome" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
+                    Nome do Titular do Convite *
+                  </label>
+                  <input
+                    id="rsvp-nome"
+                    type="text"
+                    required
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome completo"
+                    className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="rsvp-email" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
-                  E-mail <span className="lowercase font-sans opacity-75">(opcional)</span>
-                </label>
-                <input
-                  id="rsvp-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="exemplo@email.com"
-                  className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
-                />
-              </div>
-            </div>
+                {/* Telefone / WhatsApp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label htmlFor="rsvp-telefone" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
+                      WhatsApp / Celular *
+                    </label>
+                    <input
+                      id="rsvp-telefone"
+                      type="tel"
+                      required
+                      value={telefone}
+                      onChange={handleTelefoneChange}
+                      placeholder="(11) 99999-9999"
+                      className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
+                    />
+                  </div>
 
-            {/* Seção de Acompanhantes (somente quando confirmou presença) */}
-            {presenca && (
-              <div className="border-t border-[#967D67] pt-4 mt-2">
-                {convitePreDefinido ? (
-                  <div className="space-y-3">
+                  <div>
+                    <label htmlFor="rsvp-email" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
+                      E-mail <span className="lowercase font-sans opacity-75">(opcional)</span>
+                    </label>
+                    <input
+                      id="rsvp-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="exemplo@email.com"
+                      className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2.5 text-[#261811] font-serif text-[1.05rem] focus:outline-none focus:border-[#261811] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Seção de Membros e Critério de Criança para o Buffet */}
+                {presenca && (
+                  <div className="border-t border-[#967D67] pt-4 mt-2 space-y-3">
                     <div className="flex justify-between items-center mb-1">
                       <div>
                         <span className="block font-display text-[0.74rem] tracking-[0.25em] uppercase text-[#543D30] font-bold">
                           Membros da Família Autorizados
                         </span>
                         <span className="text-[0.84rem] text-[#453126] font-serif italic">
-                          Selecione quem da família comparecerá com você
+                          Marque quem irá e defina a faixa etária para o buffet
                         </span>
                       </div>
                       <span className="font-display text-[0.65rem] tracking-wider uppercase bg-[#EAE0D2] border border-[#967D67] px-2 py-1 text-[#543D30] font-bold">
-                        Convite Nominal
+                        Lista Restrita
                       </span>
                     </div>
 
@@ -469,157 +571,135 @@ export default function RsvpModal() {
                         .filter(m => !m.titular && m.nome !== nome)
                         .map((m) => {
                           const vai = !!membrosPresenca[m.id];
+                          const isMenor7 = !!membrosCrianca[m.id];
                           return (
                             <div
                               key={m.id}
-                              onClick={() => {
-                                setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
-                              }}
-                              className={`p-3 flex items-center justify-between cursor-pointer transition-colors ${
+                              className={`p-3 space-y-2.5 transition-colors ${
                                 vai ? "bg-[#FAF7F0]" : "bg-[#EAE0D2]/70 opacity-75"
                               }`}
                             >
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={vai}
-                                  onChange={() => {
-                                    setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
-                                  }}
-                                  className="w-4 h-4 accent-[#261811] cursor-pointer"
-                                />
-                                <div>
-                                  <p className="font-serif text-[0.95rem] font-semibold text-[#261811]">
-                                    {m.nome}
-                                  </p>
-                                  <p className="font-serif text-xs text-[#543D30]">
-                                    {m.criancaAte6Anos ? "Criança (menor de 7 anos)" : "Adulto / a partir de 7 anos"}
-                                  </p>
+                              <div
+                                onClick={() => {
+                                  setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
+                                }}
+                                className="flex items-center justify-between cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={vai}
+                                    onChange={() => {
+                                      setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
+                                    }}
+                                    className="w-4 h-4 accent-[#261811] cursor-pointer"
+                                  />
+                                  <div>
+                                    <p className="font-serif text-[0.98rem] font-semibold text-[#261811]">
+                                      {m.nome}
+                                    </p>
+                                  </div>
                                 </div>
+                                <span className={`text-[0.7rem] font-display uppercase tracking-wider font-bold px-2 py-0.5 border ${
+                                  vai
+                                    ? "bg-emerald-100 border-emerald-600 text-emerald-950"
+                                    : "bg-[#DBCABA] border-[#967D67] text-[#543D30]"
+                                }`}>
+                                  {vai ? "Confirmado" : "Não irá"}
+                                </span>
                               </div>
-                              <span className={`text-[0.7rem] font-display uppercase tracking-wider font-bold px-2 py-0.5 border ${
-                                vai
-                                  ? "bg-emerald-100 border-emerald-600 text-emerald-950"
-                                  : "bg-[#DBCABA] border-[#967D67] text-[#543D30]"
-                              }`}>
-                                {vai ? "Confirmado" : "Não irá"}
-                              </span>
+
+                              {/* Pergunta de idade caso a pessoa compareça */}
+                              {vai && (
+                                <div className="pl-7 pt-2 border-t border-[#EAE0D2]">
+                                  <span className="block font-display text-[0.62rem] uppercase tracking-wider text-[#543D30] font-bold mb-1">
+                                    Classificação para o Buffet:
+                                  </span>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setMembrosCrianca(prev => ({ ...prev, [m.id]: false }))}
+                                      className={`py-1.5 px-2.5 text-xs font-serif text-left border rounded-sm transition-all cursor-pointer ${
+                                        !isMenor7
+                                          ? "bg-[#261811] text-[#F8F4EC] border-[#261811] font-semibold shadow-xs"
+                                          : "bg-[#EFE7DC] text-[#261811] border-[#967D67] hover:border-[#261811]"
+                                      }`}
+                                    >
+                                      Adulto ou a partir de 7 anos
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setMembrosCrianca(prev => ({ ...prev, [m.id]: true }))}
+                                      className={`py-1.5 px-2.5 text-xs font-serif text-left border rounded-sm transition-all cursor-pointer ${
+                                        isMenor7
+                                          ? "bg-[#261811] text-[#F8F4EC] border-[#261811] font-semibold shadow-xs"
+                                          : "bg-[#EFE7DC] text-[#261811] border-[#967D67] hover:border-[#261811]"
+                                      }`}
+                                    >
+                                      Criança menor de 7 anos (0 a 6 anos)
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
                     </div>
 
                     <p className="text-[0.78rem] text-[#543D30] font-serif italic pt-1">
-                      ℹ️ Este convite é nominal e exclusivo para sua família autorizada. Não é permitido adicionar outras pessoas.
+                      ℹ️ Este convite é nominal e restrito aos membros autorizados da sua família.
                     </p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <span className="block font-display text-[0.74rem] tracking-[0.25em] uppercase text-[#543D30] font-bold">
-                          Acompanhantes
-                        </span>
-                        <span className="text-[0.84rem] text-[#453126] font-serif italic">
-                          Adicione os membros da sua família que irão com você
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addAcompanhante}
-                        className="font-display text-[0.72rem] tracking-[0.15em] uppercase text-[#261811] border-2 border-[#967D67] bg-[#EAE0D2] px-3 py-1.5 transition-colors font-bold hover:bg-[#D5C6B5]"
-                      >
-                        + Adicionar
-                      </button>
-                    </div>
 
-                    {acompanhantes.length === 0 ? (
-                      <p className="text-[0.92rem] text-[#453126] font-serif italic py-1">
-                        Nenhum acompanhante adicionado. Apenas o titular será confirmado.
-                      </p>
-                    ) : (
-                      <div className="space-y-3 mt-2">
-                        {acompanhantes.map((acomp, idx) => (
-                          <div key={idx} className="p-3 border-2 border-[#967D67] bg-[#EAE0D2] space-y-2 rounded-sm">
-                            <div className="flex justify-between items-center gap-2">
-                              <span className="font-display text-[0.7rem] tracking-wider uppercase text-[#543D30] font-bold">
-                                Acompanhante #{idx + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeAcompanhante(idx)}
-                                className="text-[#543D30] hover:text-red-900 text-xs font-sans font-bold p-1"
-                              >
-                                Remover
-                              </button>
-                            </div>
+                    {/* Resumo dinâmico da família para conferência imediata */}
+                    {(() => {
+                      const outrosConfirmados = convitePreDefinido.membros
+                        .filter(m => !m.titular && m.nome !== nome && !!membrosPresenca[m.id]);
+                      const criancasQtd = outrosConfirmados.filter(m => !!membrosCrianca[m.id]).length;
+                      const adultosQtd = 1 + outrosConfirmados.filter(m => !membrosCrianca[m.id]).length;
+                      const totalQtd = adultosQtd + criancasQtd;
 
-                            <input
-                              type="text"
-                              required
-                              value={acomp.nome}
-                              onChange={(e) => updateAcompanhante(idx, "nome", e.target.value)}
-                              placeholder="Nome completo do acompanhante"
-                              className="w-full bg-[#FAF7F0] border border-[#967D67] px-3 py-2 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#261811]"
-                            />
-
-                            {/* Checkbox Criança até 6 anos */}
-                            <label className="flex items-center gap-2.5 cursor-pointer pt-1">
-                              <input
-                                type="checkbox"
-                                checked={acomp.criancaAte6Anos}
-                                onChange={(e) => updateAcompanhante(idx, "criancaAte6Anos", e.target.checked)}
-                                className="w-4 h-4 accent-[#261811] rounded border-[#967D67]"
-                              />
-                              <span className="text-[0.9rem] font-serif text-[#261811] font-medium">
-                                Criança menor de 7 anos <span className="text-[#453126] italic">(0 a 6 anos)</span>
-                              </span>
-                            </label>
-                          </div>
-                        ))}
-
-                        {/* Resumo dinâmico em tempo real */}
+                      return (
                         <div className="p-3 bg-[#E4D9CA] border-2 border-[#967D67] text-[0.9rem] font-serif text-[#261811] flex flex-wrap justify-between gap-2 font-semibold">
-                          <span>Total: <strong>{totalGeralPessoas} {totalGeralPessoas > 1 ? "pessoas" : "pessoa"}</strong></span>
-                          <span>Adultos / ≥ 7 anos: <strong>{totalGeralAdultos}</strong></span>
-                          {totalAcompanhantesCriancas > 0 && (
-                            <span>Menores de 7 anos: <strong>{totalAcompanhantesCriancas}</strong></span>
+                          <span>Total Confirmado: <strong>{totalQtd} {totalQtd > 1 ? "pessoas" : "pessoa"}</strong></span>
+                          <span>Adultos (≥ 7 anos): <strong>{adultosQtd}</strong></span>
+                          {criancasQtd > 0 && (
+                            <span>Crianças menores de 7 anos: <strong>{criancasQtd}</strong></span>
                           )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
-              </div>
+
+                {/* Observações / Mensagem */}
+                <div>
+                  <label htmlFor="rsvp-obs" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
+                    Mensagem para os noivos ou observações <span className="lowercase font-sans opacity-75">(opcional)</span>
+                  </label>
+                  <textarea
+                    id="rsvp-obs"
+                    rows={2}
+                    maxLength={500}
+                    value={observacao}
+                    onChange={(e) => setObservacao(e.target.value)}
+                    placeholder="Ex: Restrição alimentar (vegetariano/intolerância) ou mensagem com carinho."
+                    className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#261811] transition-colors resize-none"
+                  />
+                </div>
+
+                {/* Botão de Envio */}
+                <div className="pt-2 pb-1">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full min-h-[48px] py-3.5 bg-[#261811] text-[#F8F4EC] font-display text-[0.84rem] tracking-[0.25em] uppercase hover:bg-[#160E0A] transition-all disabled:opacity-50 font-bold shadow-md cursor-pointer"
+                  >
+                    {loading ? "Registrando Confirmação..." : "Confirmar Presença"}
+                  </button>
+                </div>
+              </form>
             )}
-
-            {/* Observações / Mensagem */}
-            <div>
-              <label htmlFor="rsvp-obs" className="block font-display text-[0.72rem] tracking-[0.25em] uppercase text-[#543D30] font-bold mb-1.5">
-                Mensagem para os noivos ou observações <span className="lowercase font-sans opacity-75">(opcional)</span>
-              </label>
-              <textarea
-                id="rsvp-obs"
-                rows={2}
-                maxLength={500}
-                value={observacao}
-                onChange={(e) => setObservacao(e.target.value)}
-                placeholder="Ex: Restrição alimentar (vegetariano/intolerância) ou mensagem com carinho."
-                className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#261811] transition-colors resize-none"
-              />
-            </div>
-
-            {/* Botão de Envio */}
-            <div className="pt-2 pb-1">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full min-h-[48px] py-3.5 bg-[#261811] text-[#F8F4EC] font-display text-[0.84rem] tracking-[0.25em] uppercase hover:bg-[#160E0A] transition-all disabled:opacity-50 font-bold shadow-md"
-              >
-                {loading ? "Registrando Confirmação..." : "Confirmar Presença"}
-              </button>
-            </div>
-          </form>
+          </div>
         )}
 
         {/* ========================================================================= */}
