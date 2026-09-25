@@ -9,6 +9,7 @@ export interface MembroAutorizado {
   presenteCheckin?: boolean;
   dataHoraCheckin?: string;
   recepcionista?: string;
+  papel?: string; // Ex: Padrinho, Madrinha, Pai do Noivo, Mãe da Noiva, etc.
 }
 
 export interface ConvitePreDefinido {
@@ -18,6 +19,7 @@ export interface ConvitePreDefinido {
   telefone?: string;
   email?: string;
   status?: string;         // PENDENTE, CONFIRMADO, RECUSADO
+  papel?: string;          // Ex: Padrinhos dos Noivos, Pais do Noivo
   membros: MembroAutorizado[];
   confirmado?: boolean;
   dataConfirmacao?: string;
@@ -74,20 +76,22 @@ const convitesPadrao: ConvitePreDefinido[] = [
     familia: "João e Mariana (Padrinhos)",
     telefone: "(11) 97777-6666",
     status: "PENDENTE",
+    papel: "Padrinhos dos Noivos",
     membros: [
-      { id: "p1", nome: "João Pedro Santos", criancaAte6Anos: false, titular: true },
-      { id: "p2", nome: "Mariana Alencar", criancaAte6Anos: false, titular: false }
+      { id: "p1", nome: "João Pedro Santos", criancaAte6Anos: false, titular: true, papel: "Padrinho" },
+      { id: "p2", nome: "Mariana Alencar", criancaAte6Anos: false, titular: false, papel: "Madrinha" }
     ]
   },
   {
     codigo: "fam-vasconcelos",
-    familia: "Família Vasconcelos",
+    familia: "Família Vasconcelos (Pais do Noivo)",
     telefone: "(11) 99999-5555",
     status: "PENDENTE",
+    papel: "Pais do Noivo",
     membros: [
-      { id: "v1", nome: "Carlos Vasconcelos", criancaAte6Anos: false, titular: true },
-      { id: "v2", nome: "Clara Vasconcelos", criancaAte6Anos: false, titular: false },
-      { id: "v3", nome: "Sofia Vasconcelos", criancaAte6Anos: true, titular: false }
+      { id: "v1", nome: "Carlos Vasconcelos", criancaAte6Anos: false, titular: true, papel: "Pai do Noivo" },
+      { id: "v2", nome: "Clara Vasconcelos", criancaAte6Anos: false, titular: false, papel: "Mãe do Noivo" },
+      { id: "v3", nome: "Sofia Vasconcelos", criancaAte6Anos: true, titular: false, papel: "Daminha / Família" }
     ]
   }
 ];

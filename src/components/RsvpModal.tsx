@@ -609,36 +609,20 @@ export default function RsvpModal() {
                                 </span>
                               </div>
 
-                              {/* Pergunta de idade caso a pessoa compareça */}
+                              {/* Marcação discreta de idade caso a pessoa compareça */}
                               {vai && (
-                                <div className="pl-7 pt-2 border-t border-[#EAE0D2]">
-                                  <span className="block font-display text-[0.62rem] uppercase tracking-wider text-[#543D30] font-bold mb-1">
-                                    Classificação para o Buffet:
-                                  </span>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setMembrosCrianca(prev => ({ ...prev, [m.id]: false }))}
-                                      className={`py-1.5 px-2.5 text-xs font-serif text-left border rounded-sm transition-all cursor-pointer ${
-                                        !isMenor7
-                                          ? "bg-[#261811] text-[#F8F4EC] border-[#261811] font-semibold shadow-xs"
-                                          : "bg-[#EFE7DC] text-[#261811] border-[#967D67] hover:border-[#261811]"
-                                      }`}
-                                    >
-                                      Adulto ou a partir de 7 anos
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setMembrosCrianca(prev => ({ ...prev, [m.id]: true }))}
-                                      className={`py-1.5 px-2.5 text-xs font-serif text-left border rounded-sm transition-all cursor-pointer ${
-                                        isMenor7
-                                          ? "bg-[#261811] text-[#F8F4EC] border-[#261811] font-semibold shadow-xs"
-                                          : "bg-[#EFE7DC] text-[#261811] border-[#967D67] hover:border-[#261811]"
-                                      }`}
-                                    >
-                                      Criança menor de 7 anos (0 a 6 anos)
-                                    </button>
-                                  </div>
+                                <div className="pl-7 pt-1.5 border-t border-[#EAE0D2]">
+                                  <label className="flex items-center gap-2.5 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={isMenor7}
+                                      onChange={(e) => setMembrosCrianca(prev => ({ ...prev, [m.id]: e.target.checked }))}
+                                      className="w-4 h-4 accent-[#261811] cursor-pointer"
+                                    />
+                                    <span className="text-xs font-serif text-[#453126]">
+                                      Menor de 7 anos (0 a 6 anos)
+                                    </span>
+                                  </label>
                                 </div>
                               )}
                             </div>

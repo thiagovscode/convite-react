@@ -384,6 +384,21 @@ export default function CheckinModal() {
                       </div>
                     </div>
 
+                    {/* Banner de Papel de Honra (Padrinhos / Pais dos Noivos) */}
+                    {conviteAtual.papel && (
+                      <div className="bg-[#261811] text-[#F8F4EC] p-2.5 rounded-sm flex flex-wrap items-center justify-between gap-2 text-xs font-serif shadow-sm">
+                        <div>
+                          <span className="font-display tracking-widest uppercase text-[0.62rem] text-[#D5C6B5] font-bold block">
+                            Convidado de Honra Oficial
+                          </span>
+                          <strong className="text-sm font-semibold text-[#F8F4EC]">{conviteAtual.papel}</strong>
+                        </div>
+                        <span className="bg-[#3D281E] border border-[#967D67] px-2 py-0.5 text-[0.65rem] font-display uppercase tracking-wider font-bold text-[#F8F4EC]">
+                          Paleta Oficial dos Padrinhos / Pais
+                        </span>
+                      </div>
+                    )}
+
                     {/* Instrução para o caso de faltas no dia */}
                     <div className="bg-[#EAE0D2] p-2.5 text-xs text-[#453126] font-serif border border-[#967D67]">
                       <strong>Instrução da Recepção:</strong> Marque apenas quem está fisicamente presente na portaria.
@@ -432,14 +447,21 @@ export default function CheckinModal() {
                                   className="w-4 h-4 accent-[#261811] cursor-pointer"
                                 />
                                 <div>
-                                  <p className="font-serif text-sm font-semibold text-[#261811]">
-                                    {m.nome}
-                                    {m.titular && (
-                                      <span className="ml-2 font-display text-[0.6rem] tracking-wider uppercase text-[#543D30]">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-serif text-sm font-semibold text-[#261811]">
+                                      {m.nome}
+                                    </p>
+                                    {m.papel && (
+                                      <span className="px-2 py-0.5 font-display text-[0.62rem] uppercase tracking-wider font-bold bg-[#261811] text-[#F8F4EC] rounded-xs border border-[#967D67]">
+                                        {m.papel}
+                                      </span>
+                                    )}
+                                    {m.titular && !m.papel && (
+                                      <span className="font-display text-[0.6rem] tracking-wider uppercase text-[#543D30]">
                                         (Titular)
                                       </span>
                                     )}
-                                  </p>
+                                  </div>
                                   <p className="font-serif text-xs text-[#543D30]">
                                     {m.criancaAte6Anos
                                       ? "Criança (Menor de 7 anos - Isenta / Reduzida)"
@@ -580,7 +602,14 @@ export default function CheckinModal() {
                           {relatorio.familias.map((f) => (
                             <tr key={f.codigo} className="hover:bg-[#FAF7F0]">
                               <td className="p-2">
-                                <strong className="text-[#261811]">{f.familia}</strong>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <strong className="text-[#261811]">{f.familia}</strong>
+                                  {f.papel && (
+                                    <span className="px-1.5 py-0.2 bg-[#261811] text-[#F8F4EC] border border-[#967D67] rounded-xs text-[0.58rem] font-display uppercase tracking-wider font-bold">
+                                      {f.papel}
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="block text-[0.65rem] text-[#543D30]">#{f.codigo}</span>
                               </td>
                               <td className="p-2 text-center text-[#543D30]">{f.totalMembros}</td>
