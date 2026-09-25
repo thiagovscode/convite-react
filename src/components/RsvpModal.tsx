@@ -328,7 +328,7 @@ export default function RsvpModal() {
       if (presenca) {
         const adultosTotal = 1 + listaAcompanhantesEnvio.filter(a => !a.criancaAte6Anos).length;
         const criancasTotal = listaAcompanhantesEnvio.filter(a => a.criancaAte6Anos).length;
-        
+
         setPasseInfo({
           convidado: convitePreDefinido ? convitePreDefinido.familia : nome.trim(),
           telefone: telefone.trim(),

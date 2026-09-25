@@ -11,6 +11,7 @@ export interface MembroAutorizado {
   recepcionista?: string;
   papel?: string; // Ex: Padrinho, Madrinha, Pai dos Noivos, Mãe dos Noivos, etc.
   vinculo?: string; // Ex: Noivo, Noiva, Casal
+  idade?: number | string;
 }
 
 export interface ParticipanteCerimonia {
@@ -24,6 +25,8 @@ export interface ParticipanteCerimonia {
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   dataHoraEntrada?: string;
+  criancaAte6Anos?: boolean;
+  idade?: number | string;
 }
 
 export interface MembroEquipeFornecedor {
