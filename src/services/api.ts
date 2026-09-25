@@ -59,23 +59,21 @@ export interface AdminRsvpResponse {
 }
 
 export const getApiBaseUrl = (): string => {
-  // 1. Prioridade máxima: Variável de ambiente do Vite (configurada no .env ou no GitHub Actions)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+  // 1. Variável de ambiente do Vite (configurada via VITE_API_URL no .env ou no GitHub Secrets / CI)
+  const viteApiUrl = import.meta.env.VITE_API_URL;
+  if (viteApiUrl) {
+    return String(viteApiUrl).trim().replace(/\/$/, '');
   }
 
-  // 2. Sobrescrita manual em tempo de execução via localStorage
+  // 2. Sobrescrita manual opcional em tempo de execução (painel admin / localStorage)
   if (typeof window !== 'undefined') {
     const customUrl = localStorage.getItem('CONVITE_API_URL');
-    if (customUrl) return customUrl.replace(/\/$/, '');
+    if (customUrl) {
+      return customUrl.trim().replace(/\/$/, '');
+    }
   }
 
-  // 3. Fallback em config.js
-  const w = typeof window !== 'undefined' ? (window as any).wedding : null;
-  if (w && w.apiUrl) return w.apiUrl.replace(/\/$/, '');
-
-  // 4. Fallback padrão local caso nenhuma variável seja fornecida
-  return 'http://localhost:5000';
+  return '';
 };
 
 export const setCustomApiUrl = (url: string) => {

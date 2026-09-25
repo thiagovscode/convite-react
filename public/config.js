@@ -45,9 +45,8 @@ const wedding = {
   parking: "Estacionamento gratuito disponível no local",
 
   /* ----------------------------------------------------------
-     LINKS & BACKEND AWS
+     LINKS & REDES
   ---------------------------------------------------------- */
-  apiUrl: "http://localhost:5000", // Quando subir na AWS, altere para https://sua-api-na-aws.com
   maps:  "https://maps.google.com/?q=Espa%C3%A7o+Balboa+Mairipora+SP",
   rsvp:  "https://wa.me/5511999999999?text=Ol%C3%A1!+Confirmo+minha+presen%C3%A7a+no+casamento+de+Tainara+e+Thiago+%F0%9F%A4%8D",
   gifts: "https://www.amazon.com.br/hz/wishlist/ls/M9WM0ECW56XX?ref_=wl_share", // Link da Lista Amazon

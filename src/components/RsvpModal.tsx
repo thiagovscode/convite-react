@@ -338,7 +338,19 @@ export default function RsvpModal() {
 
       setMode("success");
     } catch (err: any) {
-      setErrorMsg(err.message || "Não foi possível conectar ao servidor. Verifique se o backend está em execução.");
+      const msg = err?.message || "";
+      if (
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError") ||
+        msg.includes("servidor") ||
+        msg.includes("ECONNREFUSED") ||
+        msg.includes("status 5") ||
+        msg.includes("fetch")
+      ) {
+        setErrorMsg("Não foi possível carregar algumas informações. Tente novamente em instantes.");
+      } else {
+        setErrorMsg(msg || "Não foi possível registrar sua confirmação no momento. Por favor, tente novamente em instantes.");
+      }
     } finally {
       setLoading(false);
     }
@@ -476,7 +488,7 @@ export default function RsvpModal() {
                   </form>
 
                   {erroConviteNaoEncontrado && (
-                    <div className="p-3 bg-[#F8EFEA] border-l-2 border-[#A85848] text-xs text-[#542820] font-serif mt-2">
+                    <div className="p-3.5 bg-[#F7F2EC] border-l-2 border-[#A8988B] text-[0.82rem] text-[#543D30] font-serif rounded-[3px] leading-relaxed mt-2">
                       {erroConviteNaoEncontrado}
                     </div>
                   )}
@@ -513,9 +525,9 @@ export default function RsvpModal() {
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-[#F8EFEA] border-l-2 border-[#A85848] py-2.5 px-3.5 text-[0.85rem] text-[#542820] font-serif flex items-center gap-2 rounded-[1px]">
-                    <span className="font-semibold">[Atenção]</span>
-                    <span>{errorMsg}</span>
+                  <div className="bg-[#F7F2EC] border-l-2 border-[#A8988B] py-3 px-4 text-[0.84rem] text-[#543D30] font-serif flex items-start gap-2.5 rounded-[3px]">
+                    <span className="text-[#8C7A6B] text-base leading-none select-none">✦</span>
+                    <span className="leading-snug">{errorMsg}</span>
                   </div>
                 )}
 
