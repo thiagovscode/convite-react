@@ -36,14 +36,14 @@ function WeddingCheckbox({
         e.stopPropagation();
         onChange(!checked);
       }}
-      className="relative p-1 -m-1 flex items-center justify-center cursor-pointer focus:outline-none"
+      className="relative p-1.5 -m-1.5 flex items-center justify-center cursor-pointer focus:outline-none shrink-0"
     >
       <span
-        className={`flex items-center justify-center transition-all duration-150 rounded-[4px] border ${
+        className={`flex items-center justify-center transition-all duration-150 rounded-[3px] border ${
           isSm ? "w-[18px] h-[18px]" : "w-[20px] h-[20px]"
         } ${
           checked
-            ? "bg-[#261811] border-[#261811] text-white shadow-sm"
+            ? "bg-[#261811] border-[#261811] text-[#FAF7F2]"
             : "bg-[#FAF7F2] border-[#8C7A6B] hover:border-[#261811]"
         }`}
       >
@@ -53,7 +53,7 @@ function WeddingCheckbox({
             viewBox="0 0 12 12"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
+            strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -413,22 +413,22 @@ export default function RsvpModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-[99999] overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rsvp-modal-title"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#160E0A] bg-opacity-80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-[#160E0A]/80 backdrop-blur-sm transition-opacity"
         onClick={close}
       ></div>
 
-      {/* Modal Container — 100% responsivo para mobile e desktop */}
-      <div className="relative w-full max-w-[540px] my-auto bg-[#FAF7F2] border border-[#D8CDC0]/80 shadow-[0_25px_60px_-15px_rgba(22,14,10,0.35)] p-5 sm:p-8 z-10 text-[#261811] animate-fade-in max-h-[92dvh] flex flex-col justify-between rounded-[3px]">
+      {/* Modal Container — Papelaria editorial premium */}
+      <div className="relative w-full max-w-[530px] my-auto bg-[#FAF7F2] border border-[#D8CDC0] shadow-[0_20px_50px_-15px_rgba(22,14,10,0.25)] p-6 sm:p-8 z-10 text-[#261811] animate-fade-in rounded-[4px] max-h-[calc(100dvh-2.5rem)] overflow-y-auto overflow-x-hidden custom-rsvp-scroll">
         
         {/* Header com Botão Fechar */}
-        <div className="flex justify-between items-start mb-5 sm:mb-6 border-b border-[#E8DFD5] pb-3.5 sm:pb-4 shrink-0">
+        <div className="flex justify-between items-start mb-6 border-b border-[#EAE0D5] pb-4 shrink-0">
           <div className="flex flex-col">
             <span className="font-sans tracking-[0.2em] uppercase text-[0.66rem] text-[#8C7A6B] font-medium">
               {mode === "admin" ? "Área Administrativa" : "R.S.V.P."}
@@ -439,7 +439,7 @@ export default function RsvpModal() {
           </div>
           <button
             onClick={close}
-            className="text-[#8C7A6B] hover:text-[#261811] transition-colors p-1.5 focus:outline-none -mr-1"
+            className="text-[#8C7A6B] hover:text-[#261811] transition-colors p-1.5 focus:outline-none -mr-1 rounded-[3px]"
             aria-label="Fechar janela"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,10 +452,10 @@ export default function RsvpModal() {
         {/* MODO GUEST: EXIGE CONVITE OFICIAL E SELETOR DE IDADE PARA CRIANÇAS        */}
         {/* ========================================================================= */}
         {mode === "guest" && (
-          <div className="overflow-y-auto overscroll-contain pr-1 flex-1 custom-rsvp-scroll">
+          <div className="overflow-x-hidden">
             {!convitePreDefinido ? (
               <div className="space-y-4 py-2">
-                <div className="bg-[#F3EDE4]/50 border border-[#E3D8CB] p-5 text-left rounded-[2px] space-y-3">
+                <div className="bg-[#F7F2EC] border border-[#E3D8CB] p-5 text-left rounded-[3px] space-y-3">
                   <span className="font-sans text-[0.65rem] tracking-[0.18em] uppercase text-[#8C7A6B] font-medium block">
                     Lista Exclusiva
                   </span>
@@ -475,12 +475,12 @@ export default function RsvpModal() {
                         value={termoBuscaConvite}
                         onChange={(e) => setTermoBuscaConvite(e.target.value)}
                         placeholder="Ex: fulana, silva, vasconcelos"
-                        className="flex-1 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#73563E] focus:bg-[#FFFFFF] rounded-[2px] transition-colors"
+                        className="flex-1 bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-2.5 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#8C7A6B] focus:bg-[#FFFFFF] rounded-[3px] transition-colors"
                       />
                       <button
                         type="submit"
                         disabled={buscandoConvite}
-                        className="bg-[#261811] hover:bg-[#3D281E] text-[#F8F4EC] px-5 py-2.5 font-sans text-xs tracking-[0.14em] uppercase font-medium transition-all rounded-[2px] cursor-pointer disabled:opacity-50"
+                        className="bg-[#261811] hover:bg-[#1C110B] text-[#FAF7F2] px-5 py-2.5 font-sans text-xs tracking-[0.14em] uppercase font-medium transition-all rounded-[3px] cursor-pointer disabled:opacity-50"
                       >
                         {buscandoConvite ? "Buscando..." : "Localizar"}
                       </button>
@@ -501,9 +501,9 @@ export default function RsvpModal() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-7">
                 {/* Banner de Boas-vindas à Família - Estilo Editorial */}
-                <div className="border-b border-[#E8DFD5] pb-4 text-left">
+                <div className="border-b border-[#EAE0D5] pb-4 text-left">
                   <div className="flex justify-between items-baseline">
                     <span className="font-sans text-[0.64rem] tracking-[0.18em] uppercase text-[#8C7A6B] font-medium">
                       Convite Nominal
@@ -533,17 +533,17 @@ export default function RsvpModal() {
 
                 {/* Alternador de Presença Geral */}
                 <div>
-                  <label className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium mb-2">
+                  <label className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-2.5">
                     Vocês comparecerão ao casamento?
                   </label>
                   <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => setPresenca(true)}
-                      className={`min-h-[46px] py-2.5 px-2 border text-center transition-all text-[0.86rem] sm:text-[0.92rem] font-serif rounded-[2px] ${
+                      className={`min-h-[46px] py-2.5 px-3 border text-center transition-all duration-200 text-[0.88rem] sm:text-[0.92rem] font-serif rounded-[3px] shadow-none ${
                         presenca
-                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2] shadow-sm"
-                          : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8F7968] hover:text-[#261811]"
+                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2]"
+                          : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8C7A6B] hover:text-[#261811]"
                       }`}
                     >
                       Sim, confirmamos presença
@@ -551,10 +551,10 @@ export default function RsvpModal() {
                     <button
                       type="button"
                       onClick={() => setPresenca(false)}
-                      className={`min-h-[46px] py-2.5 px-2 border text-center transition-all text-[0.86rem] sm:text-[0.92rem] font-serif rounded-[2px] ${
+                      className={`min-h-[46px] py-2.5 px-3 border text-center transition-all duration-200 text-[0.88rem] sm:text-[0.92rem] font-serif rounded-[3px] shadow-none ${
                         !presenca
-                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2] shadow-sm"
-                          : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8F7968] hover:text-[#261811]"
+                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2]"
+                          : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8C7A6B] hover:text-[#261811]"
                       }`}
                     >
                       Infelizmente não poderemos ir
@@ -564,7 +564,7 @@ export default function RsvpModal() {
 
                 {/* Nome do Titular */}
                 <div>
-                  <label htmlFor="rsvp-nome" className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium mb-1.5">
+                  <label htmlFor="rsvp-nome" className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-1.5">
                     Nome do Titular do Convite *
                   </label>
                   <input
@@ -574,14 +574,14 @@ export default function RsvpModal() {
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Nome completo"
-                    className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#73563E] focus:bg-[#FFFFFF] transition-all rounded-[2px]"
+                    className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-[0.98rem] placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#8C7A6B] focus:bg-[#FFFFFF] transition-all rounded-[3px] shadow-none"
                   />
                 </div>
 
                 {/* Telefone / WhatsApp */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   <div>
-                    <label htmlFor="rsvp-telefone" className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium mb-1.5">
+                    <label htmlFor="rsvp-telefone" className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-1.5">
                       WhatsApp / Celular *
                     </label>
                     <input
@@ -591,12 +591,12 @@ export default function RsvpModal() {
                       value={telefone}
                       onChange={handleTelefoneChange}
                       placeholder="(11) 99999-9999"
-                      className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#73563E] focus:bg-[#FFFFFF] transition-all rounded-[2px]"
+                      className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-[0.98rem] placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#8C7A6B] focus:bg-[#FFFFFF] transition-all rounded-[3px] shadow-none"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="rsvp-email" className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium mb-1.5">
+                    <label htmlFor="rsvp-email" className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-1.5">
                       E-mail <span className="font-serif italic lowercase opacity-80 text-[#8C7A6B]">(opcional)</span>
                     </label>
                     <input
@@ -605,16 +605,16 @@ export default function RsvpModal() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="exemplo@email.com"
-                      className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-[1rem] focus:outline-none focus:border-[#73563E] focus:bg-[#FFFFFF] transition-all rounded-[2px]"
+                      className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-[0.98rem] placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#8C7A6B] focus:bg-[#FFFFFF] transition-all rounded-[3px] shadow-none"
                     />
                   </div>
                 </div>
 
                 {/* Seção de Membros da Família */}
                 {presenca && (
-                  <div className="pt-2 space-y-3.5">
-                    <div className="border-b border-[#E8DFD5] pb-2">
-                      <span className="block font-sans text-[0.7rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium">
+                  <div className="pt-1 space-y-4">
+                    <div className="border-b border-[#EAE0D5] pb-2.5">
+                      <span className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium">
                         MEMBROS DA FAMÍLIA AUTORIZADOS
                       </span>
                       <span className="text-[0.78rem] text-[#8C7A6B] font-serif italic">
@@ -631,29 +631,27 @@ export default function RsvpModal() {
                           return (
                             <div
                               key={m.id}
-                              className={`py-3 px-2 -mx-2 rounded-[3px] transition-colors ${
+                              onClick={() => {
+                                setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
+                              }}
+                              className={`py-3.5 px-2.5 -mx-2.5 rounded-[3px] transition-colors cursor-pointer select-none ${
                                 vai ? "hover:bg-[#F3EDE4]/50" : "opacity-65 hover:opacity-85 hover:bg-[#F3EDE4]/30"
                               }`}
                             >
-                              <div
-                                onClick={() => {
-                                  setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
-                                }}
-                                className="flex items-center justify-between cursor-pointer select-none group"
-                              >
-                                <div className="flex items-center gap-3.5">
+                              <div className="flex items-center justify-between gap-3 group">
+                                <div className="flex items-center gap-3.5 min-w-0">
                                   <WeddingCheckbox
                                     size="md"
                                     checked={vai}
                                     onChange={(checked) => setMembrosPresenca(prev => ({ ...prev, [m.id]: checked }))}
                                     ariaLabel={`Presença de ${m.nome}`}
                                   />
-                                  <p className="font-serif text-[1.05rem] text-[#261811] font-medium group-hover:text-[#543D30] transition-colors">
+                                  <p className="font-serif text-[1.05rem] text-[#261811] font-medium group-hover:text-[#543D30] transition-colors truncate">
                                     {m.nome}
                                   </p>
                                 </div>
                                 
-                                <span className={`text-[0.74rem] font-sans transition-colors ${
+                                <span className={`text-[0.74rem] font-sans shrink-0 transition-colors ${
                                   vai
                                     ? "text-[#52634C] font-medium tracking-wide"
                                     : "text-[#A8988B]"
@@ -669,7 +667,7 @@ export default function RsvpModal() {
                                     e.stopPropagation();
                                     setMembrosCrianca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
                                   }}
-                                  className="pl-8 pt-2 pb-0.5 flex items-center gap-2.5 cursor-pointer select-none group/crianca"
+                                  className="pl-8 pt-2.5 pb-0.5 flex items-center gap-2.5 cursor-pointer select-none group/crianca"
                                 >
                                   <WeddingCheckbox
                                     size="sm"
@@ -696,11 +694,11 @@ export default function RsvpModal() {
                       const totalQtd = adultosQtd + criancasQtd;
 
                       return (
-                        <div className="py-2.5 px-3.5 bg-[#F4EEE6]/50 border-l-2 border-[#8C7A6B]/50 flex items-center justify-between gap-3 text-[#261811] rounded-[1px]">
-                          <span className="font-serif text-[0.9rem] text-[#261811]">
-                            <strong>{totalQtd}</strong> {totalQtd === 1 ? "convidado confirmado" : "convidados confirmados"}
+                        <div className="py-2.5 px-3.5 bg-[#F7F2EC] border-l-2 border-[#A8988B] flex flex-wrap items-center justify-between gap-2 text-[#261811] rounded-[3px]">
+                          <span className="font-serif text-[0.88rem] text-[#261811]">
+                            {totalQtd} {totalQtd === 1 ? "convidado confirmado" : "convidados confirmados"}
                           </span>
-                          <span className="text-[0.82rem] font-serif text-[#786455]">
+                          <span className="text-[0.82rem] font-serif italic text-[#786455]">
                             {adultosQtd} {adultosQtd === 1 ? "adulto" : "adultos"}
                             {criancasQtd > 0 && ` · ${criancasQtd} ${criancasQtd === 1 ? "criança" : "crianças"}`}
                           </span>
@@ -712,7 +710,7 @@ export default function RsvpModal() {
 
                 {/* Observações / Mensagem */}
                 <div>
-                  <label htmlFor="rsvp-obs" className="block font-sans text-[0.68rem] tracking-[0.16em] uppercase text-[#7D6B5D] font-medium mb-1.5">
+                  <label htmlFor="rsvp-obs" className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-1.5">
                     Mensagem para os noivos ou observações <span className="font-serif italic lowercase opacity-80 text-[#8C7A6B]">(opcional)</span>
                   </label>
                   <textarea
@@ -722,7 +720,7 @@ export default function RsvpModal() {
                     value={observacao}
                     onChange={(e) => setObservacao(e.target.value)}
                     placeholder="Restrição alimentar ou uma mensagem aos noivos…"
-                    className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-[0.98rem] placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#73563E] focus:bg-[#FFFFFF] transition-all resize-none rounded-[2px]"
+                    className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-[0.96rem] placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#8C7A6B] focus:bg-[#FFFFFF] transition-all resize-none rounded-[3px] shadow-none"
                   />
                 </div>
 
@@ -731,7 +729,7 @@ export default function RsvpModal() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full min-h-[48px] py-3.5 bg-[#261811] hover:bg-[#1C110B] text-[#FAF7F2] font-sans text-[0.8rem] tracking-[0.16em] uppercase transition-all duration-300 disabled:opacity-50 font-medium rounded-[2px] shadow-sm hover:shadow cursor-pointer"
+                    className="w-full min-h-[48px] py-3.5 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-[0.78rem] tracking-[0.18em] uppercase transition-all duration-200 disabled:opacity-50 font-medium rounded-[3px] shadow-none hover:shadow-sm cursor-pointer"
                   >
                     {loading ? "Confirmando..." : "CONFIRMAR PRESENÇA"}
                   </button>

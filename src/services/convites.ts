@@ -161,8 +161,9 @@ export async function buscarConvitePorCodigo(codigo: string): Promise<ConvitePre
   const baseUrl = getApiBaseUrl();
 
   try {
-    const res = await fetch(`${baseUrl}/api/convites/${encodeURIComponent(limpo)}`);
-    if (res.ok) {
+    const url = baseUrl ? `${baseUrl}/api/convites/${encodeURIComponent(limpo)}` : `/api/convites/${encodeURIComponent(limpo)}`;
+    const res = await fetch(url);
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       const data = await res.json();
       if (data && data.codigo) return data;
     }
@@ -193,19 +194,21 @@ export function getRecepcaoAuthHeaders(): Record<string, string> {
 export async function loginRecepcaoBackend(username: string, password: string): Promise<{ success: boolean; token?: string; message?: string }> {
   const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/api/recepcao/login`, {
+    const url = baseUrl ? `${baseUrl}/api/recepcao/login` : `/api/recepcao/login`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     });
-    if (res.ok) {
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    if (res.ok && isJson) {
       const data = await res.json();
       if (data.token) {
         localStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
       }
       return { success: true, token: data.token };
     }
-    const err = await res.json().catch(() => ({}));
+    const err = isJson ? await res.json().catch(() => ({})) : {};
     return { success: false, message: err.message || "Credenciais inválidas" };
   } catch {
     // Autenticação local offline

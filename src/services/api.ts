@@ -90,7 +90,9 @@ export const setCustomApiUrl = (url: string) => {
  */
 export async function enviarRsvpCasamento(data: RsvpCasamentoRequest): Promise<RsvpCasamentoResponse> {
   const baseUrl = getApiBaseUrl();
-  const response = await fetch(`${baseUrl}/api/rsvp/casamento`, {
+  const url = baseUrl ? `${baseUrl}/api/rsvp/casamento` : '/api/rsvp/casamento';
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -98,10 +100,15 @@ export async function enviarRsvpCasamento(data: RsvpCasamentoRequest): Promise<R
     body: JSON.stringify(data),
   });
 
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Não foi possível carregar algumas informações. Tente novamente em instantes.');
+  }
+
   const json = await response.json();
 
   if (!response.ok) {
-    const errorMsg = json.message || json.error || 'Erro ao processar confirmação de presença.';
+    const errorMsg = json.message || json.error || 'Não foi possível registrar sua confirmação no momento. Por favor, tente novamente em instantes.';
     throw new Error(errorMsg);
   }
 
@@ -113,13 +120,20 @@ export async function enviarRsvpCasamento(data: RsvpCasamentoRequest): Promise<R
  */
 export async function autenticarAdmin(username: string, password: string): Promise<string> {
   const baseUrl = getApiBaseUrl();
-  const response = await fetch(`${baseUrl}/api/auth/login`, {
+  const url = baseUrl ? `${baseUrl}/api/auth/login` : '/api/auth/login';
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ username, password }),
   });
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Não foi possível carregar algumas informações. Tente novamente em instantes.');
+  }
 
   const json = await response.json();
 
@@ -147,7 +161,9 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
     throw new Error('Autenticação necessária.');
   }
 
-  const response = await fetch(`${baseUrl}/api/admin/rsvp/casamento`, {
+  const url = baseUrl ? `${baseUrl}/api/admin/rsvp/casamento` : '/api/admin/rsvp/casamento';
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -158,6 +174,11 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
   if (response.status === 401 || response.status === 403) {
     localStorage.removeItem('CONVITE_ADMIN_TOKEN');
     throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Não foi possível carregar o relatório de presenças.');
   }
 
   const json = await response.json();
