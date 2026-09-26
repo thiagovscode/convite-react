@@ -178,3 +178,92 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
 
   return json;
 }
+
+export interface NovoMembroAdminRequest {
+  id?: string;
+  nome: string;
+  criancaAte6Anos: boolean;
+  titular?: boolean;
+  papel?: string;
+  vinculo?: string;
+}
+
+export interface CadastrarConviteAdminRequest {
+  codigo?: string;
+  familia: string;
+  telefone?: string;
+  email?: string;
+  papel?: string;
+  observacao?: string;
+  membros: NovoMembroAdminRequest[];
+}
+
+export interface CadastrarConviteAdminResponse {
+  success: boolean;
+  message: string;
+  codigo: string;
+  convite: any;
+}
+
+/**
+ * Cadastra um novo convite no backend Java
+ * POST /api/admin/convites/cadastrar
+ */
+export async function cadastrarConviteAdmin(
+  dados: CadastrarConviteAdminRequest,
+  token?: string
+): Promise<CadastrarConviteAdminResponse> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+
+  if (!authToken) {
+    throw new Error('Autenticação de administrador necessária.');
+  }
+
+  const url = baseUrl ? `${baseUrl}/api/admin/convites/cadastrar` : '/api/admin/convites/cadastrar';
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(dados),
+  });
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.message || 'Erro ao cadastrar convite no servidor.');
+  }
+  return json;
+}
+
+/**
+ * Lista convites cadastrados no backend Java
+ * GET /api/admin/convites
+ */
+export async function listarConvitesAdmin(token?: string): Promise<any[]> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+
+  if (!authToken) {
+    throw new Error('Autenticação de administrador necessária.');
+  }
+
+  const url = baseUrl ? `${baseUrl}/api/admin/convites` : '/api/admin/convites';
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.message || 'Erro ao listar convites no servidor.');
+  }
+  return json;
+}
+

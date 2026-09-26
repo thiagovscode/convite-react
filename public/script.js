@@ -595,12 +595,87 @@ function shatterSeal() {
 }
 
 /* ============================================================
-   10. MÚSICA
+   10. MÚSICA & CONTROLE INTELIGENTE DE REPRODUÇÃO
    ============================================================ */
+let userExplicitlyPaused = false;
+let pausedByVisibility   = false;
+let musicListenersInitialized = false;
+
 function initMusicButton() {
-  document.getElementById('music-btn').addEventListener('click', () => {
-    musicPlaying ? pauseMusic() : startMusic();
-  });
+  const btn = document.getElementById('music-btn');
+  if (!btn) return;
+
+  // Evita múltiplos event listeners acumulados caso a função seja chamada mais de uma vez
+  if (!btn.dataset.hasMusicListener) {
+    btn.dataset.hasMusicListener = 'true';
+    btn.addEventListener('click', () => {
+      if (musicPlaying) {
+        userExplicitlyPaused = true;
+        pausedByVisibility   = false;
+        pauseMusic();
+      } else {
+        userExplicitlyPaused = false;
+        pausedByVisibility   = false;
+        startMusic();
+      }
+    });
+  }
+
+  // Registra os ouvintes globais de visibilidade e ciclo de vida da página apenas uma única vez
+  if (!musicListenersInitialized) {
+    musicListenersInitialized = true;
+
+    // 1. Ao trocar de aba, minimizar a janela ou bloquear a tela do celular
+    document.addEventListener('visibilitychange', () => {
+      const audio = document.getElementById('bg-music');
+      if (document.hidden) {
+        // Usuário saiu da aba/página -> Pausa imediatamente
+        if (musicPlaying && audio && !audio.paused) {
+          pausedByVisibility = true;
+          audio.pause();
+          musicPlaying = false;
+          syncMusicIcon();
+        }
+      } else {
+        // Usuário retornou para a página:
+        // Só retoma a música se ela estava tocando antes da troca de aba E o usuário NÃO pausou explicitamente
+        if (pausedByVisibility && !userExplicitlyPaused) {
+          pausedByVisibility = false;
+          startMusic();
+        }
+      }
+    });
+
+    // 2. Ao sair da página, fechar aba ou navegar para outra URL
+    window.addEventListener('pagehide', () => {
+      const audio = document.getElementById('bg-music');
+      if (audio) {
+        audio.pause();
+        musicPlaying = false;
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      const audio = document.getElementById('bg-music');
+      if (audio) {
+        audio.pause();
+        musicPlaying = false;
+      }
+    });
+
+    // 3. Ao perder o foco da janela se a página estiver oculta
+    window.addEventListener('blur', () => {
+      if (document.hidden) {
+        const audio = document.getElementById('bg-music');
+        if (musicPlaying && audio && !audio.paused) {
+          pausedByVisibility = true;
+          audio.pause();
+          musicPlaying = false;
+          syncMusicIcon();
+        }
+      }
+    });
+  }
 }
 
 function startMusic() {
@@ -608,25 +683,46 @@ function startMusic() {
   if (!audio) return;
   const currentSrc = audio.src || audio.currentSrc || audio.querySelector('source')?.src;
   if (!currentSrc || currentSrc === window.location.href) return;
+
+  // Não inicia música se o usuário não estiver na página
+  if (document.hidden) return;
+
+  // Respeita a escolha do usuário se ele pausou manualmente
+  if (userExplicitlyPaused) return;
+
   audio.play()
-    .then(() => { musicPlaying = true; syncMusicIcon(); })
+    .then(() => {
+      musicPlaying = true;
+      syncMusicIcon();
+    })
     .catch((err) => { 
+      // Autoplay bloqueado pelo navegador até primeira interação
+      musicPlaying = false;
+      syncMusicIcon();
       console.warn('Autoplay bloqueado pelo navegador ou arquivo ainda não carregado:', err);
     });
 }
 
 function pauseMusic() {
   const audio = document.getElementById('bg-music');
-  audio.pause();
+  if (audio) {
+    audio.pause();
+  }
   musicPlaying = false;
   syncMusicIcon();
 }
 
+window.stopConviteMusic = pauseMusic;
+
 function syncMusicIcon() {
   const icon = document.getElementById('music-icon');
   const btn  = document.getElementById('music-btn');
-  icon.className = musicPlaying ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
-  btn.setAttribute('aria-pressed', musicPlaying ? 'true' : 'false');
+  if (icon) {
+    icon.className = musicPlaying ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
+  }
+  if (btn) {
+    btn.setAttribute('aria-pressed', musicPlaying ? 'true' : 'false');
+  }
 }
 
 /* ============================================================

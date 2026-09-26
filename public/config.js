@@ -34,7 +34,7 @@ const wedding = {
   },
 
   reception: {
-    description: "A partir das 15h30,\npara o pessoal ir chegando.",
+    description: "A partir das 15h30",
     time: "15h30"
   },
 

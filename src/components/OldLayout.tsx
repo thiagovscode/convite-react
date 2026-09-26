@@ -11,8 +11,7 @@ import CheckinModal from "./CheckinModal";
 
 export default function OldLayout() {
   useEffect(() => {
-    // Timeout gives a tick for the DOM to render before the JS queries for elements
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (typeof (window as any).initOldConvite === 'function') {
         (window as any).initOldConvite();
       }
@@ -21,6 +20,13 @@ export default function OldLayout() {
         (window as any).AOS.refresh();
       }
     }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (typeof (window as any).stopConviteMusic === 'function') {
+        (window as any).stopConviteMusic();
+      }
+    };
   }, []);
 
   return (

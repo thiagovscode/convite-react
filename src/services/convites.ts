@@ -145,7 +145,7 @@ export const RECEPCAO_JWT_STORAGE_KEY = "CASAMENTO_RECEPCAO_JWT_TOKEN";
 
 export function getRecepcaoAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined"
-    ? (localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
+    ? (sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
     : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
@@ -154,6 +154,39 @@ export function getRecepcaoAuthHeaders(): Record<string, string> {
     headers["Authorization"] = `Bearer ${token}`;
   }
   return headers;
+}
+
+// Valida a sessão de recepção no backend (sem confiar em flags estáticas do localStorage)
+export async function validarSessaoRecepcaoBackend(): Promise<boolean> {
+  const token = typeof window !== "undefined"
+    ? (sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
+    : null;
+  if (!token) return false;
+
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/recepcao/validar-sessao` : `/api/recepcao/validar-sessao`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      return true;
+    }
+  } catch (err) {
+    // Falha de rede
+  }
+
+  // Se o token for inválido ou rejeitado, limpa os storages locais para impedir auto-login indevido
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    localStorage.removeItem("CASAMENTO_RECEPCAO_AUTENTICADA");
+  }
+  return false;
 }
 
 // 2. Login da equipe de recepção (autenticação real no backend)
@@ -171,7 +204,8 @@ export async function loginRecepcaoBackend(username: string, password: string): 
     if (res.ok && isJson) {
       const data = await res.json();
       if (data.token) {
-        localStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
+        // Armazena preferencialmente na sessionStorage para fechar ao sair da sessão do navegador
+        sessionStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
       }
       return { success: true, token: data.token };
     }
@@ -180,6 +214,84 @@ export async function loginRecepcaoBackend(username: string, password: string): 
   } catch (err: any) {
     return { success: false, message: err.message || "Não foi possível conectar ao servidor." };
   }
+}
+
+// Cadastrar novo convite nominal pela Área Administrativa (com geração aleatória no backend)
+export async function cadastrarConviteAdmin(dados: {
+  familia: string;
+  telefone?: string;
+  email?: string;
+  papel?: string;
+  observacao?: string;
+  membros: Array<{
+    nome: string;
+    criancaAte6Anos: boolean;
+    titular?: boolean;
+    papel?: string;
+    vinculo?: string;
+  }>;
+}): Promise<{ success: boolean; message: string; convite?: ConvitePreDefinido; codigo?: string }> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("CONVITE_ADMIN_TOKEN") : null;
+  if (!token) {
+    return { success: false, message: "Autenticação administrativa necessária." };
+  }
+
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/admin/convites` : `/api/admin/convites`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(dados)
+    });
+
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const json = isJson ? await res.json() : {};
+
+    if (res.ok) {
+      return {
+        success: true,
+        message: json.message || "Convite gerado com sucesso!",
+        convite: json.convite || json,
+        codigo: json.codigo || json.convite?.codigo
+      };
+    }
+
+    return {
+      success: false,
+      message: json.message || "Não foi possível cadastrar o convite. Verifique os dados e tente novamente."
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || "Erro de conexão ao cadastrar convite."
+    };
+  }
+}
+
+// Listar convites pré-cadastrados para o painel administrativo
+export async function listarConvitesAdmin(): Promise<ConvitePreDefinido[]> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("CONVITE_ADMIN_TOKEN") : null;
+  if (!token) return [];
+
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/admin/convites` : `/api/admin/convites`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      return await res.json();
+    }
+  } catch {}
+  return [];
 }
 
 // 3. Registrar check-in individual por membro no banco de dados

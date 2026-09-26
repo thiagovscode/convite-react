@@ -10,7 +10,8 @@ import {
   buscarFornecedoresBackend,
   checkinMembroFornecedorBackend,
   adicionarMembroFornecedorBackend,
-  cadastrarFornecedorBackend
+  cadastrarFornecedorBackend,
+  validarSessaoRecepcaoBackend
 } from "../services/convites";
 import type {
   ConvitePreDefinido,
@@ -189,11 +190,16 @@ export default function CheckinModal() {
   };
 
   useEffect(() => {
-    const authSalva = localStorage.getItem(RECEPCAO_AUTH_KEY);
-    if (authSalva === "true") {
-      setIsAutenticado(true);
-      carregarTodosDados();
-    }
+    // Validação real de sessão no backend (não confia em boolean persistido em localStorage)
+    localStorage.removeItem(RECEPCAO_AUTH_KEY);
+    validarSessaoRecepcaoBackend().then((valida) => {
+      if (valida) {
+        setIsAutenticado(true);
+        carregarTodosDados();
+      } else {
+        setIsAutenticado(false);
+      }
+    });
 
     const checkUrl = () => {
       const params = new URLSearchParams(window.location.search);
@@ -362,7 +368,6 @@ export default function CheckinModal() {
 
     if (res.success) {
       setIsAutenticado(true);
-      localStorage.setItem(RECEPCAO_AUTH_KEY, "true");
       setUserInput("");
       setPassInput("");
       carregarTodosDados();
@@ -374,6 +379,7 @@ export default function CheckinModal() {
   const handleLogoutRecepcao = () => {
     localStorage.removeItem(RECEPCAO_AUTH_KEY);
     localStorage.removeItem("CASAMENTO_RECEPCAO_JWT_TOKEN");
+    sessionStorage.removeItem("CASAMENTO_RECEPCAO_JWT_TOKEN");
     setIsAutenticado(false);
     setConviteAtual(null);
   };
