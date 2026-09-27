@@ -55,9 +55,19 @@ function loadEnv() {
   }
 }
 
-loadEnv();
+const MONGODB_URI = 
+  process.env.MONGODB_URI || 
+  process.env.MONGO_URI || 
+  process.env.MONGODB_URL || 
+  process.env.DATABASE_URL;
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/convite-casamento';
+if (!MONGODB_URI) {
+  console.error('');
+  console.error('❌ ERRO CRÍTICO: Nenhuma variável de conexão com o MongoDB foi encontrada.');
+  console.error('Configure a variável de ambiente MONGODB_URI (ou MONGO_URI) no seu arquivo .env ou no sistema.');
+  console.error('');
+  process.exit(1);
+}
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USERNAME = process.env.SMTP_USERNAME;
