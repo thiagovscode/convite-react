@@ -638,13 +638,13 @@ export default function AdminPage() {
                       <StatCard
                         label="Total Confirmados"
                         value={fmt(data.resumoGeral.totalConfirmados)}
-                        sub="confirmaram presença"
+                        sub="pessoas confirmadas"
                         color="green"
                       />
                       <StatCard
                         label="Não Vão"
                         value={fmt(data.resumoGeral.totalRecusaram)}
-                        sub="recusaram"
+                        sub="pessoas recusaram"
                         color="rose"
                       />
                       <StatCard
@@ -663,7 +663,7 @@ export default function AdminPage() {
 
                     {/* barra de progresso de confirmações */}
                     <div className="bg-white border border-[#E3D8CB] rounded-[10px] p-6 shadow-[0_2px_12px_-4px_rgba(38,24,17,0.06)]">
-                      <SectionTitle>Taxa de Confirmação</SectionTitle>
+                      <SectionTitle>Taxa de Confirmação de Convidados</SectionTitle>
                       {(() => {
                         const total =
                           data.resumoGeral.totalConfirmados +
@@ -683,7 +683,7 @@ export default function AdminPage() {
                               </span>
                               <span className="font-serif text-sm text-[#8C7A6B] italic pb-1">
                                 {data.resumoGeral.totalConfirmados} de {total}{" "}
-                                responderam
+                                pessoas responderam
                               </span>
                             </div>
                             <div className="h-3 bg-[#EAE0D2] rounded-full overflow-hidden">
@@ -695,11 +695,11 @@ export default function AdminPage() {
                             <div className="flex gap-6 text-xs font-sans text-[#8C7A6B]">
                               <span>
                                 <span className="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-full mr-1.5 align-middle" />
-                                Confirmados: {data.resumoGeral.totalConfirmados}
+                                Confirmados: {data.resumoGeral.totalConfirmados} pessoas
                               </span>
                               <span>
                                 <span className="inline-block w-2.5 h-2.5 bg-rose-400 rounded-full mr-1.5 align-middle" />
-                                Recusaram: {data.resumoGeral.totalRecusaram}
+                                Recusaram: {data.resumoGeral.totalRecusaram} pessoas
                               </span>
                             </div>
                           </div>
@@ -985,38 +985,48 @@ export default function AdminPage() {
                         color="neutral"
                       />
                       <StatCard
-                        label="Pessoas na Lista"
+                        label="Total de Pessoas"
                         value={fmt(
                           listaConvites.reduce(
                             (acc, c) => acc + (c.membros?.length || 0),
                             0
                           )
                         )}
-                        sub="familiares cadastrados"
+                        sub="convidados cadastrados"
                         color="blue"
                       />
                       <StatCard
-                        label="Confirmados"
+                        label="Pessoas Confirmadas"
                         value={fmt(
-                          listaConvites.filter(
-                            (c) =>
-                              (c.status || "").toUpperCase() === "CONFIRMADO"
-                          ).length
+                          listaConvites.reduce(
+                            (acc, c) =>
+                              acc +
+                              (c.membros?.filter(
+                                (m) => m.confirmadoRsvp === true
+                              ).length || 0),
+                            0
+                          )
                         )}
-                        sub="já responderam"
+                        sub="presenças confirmadas"
                         color="green"
                       />
                       <StatCard
-                        label="Pendentes"
+                        label="Pessoas Que Não Vão"
                         value={fmt(
-                          listaConvites.filter(
-                            (c) =>
-                              (c.status || "PENDENTE").toUpperCase() ===
-                              "PENDENTE"
-                          ).length
+                          listaConvites.reduce(
+                            (acc, c) =>
+                              acc +
+                              (c.membros?.filter(
+                                (m) =>
+                                  m.confirmadoRsvp === false ||
+                                  (c.status === "RECUSADO" &&
+                                    m.confirmadoRsvp == null)
+                              ).length || 0),
+                            0
+                          )
                         )}
-                        sub="aguardando resposta"
-                        color="amber"
+                        sub="recusaram presença"
+                        color="rose"
                       />
                     </div>
 
