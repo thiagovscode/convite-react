@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import {
   autenticarAdmin,
   buscarRelatorioRsvpAdmin,
+  buscarMetricasAdmin,
   cadastrarConviteAdmin,
   listarConvitesAdmin,
   getApiBaseUrl,
 } from "../services/api";
 import type {
   AdminRsvpResponse,
+  DashboardMetricas,
   NovoMembroAdminRequest,
 } from "../services/api";
 
@@ -19,7 +21,6 @@ export interface MembroConviteCadastrado {
   nome: string;
   criancaAte6Anos?: boolean;
   titular?: boolean;
-  confirmouPresenca?: boolean;
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   papel?: string;
@@ -144,6 +145,119 @@ export default function AdminPage() {
   const [buscaConvites, setBuscaConvites] = useState("");
   const [copiadoLinkPorCodigo, setCopiadoLinkPorCodigo] = useState<Record<string, string>>({});
 
+  // Métricas oficiais calculadas pelo backend (fonte da verdade)
+  const [metricasBackend, setMetricasBackend] = useState<DashboardMetricas | null>(null);
+
+  // Estatísticas nominais por pessoa (com backend prioritário e fallback resiliente)
+  const stats = React.useMemo(() => {
+    if (metricasBackend) {
+      return {
+        totalConvites: metricasBackend.totalConvites,
+        totalPessoas: metricasBackend.totalPessoas,
+        totalConfirmados: metricasBackend.totalConfirmados,
+        totalRecusaram: metricasBackend.totalRecusaram,
+        totalPendentes: metricasBackend.totalPendentes,
+        totalAdultos: metricasBackend.totalAdultosConfirmados,
+        totalCriancasAte6Anos: metricasBackend.totalCriancasConfirmadas,
+        taxaConfirmacao: metricasBackend.taxaConfirmacao,
+        taxaRecusa: metricasBackend.taxaRecusa,
+        taxaPendentes: metricasBackend.taxaPendentes,
+        taxaPresencaRespondidos: metricasBackend.taxaPresencaRespondidos,
+      };
+    }
+
+    if (listaConvites && listaConvites.length > 0) {
+      const totalConvites = listaConvites.length;
+      const totalPessoas = listaConvites.reduce(
+        (acc, c) => acc + (c.membros?.length || 0),
+        0
+      );
+
+      let totalConfirmados = 0;
+      let totalRecusaram = 0;
+      let totalAdultos = 0;
+      let totalCriancasAte6Anos = 0;
+
+      listaConvites.forEach((c) => {
+        if (c.membros && c.membros.length > 0) {
+          c.membros.forEach((m) => {
+            const isCrianca = Boolean(m.criancaAte6Anos);
+            if (m.confirmadoRsvp === true) {
+              totalConfirmados++;
+              if (isCrianca) {
+                totalCriancasAte6Anos++;
+              } else {
+                totalAdultos++;
+              }
+            } else if (
+              m.confirmadoRsvp === false ||
+              (c.status === "RECUSADO" && m.confirmadoRsvp == null)
+            ) {
+              totalRecusaram++;
+            }
+          });
+        } else if (c.status === "RECUSADO") {
+          totalRecusaram++;
+        } else if (c.status === "CONFIRMADO") {
+          totalConfirmados++;
+        }
+      });
+
+      const totalPendentes = Math.max(
+        0,
+        totalPessoas - totalConfirmados - totalRecusaram
+      );
+      const totalRespondidos = totalConfirmados + totalRecusaram;
+
+      return {
+        totalConvites,
+        totalPessoas,
+        totalConfirmados,
+        totalRecusaram,
+        totalPendentes,
+        totalAdultos,
+        totalCriancasAte6Anos,
+        taxaConfirmacao: totalPessoas > 0 ? Math.round((totalConfirmados / totalPessoas) * 100) : 0,
+        taxaRecusa: totalPessoas > 0 ? Math.round((totalRecusaram / totalPessoas) * 100) : 0,
+        taxaPendentes: totalPessoas > 0 ? Math.round((totalPendentes / totalPessoas) * 100) : 0,
+        taxaPresencaRespondidos: totalRespondidos > 0 ? Math.round((totalConfirmados / totalRespondidos) * 100) : 0,
+      };
+    }
+
+    if (data?.resumoGeral) {
+      const conf = data.resumoGeral.totalConfirmados || 0;
+      const rec = data.resumoGeral.totalRecusaram || 0;
+      const total = conf + rec;
+      return {
+        totalConvites: data.resumoGeral.totalRsvps || 0,
+        totalPessoas: total,
+        totalConfirmados: conf,
+        totalRecusaram: rec,
+        totalPendentes: 0,
+        totalAdultos: data.resumoGeral.totalAdultos || 0,
+        totalCriancasAte6Anos: data.resumoGeral.totalCriancasAte6Anos || 0,
+        taxaConfirmacao: total > 0 ? Math.round((conf / total) * 100) : 0,
+        taxaRecusa: total > 0 ? Math.round((rec / total) * 100) : 0,
+        taxaPendentes: 0,
+        taxaPresencaRespondidos: total > 0 ? Math.round((conf / total) * 100) : 0,
+      };
+    }
+
+    return {
+      totalConvites: 0,
+      totalPessoas: 0,
+      totalConfirmados: 0,
+      totalRecusaram: 0,
+      totalPendentes: 0,
+      totalAdultos: 0,
+      totalCriancasAte6Anos: 0,
+      taxaConfirmacao: 0,
+      taxaRecusa: 0,
+      taxaPendentes: 0,
+      taxaPresencaRespondidos: 0,
+    };
+  }, [metricasBackend, listaConvites, data]);
+
   // cadastro
   const [novoConvite, setNovoConvite] = useState<NovoConviteState>({
     familia: "",
@@ -239,6 +353,7 @@ export default function AdminPage() {
     localStorage.removeItem("CONVITE_ADMIN_TOKEN");
     setIsLogged(false);
     setData(null);
+    setMetricasBackend(null);
     setPassword("");
     setAuthError("");
   };
@@ -247,16 +362,23 @@ export default function AdminPage() {
     setDataLoading(true);
     setDataError("");
     try {
-      const [result, convitesRes] = await Promise.all([
+      const [result, convitesRes, metricasRes] = await Promise.all([
         buscarRelatorioRsvpAdmin(token),
         listarConvitesAdmin(token).catch((e) => {
           console.warn("Erro ao buscar lista de convites:", e);
           return [];
         }),
+        buscarMetricasAdmin(token).catch((e) => {
+          console.warn("Erro ao buscar métricas consolidadas:", e);
+          return null;
+        }),
       ]);
       setData(result);
       if (Array.isArray(convitesRes)) {
         setListaConvites(convitesRes);
+      }
+      if (metricasRes) {
+        setMetricasBackend(metricasRes);
       }
     } catch (err: any) {
       setDataError(err.message || "Erro ao carregar dados.");
@@ -636,70 +758,120 @@ export default function AdminPage() {
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <StatCard
+                        label="Total de Convidados"
+                        value={fmt(stats.totalPessoas)}
+                        sub="pessoas cadastradas"
+                        color="blue"
+                      />
+                      <StatCard
                         label="Total Confirmados"
-                        value={fmt(data.resumoGeral.totalConfirmados)}
+                        value={fmt(stats.totalConfirmados)}
                         sub="pessoas confirmadas"
                         color="green"
                       />
                       <StatCard
                         label="Não Vão"
-                        value={fmt(data.resumoGeral.totalRecusaram)}
+                        value={fmt(stats.totalRecusaram)}
                         sub="pessoas recusaram"
                         color="rose"
                       />
                       <StatCard
-                        label="Adultos Confirmados"
-                        value={fmt(data.resumoGeral.totalAdultos)}
-                        sub="7 anos ou mais"
-                        color="blue"
-                      />
-                      <StatCard
-                        label="Crianças (≤ 6 anos)"
-                        value={fmt(data.resumoGeral.totalCriancasAte6Anos)}
-                        sub="isentas de lista"
+                        label="Pendentes"
+                        value={fmt(stats.totalPendentes)}
+                        sub="aguardando resposta"
                         color="amber"
                       />
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-sans text-[#786455] bg-[#FAF7F2] p-3 rounded-[8px] border border-[#E8DFD5]">
+                      <span>
+                        Adultos Confirmados: <strong className="text-[#261811]">{stats.totalAdultos}</strong>
+                      </span>
+                      <span>
+                        Crianças Confirmadas (≤ 6 anos): <strong className="text-[#261811]">{stats.totalCriancasAte6Anos}</strong>
+                      </span>
+                      <span>
+                        Convites Emitidos: <strong className="text-[#261811]">{stats.totalConvites}</strong> famílias
+                      </span>
+                    </div>
+
                     {/* barra de progresso de confirmações */}
                     <div className="bg-white border border-[#E3D8CB] rounded-[10px] p-6 shadow-[0_2px_12px_-4px_rgba(38,24,17,0.06)]">
-                      <SectionTitle>Taxa de Confirmação de Convidados</SectionTitle>
+                      <SectionTitle>Taxa de Confirmação &amp; Presença dos Convidados</SectionTitle>
                       {(() => {
-                        const total =
-                          data.resumoGeral.totalConfirmados +
-                          data.resumoGeral.totalRecusaram;
-                        const pct =
-                          total > 0
-                            ? Math.round(
-                                (data.resumoGeral.totalConfirmados / total) *
-                                  100
-                              )
-                            : 0;
+                        const totalCadastrados = stats.totalPessoas;
+                        const totalResponderam = stats.totalConfirmados + stats.totalRecusaram;
+
+                        // Taxas calculadas sobre o total de pessoas da lista oficial
+                        const pctConfirmadosTotal = totalCadastrados > 0
+                          ? Math.round((stats.totalConfirmados / totalCadastrados) * 100)
+                          : 0;
+                        const pctRecusaramTotal = totalCadastrados > 0
+                          ? Math.round((stats.totalRecusaram / totalCadastrados) * 100)
+                          : 0;
+                        const pctPendentesTotal = totalCadastrados > 0
+                          ? Math.max(0, 100 - pctConfirmadosTotal - pctRecusaramTotal)
+                          : 0;
+
+                        // Taxa de aceite entre os que já responderam
+                        const pctAceiteRespostas = totalResponderam > 0
+                          ? Math.round((stats.totalConfirmados / totalResponderam) * 100)
+                          : 0;
+
                         return (
-                          <div className="space-y-3">
-                            <div className="flex items-end justify-between">
-                              <span className="font-serif text-4xl text-emerald-800 font-light">
-                                {pct}%
-                              </span>
-                              <span className="font-serif text-sm text-[#8C7A6B] italic pb-1">
-                                {data.resumoGeral.totalConfirmados} de {total}{" "}
-                                pessoas responderam
-                              </span>
+                          <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+                              <div>
+                                <span className="font-serif text-4xl text-emerald-800 font-light">
+                                  {pctConfirmadosTotal}%
+                                </span>
+                                <span className="font-serif text-sm text-[#8C7A6B] italic pl-2">
+                                  confirmados em relação ao total da lista ({stats.totalConfirmados} de {totalCadastrados} convidados)
+                                </span>
+                              </div>
+                              {totalResponderam > 0 && (
+                                <span className="font-serif text-xs sm:text-sm text-[#6B5A4D] bg-[#FAF7F2] px-3 py-1.5 rounded-full border border-[#E8DFD5]">
+                                  {pctAceiteRespostas}% de presença entre os que já responderam ({stats.totalConfirmados} de {totalResponderam})
+                                </span>
+                              )}
                             </div>
-                            <div className="h-3 bg-[#EAE0D2] rounded-full overflow-hidden">
+
+                            {/* Barra tri-segmentada proporcional */}
+                            <div className="h-3.5 bg-[#EAE0D2] rounded-full overflow-hidden flex">
                               <div
-                                className="h-full bg-emerald-600 rounded-full transition-all duration-700"
-                                style={{ width: `${pct}%` }}
+                                className="h-full bg-emerald-600 transition-all duration-700"
+                                style={{ width: `${pctConfirmadosTotal}%` }}
+                                title={`Confirmados: ${stats.totalConfirmados} pessoas (${pctConfirmadosTotal}%)`}
+                              />
+                              <div
+                                className="h-full bg-rose-500 transition-all duration-700"
+                                style={{ width: `${pctRecusaramTotal}%` }}
+                                title={`Não vão: ${stats.totalRecusaram} pessoas (${pctRecusaramTotal}%)`}
+                              />
+                              <div
+                                className="h-full bg-amber-400/60 transition-all duration-700"
+                                style={{ width: `${pctPendentesTotal}%` }}
+                                title={`Pendentes: ${stats.totalPendentes} pessoas (${pctPendentesTotal}%)`}
                               />
                             </div>
-                            <div className="flex gap-6 text-xs font-sans text-[#8C7A6B]">
+
+                            {/* Legenda detalhada por pessoa */}
+                            <div className="flex flex-wrap gap-4 sm:gap-6 text-xs font-sans text-[#8C7A6B] pt-1">
                               <span>
                                 <span className="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-full mr-1.5 align-middle" />
-                                Confirmados: {data.resumoGeral.totalConfirmados} pessoas
+                                Confirmados: <strong className="text-[#261811]">{stats.totalConfirmados}</strong> ({pctConfirmadosTotal}%)
                               </span>
                               <span>
-                                <span className="inline-block w-2.5 h-2.5 bg-rose-400 rounded-full mr-1.5 align-middle" />
-                                Recusaram: {data.resumoGeral.totalRecusaram} pessoas
+                                <span className="inline-block w-2.5 h-2.5 bg-rose-500 rounded-full mr-1.5 align-middle" />
+                                Não vão: <strong className="text-[#261811]">{stats.totalRecusaram}</strong> ({pctRecusaramTotal}%)
+                              </span>
+                              <span>
+                                <span className="inline-block w-2.5 h-2.5 bg-amber-400 rounded-full mr-1.5 align-middle" />
+                                Pendentes: <strong className="text-[#261811]">{stats.totalPendentes}</strong> ({pctPendentesTotal}%)
+                              </span>
+                              <span>
+                                <span className="inline-block w-2.5 h-2.5 bg-[#6B5A4D] rounded-full mr-1.5 align-middle" />
+                                Total da Lista: <strong className="text-[#261811]">{totalCadastrados}</strong> pessoas
                               </span>
                             </div>
                           </div>
@@ -799,26 +971,26 @@ export default function AdminPage() {
                 </div>
 
                 {/* sumário rápido */}
-                {data && (
+                {(metricasBackend || data) && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <StatCard
                       label="Confirmados"
-                      value={data.resumoGeral.totalConfirmados}
+                      value={stats.totalConfirmados}
                       color="green"
                     />
                     <StatCard
                       label="Recusaram"
-                      value={data.resumoGeral.totalRecusaram}
+                      value={stats.totalRecusaram}
                       color="rose"
                     />
                     <StatCard
-                      label="Adultos"
-                      value={data.resumoGeral.totalAdultos}
+                      label="Adultos Confirmados"
+                      value={stats.totalAdultos}
                       color="blue"
                     />
                     <StatCard
                       label="Crianças ≤ 6 anos"
-                      value={data.resumoGeral.totalCriancasAte6Anos}
+                      value={stats.totalCriancasAte6Anos}
                       color="amber"
                     />
                   </div>
@@ -980,51 +1152,25 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <StatCard
                         label="Convites Emitidos"
-                        value={fmt(listaConvites.length)}
+                        value={fmt(stats.totalConvites)}
                         sub="famílias cadastradas"
                         color="neutral"
                       />
                       <StatCard
                         label="Total de Pessoas"
-                        value={fmt(
-                          listaConvites.reduce(
-                            (acc, c) => acc + (c.membros?.length || 0),
-                            0
-                          )
-                        )}
+                        value={fmt(stats.totalPessoas)}
                         sub="convidados cadastrados"
                         color="blue"
                       />
                       <StatCard
                         label="Pessoas Confirmadas"
-                        value={fmt(
-                          listaConvites.reduce(
-                            (acc, c) =>
-                              acc +
-                              (c.membros?.filter(
-                                (m) => m.confirmadoRsvp === true
-                              ).length || 0),
-                            0
-                          )
-                        )}
+                        value={fmt(stats.totalConfirmados)}
                         sub="presenças confirmadas"
                         color="green"
                       />
                       <StatCard
                         label="Pessoas Que Não Vão"
-                        value={fmt(
-                          listaConvites.reduce(
-                            (acc, c) =>
-                              acc +
-                              (c.membros?.filter(
-                                (m) =>
-                                  m.confirmadoRsvp === false ||
-                                  (c.status === "RECUSADO" &&
-                                    m.confirmadoRsvp == null)
-                              ).length || 0),
-                            0
-                          )
-                        )}
+                        value={fmt(stats.totalRecusaram)}
                         sub="recusaram presença"
                         color="rose"
                       />

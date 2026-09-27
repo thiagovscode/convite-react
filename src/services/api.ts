@@ -279,3 +279,49 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
   return json;
 }
 
+export interface DashboardMetricas {
+  totalConvites: number;
+  totalConvitesConfirmados: number;
+  totalConvitesRecusados: number;
+  totalConvitesPendentes: number;
+  totalPessoas: number;
+  totalConfirmados: number;
+  totalRecusaram: number;
+  totalPendentes: number;
+  totalAdultosConfirmados: number;
+  totalCriancasConfirmadas: number;
+  taxaConfirmacao: number;
+  taxaRecusa: number;
+  taxaPendentes: number;
+  taxaPresencaRespondidos: number;
+}
+
+/**
+ * Busca métricas consolidadas do dashboard diretamente do endpoint dedicado do backend
+ * GET /api/admin/convites/metricas
+ */
+export async function buscarMetricasAdmin(token?: string): Promise<DashboardMetricas> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+
+  if (!authToken) {
+    throw new Error('Autenticação de administrador necessária.');
+  }
+
+  const url = baseUrl ? `${baseUrl}/api/admin/convites/metricas` : '/api/admin/convites/metricas';
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.message || 'Erro ao buscar métricas no servidor.');
+  }
+  return json;
+}
+
