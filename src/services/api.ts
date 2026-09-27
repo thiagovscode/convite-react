@@ -279,6 +279,40 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
   return json;
 }
 
+/**
+ * Exclui um convite existente no backend Java
+ * DELETE /api/admin/convites/{codigoOuId}
+ */
+export async function excluirConviteAdmin(
+  codigoOuId: string,
+  token?: string
+): Promise<{ success: boolean; message: string; codigo?: string; familia?: string }> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+
+  if (!authToken) {
+    throw new Error('Autenticação de administrador necessária.');
+  }
+
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/convites/${encodeURIComponent(codigoOuId.trim())}`
+    : `/api/admin/convites/${encodeURIComponent(codigoOuId.trim())}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+  });
+
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(json.message || 'Erro ao excluir convite no servidor.');
+  }
+  return json;
+}
+
 export interface DashboardMetricas {
   totalConvites: number;
   totalConvitesConfirmados: number;

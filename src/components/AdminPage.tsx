@@ -4,6 +4,7 @@ import {
   buscarRelatorioRsvpAdmin,
   buscarMetricasAdmin,
   cadastrarConviteAdmin,
+  excluirConviteAdmin,
   listarConvitesAdmin,
   getApiBaseUrl,
 } from "../services/api";
@@ -276,6 +277,85 @@ export default function AdminPage() {
   } | null>(null);
   const [copiadoFeedback, setCopiadoFeedback] = useState(false);
 
+  // Edição de convite existente
+  const [conviteEmEdicao, setConviteEmEdicao] = useState<ConviteCadastrado | null>(null);
+
+  // Exclusão segura de convite com confirmação
+  const [conviteParaExcluir, setConviteParaExcluir] = useState<ConviteCadastrado | null>(null);
+  const [excluindoLoading, setExcluindoLoading] = useState(false);
+  const [excluirErro, setExcluirErro] = useState("");
+  const [feedbackGeral, setFeedbackGeral] = useState<{ tipo: "sucesso" | "erro"; msg: string } | null>(null);
+
+  const iniciarEdicao = (c: ConviteCadastrado) => {
+    setConviteEmEdicao(c);
+    setNovoConvite({
+      familia: c.familia || "",
+      telefone: c.telefone || "",
+      email: c.email || "",
+      papel: c.papel || "Convidados",
+      observacao: c.observacao || "",
+      membros: (c.membros && c.membros.length > 0)
+        ? c.membros.map((m, idx) => ({
+            id: m.id || String(idx + 1),
+            nome: m.nome || "",
+            criancaAte6Anos: Boolean(m.criancaAte6Anos),
+            titular: Boolean(m.titular),
+            papel: m.papel || "",
+          }))
+        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+    });
+    setCadErro("");
+    setCadSucesso(null);
+    setConvitesSubTab("novo");
+  };
+
+  const cancelarEdicao = () => {
+    setConviteEmEdicao(null);
+    setNovoConvite({
+      familia: "",
+      telefone: "",
+      email: "",
+      papel: "Convidados",
+      observacao: "",
+      membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+    });
+    setCadErro("");
+    setCadSucesso(null);
+    setConvitesSubTab("lista");
+  };
+
+  const abrirModalExclusao = (c: ConviteCadastrado) => {
+    setConviteParaExcluir(c);
+    setExcluirErro("");
+  };
+
+  const fecharModalExclusao = () => {
+    if (excluindoLoading) return;
+    setConviteParaExcluir(null);
+    setExcluirErro("");
+  };
+
+  const confirmarExclusao = async () => {
+    if (!conviteParaExcluir) return;
+    setExcluindoLoading(true);
+    setExcluirErro("");
+    try {
+      const idOuCodigo = conviteParaExcluir.codigo || conviteParaExcluir.id || "";
+      await excluirConviteAdmin(idOuCodigo);
+      setFeedbackGeral({
+        tipo: "sucesso",
+        msg: `Convite da família "${conviteParaExcluir.familia}" (${conviteParaExcluir.codigo}) excluído com sucesso.`,
+      });
+      setTimeout(() => setFeedbackGeral(null), 6000);
+      setConviteParaExcluir(null);
+      await loadData();
+    } catch (err: any) {
+      setExcluirErro(err.message || "Erro ao excluir convite.");
+    } finally {
+      setExcluindoLoading(false);
+    }
+  };
+
   // ─── lifecycle ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const handleOpen = () => {
@@ -451,19 +531,23 @@ export default function AdminPage() {
     setCadLoading(true);
     try {
       const res = await cadastrarConviteAdmin({
+        codigo: conviteEmEdicao ? conviteEmEdicao.codigo : undefined,
         familia: novoConvite.familia.trim(),
         telefone: novoConvite.telefone.trim() || undefined,
         email: novoConvite.email.trim() || undefined,
         papel: novoConvite.papel.trim() || undefined,
         observacao: novoConvite.observacao.trim() || undefined,
         membros: novoConvite.membros.map((m) => ({
+          id: m.id,
           nome: m.nome.trim(),
           criancaAte6Anos: m.criancaAte6Anos,
           titular: m.titular,
+          papel: m.papel,
         })),
       });
       const link = getLinkConviteCompleto(res.codigo);
       setCadSucesso({ codigo: res.codigo, link, familia: novoConvite.familia });
+      setConviteEmEdicao(null);
       setNovoConvite({
         familia: "",
         telefone: "",
@@ -474,7 +558,7 @@ export default function AdminPage() {
       });
       await loadData();
     } catch (err: any) {
-      setCadErro(err.message || "Erro ao cadastrar convite.");
+      setCadErro(err.message || "Erro ao salvar convite.");
     } finally {
       setCadLoading(false);
     }
@@ -1112,6 +1196,8 @@ export default function AdminPage() {
                     <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
                       {convitesSubTab === "lista"
                         ? "Convites Cadastrados & Códigos"
+                        : conviteEmEdicao
+                        ? `Editar Convite: ${conviteEmEdicao.familia}`
                         : "Cadastrar Novo Convite"}
                     </h1>
                   </div>
@@ -1131,8 +1217,12 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setConvitesSubTab("novo");
-                        setCadSucesso(null);
+                        if (conviteEmEdicao) {
+                          cancelarEdicao();
+                        } else {
+                          setConvitesSubTab("novo");
+                          setCadSucesso(null);
+                        }
                       }}
                       className={`text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold transition-all cursor-pointer ${
                         convitesSubTab === "novo"
@@ -1140,10 +1230,30 @@ export default function AdminPage() {
                           : "bg-white border border-[#D8CDC0] text-[#6B5A4D] hover:text-[#261811]"
                       }`}
                     >
-                      + Novo Convite
+                      {conviteEmEdicao ? "✏️ Editando Convite" : "+ Novo Convite"}
                     </button>
                   </div>
                 </div>
+
+                {/* Feedback Geral (ex: após exclusão) */}
+                {feedbackGeral && (
+                  <div
+                    className={`p-4 rounded-[8px] text-xs font-sans font-medium flex items-center justify-between border ${
+                      feedbackGeral.tipo === "sucesso"
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                        : "bg-rose-50 border-rose-300 text-rose-900"
+                    }`}
+                  >
+                    <span>{feedbackGeral.msg}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFeedbackGeral(null)}
+                      className="text-current opacity-70 hover:opacity-100 underline text-[0.7rem] cursor-pointer ml-3"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                )}
 
                 {/* 1. SUB-ABA: LISTA DE CONVITES CADASTRADOS */}
                 {convitesSubTab === "lista" ? (
@@ -1371,6 +1481,32 @@ export default function AdminPage() {
                                   </svg>
                                   <span>WhatsApp</span>
                                 </button>
+
+                                {/* Botão Editar */}
+                                <button
+                                  type="button"
+                                  onClick={() => iniciarEdicao(c)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] transition-all cursor-pointer font-medium"
+                                  title="Editar convite e membros"
+                                >
+                                  <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  <span>Editar</span>
+                                </button>
+
+                                {/* Botão Excluir */}
+                                <button
+                                  type="button"
+                                  onClick={() => abrirModalExclusao(c)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-sans text-rose-700 hover:text-rose-900 bg-rose-50/70 hover:bg-rose-100 border border-rose-200/80 rounded-[6px] transition-all cursor-pointer font-medium"
+                                  title="Excluir convite permanentemente"
+                                >
+                                  <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  <span>Excluir</span>
+                                </button>
                               </div>
                             </div>
                           );
@@ -1407,7 +1543,7 @@ export default function AdminPage() {
                         <span className="text-4xl block">✦</span>
                         <div>
                           <p className="text-[0.64rem] font-sans tracking-[0.2em] uppercase text-[#6B5A4D] font-semibold mb-1">
-                            Convite Gravado no Backend com Sucesso
+                            Convite Salvo com Sucesso
                           </p>
                           <h2 className="font-serif text-2xl text-[#261811] font-light">
                             {cadSucesso.familia}
@@ -1468,6 +1604,24 @@ export default function AdminPage() {
                       >
                         {/* Coluna principal */}
                         <div className="lg:col-span-2 space-y-5">
+                          {conviteEmEdicao && (
+                            <div className="p-4 bg-amber-50 border border-amber-300 rounded-[8px] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-sans text-amber-950">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">✏️</span>
+                                <span>
+                                  Você está editando o convite da família <strong>{conviteEmEdicao.familia}</strong> (Código: <code className="font-mono font-bold bg-amber-100/80 px-1.5 py-0.5 rounded border border-amber-200">{conviteEmEdicao.codigo}</code>).
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={cancelarEdicao}
+                                className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded text-[0.68rem] tracking-wider uppercase font-semibold transition-colors cursor-pointer self-start sm:self-auto"
+                              >
+                                Cancelar Edição
+                              </button>
+                            </div>
+                          )}
+
                           {cadErro && (
                             <div className="p-4 bg-rose-50 border border-rose-300 rounded-[8px] text-sm text-rose-900 font-medium">
                               {cadErro}
@@ -1721,8 +1875,10 @@ export default function AdminPage() {
                               className="w-full py-3.5 bg-[#261811] hover:bg-[#1A100B] text-white font-sans text-[0.74rem] tracking-[0.18em] uppercase font-semibold rounded-[8px] transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                             >
                               {cadLoading
-                                ? "Gravando no Backend…"
-                                : "Salvar Convite no Backend"}
+                                ? "Salvando…"
+                                : conviteEmEdicao
+                                ? "Salvar Alterações"
+                                : "Salvar Convite"}
                             </button>
                           </div>
                         </div>
@@ -1750,6 +1906,105 @@ export default function AdminPage() {
           ← Voltar ao Convite
         </button>
       </footer>
+
+      {/* ── MODAL DE EXCLUSÃO SEGURA DE CONVITE ── */}
+      {conviteParaExcluir && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+        >
+          <div className="bg-[#FAF7F2] border border-[#D8CDC0] rounded-[12px] p-6 sm:p-8 max-w-[500px] w-full shadow-2xl space-y-6 text-[#261811]">
+            {/* Cabeçalho */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-serif text-xl sm:text-2xl font-light text-[#261811]">
+                  Excluir Convite
+                </h3>
+                <p className="text-xs font-sans text-[#6B5A4D] mt-1">
+                  Esta ação é irreversível e removerá todos os dados deste convite.
+                </p>
+              </div>
+            </div>
+
+            {/* Detalhes do Convite */}
+            <div className="bg-white border border-[#E3D8CB] rounded-[8px] p-4 space-y-2 text-xs font-sans text-[#543D30]">
+              <div className="flex justify-between items-center py-0.5 border-b border-[#F0EAE0]">
+                <span className="text-[#8C7A6B]">Família / Convidado:</span>
+                <strong className="text-[#261811] text-sm font-serif">{conviteParaExcluir.familia}</strong>
+              </div>
+              <div className="flex justify-between items-center py-0.5 border-b border-[#F0EAE0]">
+                <span className="text-[#8C7A6B]">Código Único:</span>
+                <span className="font-mono font-bold text-[#261811] bg-[#F5F0E8] px-2 py-0.5 rounded border border-[#D8CDC0]">
+                  {conviteParaExcluir.codigo}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-0.5 border-b border-[#F0EAE0]">
+                <span className="text-[#8C7A6B]">Convidados Vinculados:</span>
+                <strong className="text-[#261811]">
+                  {conviteParaExcluir.membros?.length || 0} pessoa(s)
+                </strong>
+              </div>
+              {conviteParaExcluir.telefone && (
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-[#8C7A6B]">Telefone:</span>
+                  <span>{conviteParaExcluir.telefone}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Aviso de Impacto */}
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-[8px] text-[0.74rem] font-sans text-rose-900 leading-relaxed space-y-1">
+              <p className="font-semibold flex items-center gap-1.5">
+                <span>⚠️</span> Atenção ao confirmar:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 opacity-90">
+                <li>Os membros cadastrados serão excluídos da lista oficial do evento.</li>
+                <li>Quaisquer confirmações de presença (RSVP) deste convite serão excluídas.</li>
+                <li>O link oficial deixará de ser acessível para os convidados.</li>
+              </ul>
+            </div>
+
+            {excluirErro && (
+              <div className="p-3 bg-rose-100 border border-rose-300 rounded text-xs text-rose-950 font-medium">
+                {excluirErro}
+              </div>
+            )}
+
+            {/* Ações */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={excluindoLoading}
+                onClick={fecharModalExclusao}
+                className="px-4 py-2.5 border border-[#D8CDC0] hover:bg-[#FAF7F2] text-[#6B5A4D] hover:text-[#261811] text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindoLoading}
+                onClick={confirmarExclusao}
+                className="px-5 py-2.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] transition-all cursor-pointer shadow-sm disabled:opacity-50 flex items-center gap-2"
+              >
+                {excluindoLoading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Excluindo…</span>
+                  </>
+                ) : (
+                  <span>Sim, Excluir Convite</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
