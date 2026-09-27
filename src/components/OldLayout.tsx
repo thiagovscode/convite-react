@@ -8,6 +8,7 @@ import Footer from "./sections/Footer";
 import Modals from "./Modals";
 import RsvpModal from "./RsvpModal";
 import CheckinModal from "./CheckinModal";
+import AdminPage from "./AdminPage";
 
 export default function OldLayout() {
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function OldLayout() {
       <Modals />
       <RsvpModal />
       <CheckinModal />
+      <AdminPage />
     </>
   );
 }

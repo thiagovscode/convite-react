@@ -59,15 +59,27 @@ export interface AdminRsvpResponse {
 }
 
 export const getApiBaseUrl = (): string => {
-  // Variável de ambiente do Vite (configurada via VITE_API_URL no GitHub Secrets / CI)
   const viteApiUrl = import.meta.env.VITE_API_URL;
   if (viteApiUrl && String(viteApiUrl).trim() !== '') {
     return String(viteApiUrl).trim().replace(/\/$/, '');
   }
 
-  // Garantia de produção: se estiver no GitHub Pages e a variável não foi injetada no build
-  if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
-    return 'https://casamento.southiagovasconcelos.workers.dev';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      if (window.location.port === '5173' || window.location.port === '4173') {
+        return '';
+      }
+      return 'http://localhost:3001';
+    }
+
+    if (window.location.protocol === 'file:') {
+      return 'http://localhost:3001';
+    }
+
+    if (host.includes('github.io')) {
+      return 'https://casamento.southiagovasconcelos.workers.dev';
+    }
   }
 
   return '';

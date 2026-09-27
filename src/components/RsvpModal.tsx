@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
   enviarRsvpCasamento,
-  autenticarAdmin,
-  buscarRelatorioRsvpAdmin,
-  cadastrarConviteAdmin,
   getApiBaseUrl
 } from "../services/api";
 import type {
-  AcompanhanteRequest,
-  AdminRsvpResponse,
-  NovoMembroAdminRequest
+  AcompanhanteRequest
 } from "../services/api";
 import { buscarConvitePorCodigo } from "../services/convites";
 import type { ConvitePreDefinido } from "../services/convites";
@@ -68,7 +63,7 @@ function WeddingCheckbox({
 
 export default function RsvpModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<"guest" | "admin" | "success">("guest");
+  const [mode, setMode] = useState<"guest" | "success">("guest");
 
   // Form State
   const [nome, setNome] = useState("");
@@ -92,30 +87,6 @@ export default function RsvpModal() {
   const [termoBuscaConvite, setTermoBuscaConvite] = useState("");
   const [buscandoConvite, setBuscandoConvite] = useState(false);
   const [erroConviteNaoEncontrado, setErroConviteNaoEncontrado] = useState("");
-
-  // Admin State
-  const [adminUsername, setAdminUsername] = useState("admin");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminError, setAdminError] = useState("");
-  const [adminData, setAdminData] = useState<AdminRsvpResponse | null>(null);
-  const [isLoggedAdmin, setIsLoggedAdmin] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Sub-aba do painel restrito e cadastro de novos convites no backend Java
-  const [adminTab, setAdminTab] = useState<"relatorio" | "cadastrar">("relatorio");
-  const [novoFamilia, setNovoFamilia] = useState("");
-  const [novoTelefone, setNovoTelefone] = useState("");
-  const [novoEmail, setNovoEmail] = useState("");
-  const [novoPapel, setNovoPapel] = useState("Convidados");
-  const [novoObservacao, setNovoObservacao] = useState("");
-  const [novosMembros, setNovosMembros] = useState<NovoMembroAdminRequest[]>([
-    { id: "1", nome: "", criancaAte6Anos: false, titular: true }
-  ]);
-  const [cadastrandoLoading, setCadastrandoLoading] = useState(false);
-  const [cadastrandoErro, setCadastrandoErro] = useState("");
-  const [cadastrandoSucesso, setCadastrandoSucesso] = useState<{ codigo: string; link: string; familia: string } | null>(null);
-  const [linkCopiadoFeedback, setLinkCopiadoFeedback] = useState(false);
 
   const aplicarDadosDoConvite = (c: ConvitePreDefinido) => {
     setConvitePreDefinido(c);
@@ -171,15 +142,7 @@ export default function RsvpModal() {
       const isHashAdmin = window.location.hash.includes("admin=true");
 
       if (isParamAdmin || isHashAdmin) {
-        setIsOpen(true);
-        setMode("admin");
-        document.body.style.overflow = "hidden";
-        
-        const token = localStorage.getItem("CONVITE_ADMIN_TOKEN");
-        if (token) {
-          setIsLoggedAdmin(true);
-          carregarRelatorioAdmin(token);
-        }
+        setIsOpen(false);
         return;
       }
 
@@ -195,10 +158,14 @@ export default function RsvpModal() {
       }
 
       // 3. Abre direto o formulário se tiver ?rsvp=true ou #rsvp
-      if (params.get("rsvp") === "true" || window.location.hash.includes("rsvp")) {
+      const hasRsvp = params.get("rsvp") === "true" || window.location.hash.includes("rsvp");
+      if (hasRsvp) {
         setIsOpen(true);
         setMode("guest");
         document.body.style.overflow = "hidden";
+      } else if (!isParamAdmin && !isHashAdmin) {
+        setIsOpen(false);
+        document.body.style.overflow = "";
       }
     };
 
@@ -210,6 +177,9 @@ export default function RsvpModal() {
       setMode("guest");
       setErrorMsg("");
       document.body.style.overflow = "hidden";
+      if (!window.location.hash.includes("rsvp")) {
+        window.history.pushState({ rsvp: true }, "", "#rsvp");
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -221,10 +191,6 @@ export default function RsvpModal() {
     window.addEventListener("open-rsvp-modal", handleOpen);
     document.addEventListener("keydown", handleKeyDown);
 
-    const token = localStorage.getItem("CONVITE_ADMIN_TOKEN");
-    if (token) {
-      setIsLoggedAdmin(true);
-    }
 
     return () => {
       window.removeEventListener("open-rsvp-modal", handleOpen);
@@ -237,17 +203,28 @@ export default function RsvpModal() {
     setIsOpen(false);
     document.body.style.overflow = "";
 
-    // Remove ?admin=true da URL ao fechar o painel
+    // Se estiver com #rsvp no histórico, volta no navegador
+    if (window.location.hash.includes("rsvp")) {
+      if (window.history.state && window.history.state.rsvp) {
+        window.history.back();
+      } else {
+        const url = new URL(window.location.href);
+        url.hash = "";
+        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+      }
+    }
+
+    // Remove ?admin=true ou ?rsvp=true da URL
     const url = new URL(window.location.href);
-    if (url.searchParams.has("admin")) {
+    if (url.searchParams.has("admin") || url.searchParams.has("rsvp")) {
       url.searchParams.delete("admin");
+      url.searchParams.delete("rsvp");
       window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
     }
 
     setTimeout(() => {
       setMode("guest");
       setErrorMsg("");
-      setAdminError("");
     }, 300);
   };
 
@@ -377,132 +354,7 @@ export default function RsvpModal() {
     }
   };
 
-  // Funções do Admin
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminError("");
-    setAdminLoading(true);
 
-    try {
-      const token = await autenticarAdmin(adminUsername.trim(), adminPassword);
-      setIsLoggedAdmin(true);
-      await carregarRelatorioAdmin(token);
-    } catch (err: any) {
-      setAdminError(err.message || "Usuário ou senha inválidos.");
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const carregarRelatorioAdmin = async (token?: string) => {
-    setAdminLoading(true);
-    setAdminError("");
-    try {
-      const data = await buscarRelatorioRsvpAdmin(token);
-      setAdminData(data);
-    } catch (err: any) {
-      setAdminError(err.message || "Erro ao carregar relatório.");
-      if (err.message.includes("expirada") || err.message.includes("Autenticação")) {
-        setIsLoggedAdmin(false);
-      }
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const handleAdminLogout = () => {
-    localStorage.removeItem("CONVITE_ADMIN_TOKEN");
-    setIsLoggedAdmin(false);
-    setAdminData(null);
-  };
-
-  const addMembroCadastro = () => {
-    setNovosMembros(prev => [
-      ...prev,
-      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false }
-    ]);
-  };
-
-  const removeMembroCadastro = (idx: number) => {
-    if (novosMembros.length <= 1) return;
-    setNovosMembros(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateMembroCadastro = (idx: number, campo: keyof NovoMembroAdminRequest, valor: any) => {
-    setNovosMembros(prev => {
-      const clone = [...prev];
-      clone[idx] = { ...clone[idx], [campo]: valor };
-      if (campo === "titular" && valor === true) {
-        clone.forEach((m, i) => {
-          if (i !== idx) m.titular = false;
-        });
-      }
-      return clone;
-    });
-  };
-
-  const handleCadastrarConvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCadastrandoErro("");
-    setCadastrandoSucesso(null);
-
-    if (!novoFamilia.trim()) {
-      setCadastrandoErro("Informe o nome da família ou convidado principal.");
-      return;
-    }
-
-    const membrosValidos = novosMembros.filter(m => m.nome.trim() !== "");
-    if (membrosValidos.length === 0) {
-      setCadastrandoErro("Adicione pelo menos um membro com o nome preenchido.");
-      return;
-    }
-
-    if (!membrosValidos.some(m => m.titular)) {
-      membrosValidos[0].titular = true;
-    }
-
-    setCadastrandoLoading(true);
-    try {
-      const resp = await cadastrarConviteAdmin({
-        familia: novoFamilia.trim(),
-        telefone: novoTelefone.trim() || undefined,
-        email: novoEmail.trim() || undefined,
-        papel: novoPapel.trim() || undefined,
-        observacao: novoObservacao.trim() || undefined,
-        membros: membrosValidos
-      });
-
-      const codigoGerado = resp.codigo;
-      const origin = window.location.origin;
-      const pathname = window.location.pathname;
-      const linkCompleto = `${origin}${pathname}?convite=${codigoGerado}`;
-
-      setCadastrandoSucesso({
-        codigo: codigoGerado,
-        link: linkCompleto,
-        familia: novoFamilia.trim()
-      });
-
-      setNovoFamilia("");
-      setNovoTelefone("");
-      setNovoEmail("");
-      setNovoPapel("Convidados");
-      setNovoObservacao("");
-      setNovosMembros([{ id: "1", nome: "", criancaAte6Anos: false, titular: true }]);
-
-      carregarRelatorioAdmin();
-    } catch (err: any) {
-      setCadastrandoErro(err.message || "Erro ao cadastrar convite no backend.");
-    } finally {
-      setCadastrandoLoading(false);
-    }
-  };
-
-  const handleCopiarLinkConvite = (link: string) => {
-    navigator.clipboard.writeText(link);
-    setLinkCopiadoFeedback(true);
-    setTimeout(() => setLinkCopiadoFeedback(false), 3000);
-  };
 
   if (!isOpen) return null;
 
@@ -514,40 +366,60 @@ export default function RsvpModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[99999] overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rsvp-modal-title"
+      className="fixed inset-0 z-[99999] overflow-y-auto overflow-x-hidden bg-[#FAF7F2] text-[#261811] animate-fade-in"
+      role="region"
+      aria-label="Página de Confirmação de Presença"
     >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-[#160E0A]/80 backdrop-blur-sm transition-opacity"
-        onClick={close}
-      ></div>
-
-      {/* Modal Container — Papelaria editorial premium */}
-      <div className="relative w-full max-w-[530px] my-auto bg-[#FAF7F2] border border-[#D8CDC0] shadow-[0_20px_50px_-15px_rgba(22,14,10,0.25)] p-6 sm:p-8 z-10 text-[#261811] animate-fade-in rounded-[4px] max-h-[calc(100dvh-2.5rem)] overflow-y-auto overflow-x-hidden custom-rsvp-scroll">
-        
-        {/* Header com Botão Fechar */}
-        <div className="flex justify-between items-start mb-6 border-b border-[#EAE0D5] pb-4 shrink-0">
-          <div className="flex flex-col">
-            <span className="font-sans tracking-[0.2em] uppercase text-[0.66rem] text-[#8C7A6B] font-medium">
-              {mode === "admin" ? "Área Administrativa" : "R.S.V.P."}
-            </span>
-            <h2 id="rsvp-modal-title" className="font-serif text-2xl sm:text-[1.85rem] text-[#261811] font-light mt-0.5 tracking-[-0.01em]">
-              {mode === "admin" ? "Relatório de Presenças" : "Confirmação de Presença"}
-            </h2>
-          </div>
+      {/* Barra de Navegação Superior (Header Fixo de Página com Botão de Voltar) */}
+      <header className="sticky top-0 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DEC8] px-4 sm:px-8 py-3.5 sm:py-4 transition-all shadow-xs">
+        <div className="max-w-[760px] mx-auto flex items-center justify-between">
           <button
+            type="button"
             onClick={close}
-            className="text-[#8C7A6B] hover:text-[#261811] transition-colors p-1.5 focus:outline-none -mr-1 rounded-[3px]"
-            aria-label="Fechar janela"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-sans tracking-[0.14em] uppercase text-[#6B5A4D] hover:text-[#261811] transition-colors py-1.5 px-3 -ml-3 rounded-[3px] hover:bg-[#EFE9DD] cursor-pointer font-medium"
           >
+            <span className="text-base leading-none">←</span>
+            <span>Voltar ao Convite</span>
+          </button>
+
+          <div className="text-center hidden sm:block">
+            <span className="font-serif italic text-sm text-[#8C7A6B]">
+              Tainara &amp; Thiago · 24.01.2027
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={close}
+            className="inline-flex items-center gap-1.5 text-xs font-sans tracking-[0.12em] uppercase text-[#8C7A6B] hover:text-[#261811] p-1.5 rounded-[3px] hover:bg-[#EFE9DD] transition-colors cursor-pointer"
+            aria-label="Fechar e voltar ao convite"
+          >
+            <span className="hidden sm:inline text-[0.7rem]">Fechar</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
+      </header>
+
+      {/* Conteúdo Central da Página com Largura Confortável e Generosa */}
+      <main className="max-w-[760px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
+        <div className="bg-[#FFFFFF] border border-[#E3D8CB] shadow-[0_4px_24px_-8px_rgba(38,24,17,0.06)] p-6 sm:p-10 rounded-[6px] text-[#261811]">
+          
+          {/* Header com Identificação */}
+          <div className="flex justify-between items-start mb-6 border-b border-[#EAE0D5] pb-5 shrink-0">
+            <div className="flex flex-col space-y-1">
+              <span className="font-sans tracking-[0.2em] uppercase text-[0.66rem] text-[#8C7A6B] font-medium">
+                R.S.V.P.
+              </span>
+              <h1 id="rsvp-modal-title" className="font-serif text-2xl sm:text-3xl text-[#261811] font-light mt-0.5 tracking-[-0.01em]">
+                Confirmação de Presença
+              </h1>
+              <p className="font-serif italic text-sm text-[#6B5A4D]">
+                Por favor, confirme se você e sua família poderão celebrar conosco este momento especial.
+              </p>
+            </div>
+          </div>
 
         {/* ========================================================================= */}
         {/* MODO GUEST: EXIGE CONVITE OFICIAL E SELETOR DE IDADE PARA CRIANÇAS        */}
@@ -879,573 +751,20 @@ export default function RsvpModal() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* MODO ADMIN: ACESSADO EXCLUSIVAMENTE VIA ?admin=true NO LINK               */}
-        {/* ========================================================================= */}
-        {mode === "admin" && (
-          <div className="overflow-y-auto overscroll-contain pr-1 flex-1 space-y-4 animate-fade-in">
-            {/* Header com voltar e abas */}
-            <div className="flex flex-wrap justify-between items-center gap-2 border-b border-[#967D67] pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="font-display text-[0.72rem] tracking-[0.2em] uppercase text-[#543D30] font-bold">
-                  Painel Restrito
-                </span>
-                {isLoggedAdmin && (
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <button
-                      type="button"
-                      onClick={() => setAdminTab("relatorio")}
-                      className={`font-display text-[0.68rem] tracking-wider uppercase px-2.5 py-1 border transition-all rounded-[2px] font-bold cursor-pointer ${
-                        adminTab === "relatorio"
-                          ? "bg-[#261811] text-[#FAF7F2] border-[#261811]"
-                          : "text-[#543D30] hover:text-[#261811] border-[#967D67]/40 bg-white/40"
-                      }`}
-                    >
-                      Relatório Presenças
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAdminTab("cadastrar")}
-                      className={`font-display text-[0.68rem] tracking-wider uppercase px-2.5 py-1 border transition-all rounded-[2px] font-bold cursor-pointer ${
-                        adminTab === "cadastrar"
-                          ? "bg-[#261811] text-[#FAF7F2] border-[#261811]"
-                          : "text-[#543D30] hover:text-[#261811] border-[#967D67]/40 bg-white/40"
-                      }`}
-                    >
-                      + Cadastrar Convite
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {isLoggedAdmin && (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      close();
-                      window.dispatchEvent(new CustomEvent("open-recepcao-modal"));
-                    }}
-                    className="font-display text-[0.72rem] tracking-wider uppercase text-[#543D30] hover:text-[#261811] underline underline-offset-2 transition-colors font-bold"
-                  >
-                    Portaria / Recepção
-                  </button>
-                  <span className="text-[#967D67]">|</span>
-                  <button
-                    type="button"
-                    onClick={() => carregarRelatorioAdmin()}
-                    disabled={adminLoading}
-                    className="font-display text-[0.72rem] tracking-wider uppercase text-[#261811] hover:text-[#543D30] transition-colors font-bold"
-                  >
-                    Atualizar Dados
-                  </button>
-                  <span className="text-[#967D67]">|</span>
-                  <button
-                    type="button"
-                    onClick={handleAdminLogout}
-                    className="font-display text-[0.72rem] tracking-wider uppercase text-red-900 hover:opacity-80 transition-colors font-bold"
-                  >
-                    Sair
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {/* SE NÃO ESTIVER AUTENTICADO: LOGIN */}
-            {!isLoggedAdmin ? (
-              <form onSubmit={handleAdminLogin} className="p-5 border-2 border-[#967D67] bg-[#EAE0D2] space-y-4 max-w-[420px] mx-auto my-3 rounded-sm">
-                <div className="text-center pb-1">
-                  <h4 className="font-serif text-xl text-[#261811] font-semibold">Acesso Restrito dos Noivos</h4>
-                  <p className="font-serif italic text-xs text-[#453126] mt-0.5">
-                    Faça login com seu usuário administrativo do backend.
-                  </p>
-                </div>
-
-                {adminError && (
-                  <div className="bg-red-100 border border-red-500 p-2.5 text-xs text-red-950 font-semibold">
-                    {adminError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block font-display text-[0.7rem] tracking-[0.2em] uppercase text-[#543D30] font-bold mb-1">
-                    Usuário
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={adminUsername}
-                    onChange={(e) => setAdminUsername(e.target.value)}
-                    placeholder="admin"
-                    className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-display text-[0.7rem] tracking-[0.2em] uppercase text-[#543D30] font-bold mb-1">
-                    Senha
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="Digite sua senha"
-                    className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={adminLoading}
-                  className="w-full py-3 bg-[#261811] text-[#F8F4EC] font-display text-[0.78rem] tracking-[0.2em] uppercase hover:bg-[#160E0A] transition-colors disabled:opacity-50 font-bold"
-                >
-                  {adminLoading ? "Autenticando..." : "Entrar no Painel"}
-                </button>
-
-                <div className="text-center pt-3 border-t border-[#967D67]/30">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      close();
-                      window.dispatchEvent(new CustomEvent("open-recepcao-modal"));
-                    }}
-                    className="inline-flex items-center gap-1.5 text-[0.75rem] text-[#543D30] hover:text-[#261811] underline underline-offset-4 font-sans tracking-wide font-medium cursor-pointer transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                    Acessar Tela de Recepção / Portaria
-                  </button>
-                </div>
-              </form>
-            ) : adminTab === "cadastrar" ? (
-              /* SE ESTIVER AUTENTICADO E NA ABA CADASTRAR: FORMULÁRIO DE NOVO CONVITE NO BACKEND JAVA */
-              <div className="space-y-4">
-                {cadastrandoSucesso ? (
-                  /* Card de Convite Gerado com Sucesso */
-                  <div className="p-6 bg-[#FAF7F2] border-2 border-[#967D67] rounded-sm text-center space-y-4 shadow-sm animate-fade-in">
-                    <span className="text-3xl text-[#73563E] block">✦</span>
-                    <div>
-                      <span className="font-display text-[0.68rem] tracking-[0.2em] uppercase text-[#7D6B5D] font-bold block mb-1">
-                        Convite Gravado no Backend com Sucesso
-                      </span>
-                      <h4 className="font-serif text-2xl text-[#261811] font-semibold">
-                        {cadastrandoSucesso.familia}
-                      </h4>
-                    </div>
-
-                    <div className="bg-[#EAE0D2] border border-[#D5C6B5] p-3.5 rounded-sm max-w-sm mx-auto">
-                      <span className="block font-sans text-[0.65rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                        Código Único do Convite
-                      </span>
-                      <span className="font-mono text-2xl font-bold tracking-widest text-[#261811] block mt-1 select-all">
-                        {cadastrandoSucesso.codigo}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 max-w-md mx-auto text-left">
-                      <label className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium">
-                        Link Direto para Enviar ao Convidado:
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={cadastrandoSucesso.link}
-                          className="flex-1 bg-[#FFFFFF] border border-[#D8CDC0] px-3 py-2 text-xs font-mono text-[#261811] rounded-[3px] select-all"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCopiarLinkConvite(cadastrandoSucesso.link)}
-                          className="px-4 py-2 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-[0.72rem] tracking-wider uppercase font-bold rounded-[3px] transition-colors shrink-0 cursor-pointer"
-                        >
-                          {linkCopiadoFeedback ? "Copiado!" : "Copiar Link"}
-                        </button>
-                      </div>
-                      {linkCopiadoFeedback && (
-                        <p className="text-[0.78rem] text-emerald-800 font-medium italic text-center">
-                          ✓ Link copiado com sucesso para a área de transferência!
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="pt-3 flex flex-wrap justify-center gap-3 border-t border-[#EAE0D5]">
-                      <button
-                        type="button"
-                        onClick={() => setCadastrandoSucesso(null)}
-                        className="px-5 py-2.5 bg-[#261811] text-[#FAF7F2] font-display text-[0.72rem] tracking-wider uppercase hover:bg-[#1A100B] transition-colors font-bold rounded-[2px] cursor-pointer"
-                      >
-                        + Cadastrar Outro Convite
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCadastrandoSucesso(null);
-                          setAdminTab("relatorio");
-                        }}
-                        className="px-5 py-2.5 bg-transparent border border-[#261811] text-[#261811] font-display text-[0.72rem] tracking-wider uppercase hover:bg-[#261811] hover:text-[#FAF7F2] transition-colors font-bold rounded-[2px] cursor-pointer"
-                      >
-                        Ver Relatório
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Formulário de Cadastro de Novo Convite */
-                  <form onSubmit={handleCadastrarConvite} className="p-4 sm:p-5 border-2 border-[#967D67] bg-[#EAE0D2] space-y-4 rounded-sm text-left">
-                    <div className="border-b border-[#967D67]/40 pb-2">
-                      <span className="font-display text-[0.66rem] tracking-[0.2em] uppercase text-[#543D30] font-bold block">
-                        Cadastro de Novo Convite Oficial (Backend Java)
-                      </span>
-                      <h4 className="font-serif text-xl sm:text-2xl text-[#261811] font-normal mt-0.5">
-                        Cadastrar Família &amp; Convidados
-                      </h4>
-                      <p className="font-serif italic text-xs text-[#543D30] mt-0.5">
-                        O código exclusivo será gerado pelo backend de forma segura e única no banco de dados MongoDB.
-                      </p>
-                    </div>
-
-                    {cadastrandoErro && (
-                      <div className="bg-red-100 border border-red-500 p-2.5 text-xs text-red-950 font-semibold rounded-[2px]">
-                        {cadastrandoErro}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {/* Nome da Família / Identificação */}
-                      <div>
-                        <label className="block font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold mb-1">
-                          Nome da Família / Convidado Principal *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={novoFamilia}
-                          onChange={(e) => setNovoFamilia(e.target.value)}
-                          placeholder="Ex: Família Silva ou Lucas &amp; Mariana"
-                          className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] rounded-[2px]"
-                        />
-                      </div>
-
-                      {/* Telefone / WhatsApp */}
-                      <div>
-                        <label className="block font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold mb-1">
-                          WhatsApp / Contato
-                        </label>
-                        <input
-                          type="tel"
-                          value={novoTelefone}
-                          onChange={(e) => setNovoTelefone(e.target.value)}
-                          placeholder="(11) 99999-9999"
-                          className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] rounded-[2px]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {/* E-mail */}
-                      <div>
-                        <label className="block font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold mb-1">
-                          E-mail (opcional)
-                        </label>
-                        <input
-                          type="email"
-                          value={novoEmail}
-                          onChange={(e) => setNovoEmail(e.target.value)}
-                          placeholder="email@exemplo.com"
-                          className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] rounded-[2px]"
-                        />
-                      </div>
-
-                      {/* Categoria / Papel */}
-                      <div>
-                        <label className="block font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold mb-1">
-                          Papel / Categoria no Evento
-                        </label>
-                        <select
-                          value={novoPapel}
-                          onChange={(e) => setNovoPapel(e.target.value)}
-                          className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] rounded-[2px]"
-                        >
-                          <option value="Convidados">Convidados</option>
-                          <option value="Padrinhos">Padrinhos</option>
-                          <option value="Padrinhos da Noiva">Padrinhos da Noiva</option>
-                          <option value="Padrinhos do Noivo">Padrinhos do Noivo</option>
-                          <option value="Família dos Noivos">Família dos Noivos</option>
-                          <option value="Pajens &amp; Daminhas">Pajens &amp; Daminhas</option>
-                          <option value="Convidados Especiais">Convidados Especiais</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Membros da Família */}
-                    <div className="pt-2">
-                      <div className="flex justify-between items-center border-b border-[#967D67]/40 pb-1.5 mb-2.5">
-                        <span className="font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                          Membros Autorizados no Convite ({novosMembros.length})
-                        </span>
-                        <button
-                          type="button"
-                          onClick={addMembroCadastro}
-                          className="text-[0.72rem] text-[#261811] hover:underline font-display tracking-wider uppercase font-bold cursor-pointer"
-                        >
-                          + Adicionar Membro
-                        </button>
-                      </div>
-
-                      <div className="space-y-2.5">
-                        {novosMembros.map((m, idx) => (
-                          <div
-                            key={m.id || idx}
-                            className="p-3 bg-[#FAF7F0] border border-[#967D67]/60 rounded-sm flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between"
-                          >
-                            <div className="flex-1 w-full sm:w-auto">
-                              <input
-                                type="text"
-                                required
-                                value={m.nome}
-                                onChange={(e) => updateMembroCadastro(idx, "nome", e.target.value)}
-                                placeholder={`Nome completo do membro ${idx + 1}`}
-                                className="w-full bg-white border border-[#D8CDC0] px-3 py-1.5 text-sm font-serif text-[#261811] focus:outline-none focus:border-[#261811] rounded-[2px]"
-                              />
-                            </div>
-
-                            <div className="flex items-center gap-4 flex-wrap text-xs">
-                              {/* Seletor Adulto / Criança */}
-                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={m.criancaAte6Anos}
-                                  onChange={(e) => updateMembroCadastro(idx, "criancaAte6Anos", e.target.checked)}
-                                  className="accent-[#261811] w-4 h-4 cursor-pointer"
-                                />
-                                <span className="font-serif text-[#453126]">
-                                  Criança (0 a 6 anos)
-                                </span>
-                              </label>
-
-                              {/* Titular */}
-                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={m.titular || false}
-                                  onChange={(e) => updateMembroCadastro(idx, "titular", e.target.checked)}
-                                  className="accent-[#261811] w-4 h-4 cursor-pointer"
-                                />
-                                <span className="font-serif text-[#453126]">
-                                  Titular
-                                </span>
-                              </label>
-
-                              {novosMembros.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeMembroCadastro(idx)}
-                                  className="text-red-800 hover:text-red-950 text-sm font-bold px-1 cursor-pointer"
-                                  title="Remover membro"
-                                >
-                                  ✕
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Observações */}
-                    <div>
-                      <label className="block font-display text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-bold mb-1">
-                        Observações Internas (opcional)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={novoObservacao}
-                        onChange={(e) => setNovoObservacao(e.target.value)}
-                        placeholder="Anotações para a equipe ou noivos..."
-                        className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3 py-2 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] rounded-[2px]"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={cadastrandoLoading}
-                      className="w-full py-3.5 bg-[#261811] text-[#F8F4EC] font-display text-[0.78rem] tracking-[0.2em] uppercase hover:bg-[#160E0A] transition-colors disabled:opacity-50 font-bold rounded-[2px] cursor-pointer shadow-sm"
-                    >
-                      {cadastrandoLoading ? "Cadastrando no Backend Java..." : "Gravar Convite no Backend"}
-                    </button>
-                  </form>
-                )}
-              </div>
-            ) : (
-              /* SE ESTIVER AUTENTICADO: RELATÓRIO COMPLETO COM ALTO CONTRASTE */
-              <div className="space-y-4">
-                {adminLoading && !adminData && (
-                  <p className="font-serif italic text-center py-8 text-[#453126]">
-                    Carregando dados das confirmações...
-                  </p>
-                )}
-
-                {adminError && (
-                  <div className="bg-red-100 border border-red-500 p-3 text-xs text-red-950 font-semibold">
-                    {adminError}
-                  </div>
-                )}
-
-                {adminData?.resumoGeral && (
-                  <>
-                    {/* Cards de Métricas Principais com Alto Contraste */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {/* Total Geral de Pessoas Confirmadas */}
-                      <div className="p-3 bg-[#EAE0D2] border-2 border-[#967D67] text-center rounded-sm">
-                        <span className="block font-display text-[0.65rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                          Total Pessoas
-                        </span>
-                        <span className="font-serif text-3xl text-[#261811] font-bold block my-0.5">
-                          {adminData.resumoGeral.totalAdultos + adminData.resumoGeral.totalCriancasAte6Anos}
-                        </span>
-                        <span className="block text-[0.72rem] text-[#453126] italic font-serif">
-                          confirmadas
-                        </span>
-                      </div>
-
-                      {/* Adultos e Crianças com 7 anos ou mais */}
-                      <div className="p-3 bg-[#EAE0D2] border-2 border-[#967D67] text-center rounded-sm">
-                        <span className="block font-display text-[0.65rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                          Adultos / ≥ 7 anos
-                        </span>
-                        <span className="font-serif text-3xl text-[#261811] font-bold block my-0.5">
-                          {adminData.resumoGeral.totalAdultos}
-                        </span>
-                        <span className="block text-[0.72rem] text-[#453126] italic font-serif">
-                          pagantes buffet
-                        </span>
-                      </div>
-
-                      {/* Crianças menores de 7 anos */}
-                      <div className="p-3 bg-[#EAE0D2] border-2 border-[#967D67] text-center rounded-sm">
-                        <span className="block font-display text-[0.65rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                          Menores 7 anos
-                        </span>
-                        <span className="font-serif text-3xl text-[#261811] font-bold block my-0.5">
-                          {adminData.resumoGeral.totalCriancasAte6Anos}
-                        </span>
-                        <span className="block text-[0.72rem] text-[#453126] italic font-serif">
-                          0 a 6 anos (cortesia)
-                        </span>
-                      </div>
-
-                      {/* Recusaram */}
-                      <div className="p-3 bg-[#EAE0D2] border-2 border-[#967D67] text-center rounded-sm">
-                        <span className="block font-display text-[0.65rem] tracking-[0.18em] uppercase text-[#543D30] font-bold">
-                          Não vão
-                        </span>
-                        <span className="font-serif text-3xl text-[#453126] font-bold block my-0.5">
-                          {adminData.resumoGeral.totalRecusaram}
-                        </span>
-                        <span className="block text-[0.72rem] text-[#453126] italic font-serif">
-                          respostas
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Barra de Pesquisa */}
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Buscar por nome do convidado..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#FAF7F0] border-2 border-[#967D67] px-3.5 py-2 text-sm text-[#261811] font-serif focus:outline-none focus:border-[#261811]"
-                      />
-                    </div>
-
-                    {/* Lista Detalhada de Convidados */}
-                    <div className="space-y-2.5 max-h-[340px] overflow-y-auto overscroll-contain pr-1">
-                      {adminData.data
-                        .filter(item => item.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-                        .map((item) => (
-                          <div
-                            key={item.id}
-                            className={`p-3 border-2 rounded-sm ${
-                              item.presenca
-                                ? "border-[#967D67] bg-[#FAF7F0]"
-                                : "border-[#967D67]/70 bg-[#EAE0D2]/60 opacity-80"
-                            }`}
-                          >
-                            <div className="flex justify-between items-start gap-2">
-                              <div>
-                                <strong className="text-base text-[#261811] block font-serif">
-                                  {item.nome}
-                                </strong>
-                                <div className="text-[#453126] text-[0.88rem] flex items-center gap-3 mt-1 font-serif">
-                                  <span>{item.telefone}</span>
-                                  {item.telefone && (
-                                    <a
-                                      href={`https://wa.me/55${item.telefone.replace(/\D/g, "")}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-green-900 font-bold hover:underline"
-                                    >
-                                      WhatsApp &rarr;
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-
-                              <span
-                                className={`px-2.5 py-1 text-[0.7rem] uppercase font-display tracking-wider font-bold ${
-                                  item.presenca
-                                    ? "bg-[#261811] text-[#F8F4EC]"
-                                    : "bg-[#967D67] text-[#FAF7F0]"
-                                }`}
-                              >
-                                {item.presenca ? `Confirmado (${item.totalPessoas})` : "Não vai"}
-                              </span>
-                            </div>
-
-                            {/* Acompanhantes do Convidado */}
-                            {item.presenca && item.acompanhantes && item.acompanhantes.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-[#967D67]/70">
-                                <span className="font-display text-[0.68rem] tracking-wider uppercase text-[#543D30] block mb-1 font-bold">
-                                  Acompanhantes ({item.acompanhantes.length}):
-                                </span>
-                                <ul className="space-y-1 pl-2 font-serif text-[0.95rem]">
-                                  {item.acompanhantes.map((ac, idx) => (
-                                    <li key={idx} className="flex justify-between text-[#261811]">
-                                      <span>• {ac.nome}</span>
-                                      <span className="text-[0.82rem] italic text-[#453126] font-semibold">
-                                        {ac.criancaAte6Anos ? "Criança (< 7 anos)" : "Adulto / ≥ 7 anos"}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {/* Observação / Mensagem */}
-                            {item.observacao && (
-                              <div className="mt-2 text-[0.9rem] text-[#453126] italic border-t border-[#967D67]/40 pt-1 font-serif">
-                                &ldquo;{item.observacao}&rdquo;
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                      {adminData.data.length === 0 && (
-                        <p className="text-center text-[#453126] py-4 italic font-serif">
-                          Nenhuma confirmação registrada ainda.
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
+        {/* Rodapé Interno com Botão de Retorno */}
+        <div className="mt-8 pt-6 border-t border-[#EAE0D5] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-serif text-[#8C7A6B]">
+          <span>Tainara &amp; Thiago · Espaço Balboa</span>
+          <button
+            type="button"
+            onClick={close}
+            className="inline-flex items-center gap-1.5 text-xs font-sans tracking-[0.14em] uppercase font-semibold text-[#261811] hover:text-[#543D30] underline cursor-pointer"
+          >
+            <span>← Voltar para a página anterior</span>
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    </main>
+  </div>
+);
 }

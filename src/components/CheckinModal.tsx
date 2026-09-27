@@ -433,32 +433,66 @@ export default function CheckinModal() {
           aspectRatio: 1.0,
         };
 
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          config,
-          async (decodedText: string) => {
-            // Reconhecimento automático do QR Code
-            try {
-              if (html5QrCode.isScanning) {
-                await html5QrCode.stop();
-              }
-            } catch {}
-            html5QrCodeRef.current = null;
-            setCameraAberta(false);
-            setCameraIniciando(false);
-            processarCodigoOuQr(decodedText, "qr");
-          },
-          () => {
-            // Frame ignorado durante leitura contínua
+        const onScanSuccess = async (decodedText: string) => {
+          try {
+            if (html5QrCode.isScanning) {
+              await html5QrCode.stop();
+            }
+          } catch {}
+          html5QrCodeRef.current = null;
+          setCameraAberta(false);
+          setCameraIniciando(false);
+          processarCodigoOuQr(decodedText, "qr");
+        };
+
+        try {
+          // 1. Tenta câmera traseira (smartphone)
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        } catch (envErr) {
+          console.warn("Câmera traseira indisponível, tentando webcam/frontal...", envErr);
+          try {
+            // 2. Fallback para webcam padrão do computador ou câmera frontal
+            await html5QrCode.start(
+              { facingMode: "user" },
+              config,
+              onScanSuccess,
+              () => {}
+            );
+          } catch (userErr: any) {
+            console.error("Falha ao abrir webcam/câmera:", userErr);
+            throw userErr;
           }
-        );
+        }
         setCameraIniciando(false);
       } catch (err: any) {
         console.error("Erro ao iniciar câmera:", err);
         setCameraIniciando(false);
-        setCameraErro("Não foi possível acessar a câmera do dispositivo. Verifique as permissões de acesso ou utilize a busca manual.");
+        setCameraErro("Não foi possível acessar a câmera do dispositivo. Verifique as permissões do navegador ou envie a imagem do QR Code abaixo.");
       }
     }, 150);
+  };
+
+  const handleEscanearArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCameraErro("");
+    setErroCheckin("");
+    setLoadingBusca(true);
+    try {
+      const html5QrCode = new Html5Qrcode("qr-reader-container", false);
+      const decodedText = await html5QrCode.scanFile(file, true);
+      processarCodigoOuQr(decodedText, "qr");
+    } catch (err: any) {
+      setErroCheckin("Não foi possível identificar um QR Code na imagem enviada. Você pode digitar o código ou nome na busca manual.");
+    } finally {
+      setLoadingBusca(false);
+      e.target.value = "";
+    }
   };
 
   // Buscar convite por código, QR code ou texto
@@ -617,30 +651,49 @@ export default function CheckinModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
+      className="fixed inset-0 z-[99999] bg-[#F5F0E8] overflow-y-auto overflow-x-hidden text-[#261811]"
+      role="region"
+      aria-label="Painel da Portaria e Recepção"
     >
-      <div className="fixed inset-0 bg-[#160E0A] bg-opacity-85 backdrop-blur-sm" onClick={close}></div>
-
-      <div className="relative w-full max-w-[760px] my-auto bg-[#F8F4EC] border-2 border-[#967D67] shadow-2xl p-4 sm:p-6 z-10 text-[#261811] max-h-[92dvh] flex flex-col justify-between rounded-sm">
-        
-        {/* Header */}
-        <div className="flex justify-between items-start border-b border-[#967D67] pb-3 mb-4 shrink-0">
-          <div>
-            <span className="font-display tracking-[0.25em] uppercase text-[0.7rem] text-[#543D30] font-bold">
-              Portaria &amp; Cerimonial
+      {/* Topbar Fixo de Página Inteira */}
+      <header className="sticky top-0 z-40 bg-[#261811] text-[#FAF7F2] shadow-lg">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={close}
+              className="text-[#D5C6B5] hover:text-white transition-colors p-1 -ml-1 rounded cursor-pointer"
+              title="Voltar ao convite"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="h-5 w-px bg-[#453126]" />
+            <span className="font-serif text-base sm:text-lg text-[#FAF7F2] tracking-wide">
+              Tainara &amp; Thiago
             </span>
-            <h2 className="font-serif text-2xl text-[#261811] font-semibold">
-              Recepção do Casamento
-            </h2>
+            <span className="hidden sm:inline text-[0.65rem] font-sans tracking-[0.2em] uppercase text-[#967D67] font-medium ml-1">
+              · Portaria &amp; Cerimonial
+            </span>
           </div>
-          <button onClick={close} className="text-[#543D30] hover:text-[#261811] p-1 font-bold" aria-label="Fechar">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+
+          <button
+            type="button"
+            onClick={close}
+            className="text-[0.72rem] font-sans tracking-[0.14em] uppercase text-[#D5C6B5] hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <span>Voltar ao Convite</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
+      </header>
+
+      {/* Conteúdo Central em Página Inteira */}
+      <main className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
+        <div className="bg-white border border-[#E3D8CB] rounded-[10px] p-6 sm:p-8 shadow-[0_4px_24px_-8px_rgba(38,24,17,0.08)]">
 
         {/* 1. SE NÃO AUTENTICADO: LOGIN DA RECEPÇÃO */}
         {!isAutenticado ? (
@@ -820,6 +873,21 @@ export default function CheckinModal() {
                             </svg>
                             Escanear QR Code
                           </button>
+
+                          <div className="pt-2 text-center">
+                            <label className="text-xs font-serif text-[#543D30] hover:text-[#261811] underline cursor-pointer inline-flex items-center gap-1.5 py-1">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <span>Ler print / foto do QR Code</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleEscanearArquivo}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
                       )}
 
@@ -1939,14 +2007,22 @@ export default function CheckinModal() {
           </div>
         )}
 
-        {/* Footer */}
-        <div className="border-t border-[#967D67] pt-3 mt-4 flex justify-between items-center text-xs text-[#543D30] font-serif shrink-0">
-          <span>Sistema Integrado com AWS &amp; Portaria</span>
-          <button onClick={close} className="underline text-[#261811] hover:text-[#543D30] font-semibold cursor-pointer">
-            Voltar ao Convite
-          </button>
         </div>
-      </div>
+      </main>
+
+      {/* Footer de Página Inteira */}
+      <footer className="border-t border-[#E3D8CB] mt-8 py-5 px-8 text-center">
+        <p className="text-[0.72rem] font-serif italic text-[#8C7A6B]">
+          Tainara &amp; Thiago · Portaria &amp; Recepção do Evento
+        </p>
+        <button
+          type="button"
+          onClick={close}
+          className="mt-2 text-[0.7rem] font-sans tracking-[0.14em] uppercase text-[#6B5A4D] hover:text-[#261811] underline cursor-pointer transition-colors"
+        >
+          ← Voltar para o Convite
+        </button>
+      </footer>
     </div>
   );
 }

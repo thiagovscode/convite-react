@@ -49,7 +49,7 @@ export default function QrCodePass({
         dark: "#261811",
         light: "#FFFFFF",
       },
-      errorCorrectionLevel: "H",
+      errorCorrectionLevel: "M",
     })
       .then((url) => setQrDataUrl(url))
       .catch((err) => console.error("Erro ao gerar QR Code:", err));
