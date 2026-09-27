@@ -323,16 +323,16 @@ export default function CheckinModal() {
     const agora = new Date();
     const dataHoraStr = `${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 
-    let texto = `📋 *FECHAMENTO OFICIAL DA PORTARIA - CASAMENTO*\n`;
-    texto += `📅 *Horário da Auditoria:* ${dataHoraStr}\n\n`;
-    texto += `👥 *CONVIDADOS:*\n`;
+    let texto = `*FECHAMENTO OFICIAL DA PORTARIA - CASAMENTO*\n`;
+    texto += `*Horário da Auditoria:* ${dataHoraStr}\n\n`;
+    texto += `*CONVIDADOS:*\n`;
     texto += `• Total Previsto: ${relatorio.totalConvidadosPrevistos} pessoas (${relatorio.totalAdultosPrevistos} adultos · ${relatorio.totalCriancasPrevistas} crianças)\n`;
     texto += `• Confirmados no RSVP: ${relatorio.totalConfirmadosRsvp} pessoas (${relatorio.totalAdultosConfirmados} adultos · ${relatorio.totalCriancasConfirmadas} crianças)\n`;
     texto += `• *Presentes Reais no Evento:* ${relatorio.totalPresentesReais} pessoas (${relatorio.totalAdultosPresentes} adultos · ${relatorio.totalCriancasPresentes} crianças)\n`;
     texto += `• Faltantes confirmados (No-Show): ${relatorio.totalAusentesNoShow} pessoas\n\n`;
 
     const totalStaffPresente = fornecedores.reduce((acc: number, f: FornecedorCasamento) => acc + (f.equipe ? f.equipe.filter((m: MembroEquipeFornecedor) => m.presente).length : 0), 0);
-    texto += `🎧 *FORNECEDORES & EQUIPES NO LOCAL:*\n`;
+    texto += `*FORNECEDORES & EQUIPES NO LOCAL:*\n`;
     texto += `• Total de profissionais presentes: *${totalStaffPresente} pessoas*\n`;
     fornecedores.forEach((f: FornecedorCasamento) => {
       const presentesForn = f.equipe ? f.equipe.filter((m: MembroEquipeFornecedor) => m.presente).length : 0;
@@ -544,9 +544,14 @@ export default function CheckinModal() {
       setConviteAtual(c);
       pararLeitorCamera();
 
+      const membros = c.membros || [];
+      const membrosPresentes = membros.filter(m => Boolean(m.presenteCheckin));
+      const todosJaEntraram = membros.length > 0 && membrosPresentes.length === membros.length;
+      const parteJaEntrou = membrosPresentes.length > 0 && !todosJaEntraram;
+
       // Inicializa presença: se já tinha checkin gravado, usa o status; senão, default = true para quem confirmou RSVP
       const sel: Record<string, boolean> = {};
-      c.membros?.forEach(m => {
+      membros.forEach(m => {
         if (m.presenteCheckin !== undefined) {
           sel[m.id] = m.presenteCheckin;
         } else {
@@ -554,7 +559,17 @@ export default function CheckinModal() {
         }
       });
       setSelecaoPresenca(sel);
-      setMensagemSucesso("Convite localizado.");
+
+      if (todosJaEntraram) {
+        setErroCheckin("ALERTA DE SEGURANÇA: Todos os membros deste convite já realizaram entrada anteriormente!");
+        setMensagemSucesso("");
+      } else if (parteJaEntrou) {
+        setMensagemSucesso(`Atenção: ${membrosPresentes.length} de ${membros.length} membros já realizaram entrada.`);
+        setErroCheckin("");
+      } else {
+        setMensagemSucesso("Convite localizado com sucesso.");
+        setErroCheckin("");
+      }
     } else {
       setConviteAtual(null);
       if (origem === "qr") {
@@ -1044,10 +1059,25 @@ export default function CheckinModal() {
                       </div>
                     )}
 
-                    {/* Mensagem de Erro se houver */}
+                    {/* Mensagem de Erro ou Alerta se houver */}
                     {erroCheckin && (
                       <div className="p-3 bg-red-100 border border-red-500 rounded-[3px] text-xs text-red-950 font-medium">
                         {erroCheckin}
+                      </div>
+                    )}
+
+                    {/* Alerta de Segurança se todos já entraram */}
+                    {conviteAtual.membros && conviteAtual.membros.length > 0 && conviteAtual.membros.every(m => Boolean(m.presenteCheckin)) && (
+                      <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-[8px] text-rose-950 space-y-1.5 text-left">
+                        <div className="flex items-center gap-2 font-bold text-sm text-rose-900">
+                          <svg className="w-5 h-5 text-rose-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span>ALERTA DE SEGURANÇA: ENTRADA JÁ REGISTRADA</span>
+                        </div>
+                        <p className="text-xs text-rose-900 leading-relaxed font-sans">
+                          Todos os membros deste convite já realizaram check-in anteriormente. Se alguém estiver apresentando este mesmo QR Code na portaria, trata-se de uma cópia ou foto compartilhada indevidamente.
+                        </p>
                       </div>
                     )}
 
@@ -1111,12 +1141,12 @@ export default function CheckinModal() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     {m.confirmadoRsvp !== false ? (
-                                      <span className="text-[0.68rem] font-serif text-emerald-900 font-medium">
-                                        ✓ RSVP Confirmado
+                                      <span className="text-[0.68rem] font-sans text-emerald-800 font-medium">
+                                        RSVP Confirmado
                                       </span>
                                     ) : (
-                                      <span className="text-[0.68rem] font-serif text-amber-900 font-medium">
-                                        ⏳ RSVP Pendente
+                                      <span className="text-[0.68rem] font-sans text-amber-800 font-medium">
+                                        RSVP Pendente
                                       </span>
                                     )}
                                   </div>
@@ -1124,12 +1154,16 @@ export default function CheckinModal() {
                               </div>
 
                               <div className="text-right shrink-0">
-                                {isPresente ? (
-                                  <span className="inline-block px-2.5 py-1 font-display text-[0.65rem] tracking-wider uppercase font-bold bg-[#166534] text-white rounded-[3px] shadow-2xs">
-                                    Presente ✓
+                                {m.presenteCheckin ? (
+                                  <span className="inline-block px-2.5 py-1 font-sans text-[0.65rem] tracking-wider uppercase font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full">
+                                    No Local {m.dataHoraCheckin ? `· ${new Date(m.dataHoraCheckin).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ""}
+                                  </span>
+                                ) : isPresente ? (
+                                  <span className="inline-block px-2.5 py-1 font-sans text-[0.65rem] tracking-wider uppercase font-semibold bg-emerald-700 text-white rounded-full">
+                                    Entrando Agora
                                   </span>
                                 ) : (
-                                  <span className="inline-block px-2.5 py-1 font-display text-[0.65rem] tracking-wider uppercase font-semibold bg-[#FAF7F0] text-[#543D30] border border-[#967D67]/40 rounded-[3px]">
+                                  <span className="inline-block px-2.5 py-1 font-sans text-[0.65rem] tracking-wider uppercase font-medium bg-[#FAF7F2] text-[#6B5A4D] border border-[#D8CDC0] rounded-full">
                                     Aguardando
                                   </span>
                                 )}

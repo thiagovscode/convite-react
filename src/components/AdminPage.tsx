@@ -285,7 +285,7 @@ export default function AdminPage() {
 
   const copiarTexto = (texto: string, chave: string) => {
     navigator.clipboard.writeText(texto);
-    setCopiadoLinkPorCodigo((prev) => ({ ...prev, [chave]: "✓ Copiado!" }));
+    setCopiadoLinkPorCodigo((prev) => ({ ...prev, [chave]: "Copiado" }));
     setTimeout(() => {
       setCopiadoLinkPorCodigo((prev) => {
         const c = { ...prev };
@@ -746,7 +746,7 @@ export default function AdminPage() {
                                     : "bg-rose-100 text-rose-800"
                                 }`}
                               >
-                                {item.presenca ? "✓ Confirmado" : "✕ Não vai"}
+                                {item.presenca ? "Confirmado" : "Não vai"}
                               </span>
                             </div>
                           ))}
@@ -903,7 +903,7 @@ export default function AdminPage() {
                                       : "bg-rose-100 text-rose-800"
                                   }`}
                                 >
-                                  {item.presenca ? "✓ Vai" : "✕ Não vai"}
+                                  {item.presenca ? "Confirmado" : "Não vai"}
                                 </span>
                               </td>
                             </tr>
@@ -952,7 +952,7 @@ export default function AdminPage() {
                           : "bg-white border border-[#D8CDC0] text-[#6B5A4D] hover:text-[#261811]"
                       }`}
                     >
-                      📋 Lista de Convites ({listaConvites.length})
+                      Lista de Convites ({listaConvites.length})
                     </button>
                     <button
                       type="button"
@@ -973,184 +973,207 @@ export default function AdminPage() {
 
                 {/* 1. SUB-ABA: LISTA DE CONVITES CADASTRADOS */}
                 {convitesSubTab === "lista" ? (
-                  <div className="space-y-5">
-                    {/* Barra de Busca e Filtro */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex items-center gap-2 flex-1 max-w-md">
-                        <input
-                          type="text"
-                          placeholder="Buscar por família, membro ou código…"
-                          value={buscaConvites}
-                          onChange={(e) => setBuscaConvites(e.target.value)}
-                          className="w-full bg-white border border-[#D8CDC0] px-4 py-2.5 text-sm font-serif text-[#261811] focus:outline-none focus:border-[#261811] rounded-[6px] transition-all"
-                        />
-                        {buscaConvites && (
-                          <button
-                            type="button"
-                            onClick={() => setBuscaConvites("")}
-                            className="text-xs text-[#8C7A6B] hover:text-[#261811] underline cursor-pointer shrink-0"
-                          >
-                            Limpar
-                          </button>
+                  <div className="space-y-6">
+                    {/* StatCards no topo da aba Convites */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <StatCard
+                        label="Convites Emitidos"
+                        value={fmt(listaConvites.length)}
+                        sub="famílias cadastradas"
+                        color="neutral"
+                      />
+                      <StatCard
+                        label="Pessoas na Lista"
+                        value={fmt(
+                          listaConvites.reduce(
+                            (acc, c) => acc + (c.membros?.length || 0),
+                            0
+                          )
                         )}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs font-sans text-[#8C7A6B]">
-                        <span>
-                          Exibindo <strong>{filteredConvites.length}</strong> de{" "}
-                          {listaConvites.length} convites
-                        </span>
-                      </div>
+                        sub="familiares cadastrados"
+                        color="blue"
+                      />
+                      <StatCard
+                        label="Confirmados"
+                        value={fmt(
+                          listaConvites.filter(
+                            (c) =>
+                              (c.status || "").toUpperCase() === "CONFIRMADO"
+                          ).length
+                        )}
+                        sub="já responderam"
+                        color="green"
+                      />
+                      <StatCard
+                        label="Pendentes"
+                        value={fmt(
+                          listaConvites.filter(
+                            (c) =>
+                              (c.status || "PENDENTE").toUpperCase() ===
+                              "PENDENTE"
+                          ).length
+                        )}
+                        sub="aguardando resposta"
+                        color="amber"
+                      />
                     </div>
 
-                    {/* Cards de Convites */}
-                    <div className="space-y-4">
-                      {filteredConvites.map((c) => {
-                        const statusColor: Record<string, string> = {
-                          CONFIRMADO:
-                            "bg-emerald-100 text-emerald-800 border-emerald-300",
-                          RECUSADO:
-                            "bg-rose-100 text-rose-800 border-rose-300",
-                          PENDENTE:
-                            "bg-amber-100 text-amber-800 border-amber-300",
-                        };
-                        const statusText: Record<string, string> = {
-                          CONFIRMADO: "✓ Confirmado",
-                          RECUSADO: "✕ Não vai",
-                          PENDENTE: "⏳ Pendente",
-                        };
-                        const statusKey = (c.status || "PENDENTE").toUpperCase();
-                        const linkOficial = getLinkConviteCompleto(c.codigo);
-                        const linkRsvp = getLinkRsvpDireto(c.codigo);
-                        const feedbackMsg = copiadoLinkPorCodigo[c.codigo];
+                    {/* Painel Unificado Elegante */}
+                    <div className="bg-white border border-[#E3D8CB] rounded-[10px] p-6 sm:p-8 shadow-[0_2px_12px_-4px_rgba(38,24,17,0.06)]">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#F0EAE0]">
+                        <div className="flex items-center gap-3">
+                          <span className="w-1 h-5 bg-[#261811] rounded-full inline-block" />
+                          <h2 className="font-serif text-xl text-[#261811] font-normal">
+                            Relação de Convites &amp; Códigos
+                          </h2>
+                          <span className="text-xs text-[#8C7A6B] font-sans">
+                            ({filteredConvites.length}{" "}
+                            {filteredConvites.length === 1
+                              ? "convite"
+                              : "convites"}
+                            )
+                          </span>
+                        </div>
 
-                        return (
-                          <div
-                            key={c.id || c.codigo}
-                            className="bg-white border border-[#E3D8CB] rounded-[10px] p-5 sm:p-6 shadow-[0_2px_12px_-4px_rgba(38,24,17,0.06)] hover:border-[#261811]/40 transition-colors"
-                          >
-                            {/* Linha 1: Família + Categoria + Status + Código */}
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-[#F0EAE0] pb-4 mb-4">
-                              <div className="space-y-1">
+                        {/* Campo de Busca Rápida */}
+                        <div className="flex items-center gap-2 w-full sm:w-80">
+                          <input
+                            type="text"
+                            placeholder="Buscar família, membro ou código…"
+                            value={buscaConvites}
+                            onChange={(e) => setBuscaConvites(e.target.value)}
+                            className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] focus:outline-none focus:border-[#261811] focus:bg-white rounded-[6px] transition-all"
+                          />
+                          {buscaConvites && (
+                            <button
+                              type="button"
+                              onClick={() => setBuscaConvites("")}
+                              className="text-xs text-[#8C7A6B] hover:text-[#261811] underline cursor-pointer shrink-0"
+                            >
+                              Limpar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lista Linha a Linha (Estilo Últimas Confirmações) */}
+                      <div className="divide-y divide-[#F0EAE0]">
+                        {filteredConvites.map((c) => {
+                          const statusKey = (
+                            c.status || "PENDENTE"
+                          ).toUpperCase();
+                          const statusPill =
+                            statusKey === "CONFIRMADO"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : statusKey === "RECUSADO"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-800";
+                          const statusLabel =
+                            statusKey === "CONFIRMADO"
+                              ? "Confirmado"
+                              : statusKey === "RECUSADO"
+                              ? "Não vai"
+                              : "Pendente";
+
+                          const linkOficial = getLinkConviteCompleto(c.codigo);
+                          const linkRsvp = getLinkRsvpDireto(c.codigo);
+                          const copiadoConvite =
+                            copiadoLinkPorCodigo[c.codigo];
+                          const copiadoRsvp =
+                            copiadoLinkPorCodigo[`${c.codigo}-rsvp`];
+                          const copiadoCode =
+                            copiadoLinkPorCodigo[`${c.codigo}-code`];
+
+                          return (
+                            <div
+                              key={c.id || c.codigo}
+                              className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#FAF7F2]/60 -mx-4 px-4 rounded-[6px] transition-colors"
+                            >
+                              {/* Dados do Convite e Familiares */}
+                              <div className="space-y-1.5 flex-1 min-w-0">
                                 <div className="flex items-center gap-2.5 flex-wrap">
-                                  <h3 className="font-serif text-xl sm:text-2xl text-[#261811] font-medium">
+                                  <span className="font-serif text-[1.05rem] text-[#261811] font-medium leading-tight">
                                     {c.familia}
-                                  </h3>
+                                  </span>
                                   {c.papel && (
                                     <span className="text-[0.62rem] font-sans tracking-[0.16em] uppercase px-2 py-0.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded text-[#6B5A4D] font-semibold">
                                       {c.papel}
                                     </span>
                                   )}
                                   <span
-                                    className={`text-[0.66rem] font-sans tracking-wider uppercase px-2.5 py-0.5 rounded-full border font-semibold ${
-                                      statusColor[statusKey] ||
-                                      statusColor.PENDENTE
-                                    }`}
+                                    onClick={() =>
+                                      copiarTexto(c.codigo, `${c.codigo}-code`)
+                                    }
+                                    title="Clique para copiar o código"
+                                    className="font-mono text-xs font-bold text-[#261811] bg-[#F5F0E8] hover:bg-[#EAE0D5] px-2 py-0.5 rounded border border-[#D8CDC0] cursor-pointer transition-colors select-all"
                                   >
-                                    {statusText[statusKey] || "Pendente"}
+                                    {copiadoCode || c.codigo}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-[#8C7A6B] font-sans">
-                                  {c.telefone && (
-                                    <span>Tel: {c.telefone}</span>
-                                  )}
-                                  {c.email && <span>· {c.email}</span>}
+
+                                {/* Linha de Familiares e Informações */}
+                                <p className="text-[0.78rem] text-[#6B5A4D] font-sans leading-relaxed">
+                                  {c.telefone && <span>{c.telefone} · </span>}
+                                  <span className="text-[#8C7A6B]">
+                                    {c.membros?.length
+                                      ? `Membros (${c.membros.length}): `
+                                      : "Sem membros detalhados"}
+                                  </span>
+                                  {c.membros?.map((m, idx) => (
+                                    <span key={m.id || idx}>
+                                      {idx > 0 && ", "}
+                                      <strong className="text-[#261811] font-normal">
+                                        {m.nome}
+                                      </strong>
+                                      {m.titular && (
+                                        <span className="text-[0.65rem] text-[#8C7A6B]">
+                                          {" "}
+                                          (Titular)
+                                        </span>
+                                      )}
+                                      {m.criancaAte6Anos && (
+                                        <span className="text-[0.65rem] text-amber-700">
+                                          {" "}
+                                          (≤ 6 anos)
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
                                   {c.observacao && (
-                                    <span className="italic font-serif text-[#6B5A4D]">
+                                    <span className="italic font-serif text-[#8C7A6B]">
+                                      {" "}
                                       · "{c.observacao}"
                                     </span>
                                   )}
-                                </div>
+                                </p>
                               </div>
 
-                              {/* Código único do convite com botão copiar */}
-                              <div className="flex items-center gap-2 bg-[#F5F0E8] border border-[#D8CDC0] px-3 py-1.5 rounded-[6px] shrink-0">
-                                <span className="text-[0.64rem] font-sans tracking-wider uppercase text-[#8C7A6B] font-semibold">
-                                  Código:
-                                </span>
-                                <span className="font-mono text-base font-bold text-[#261811] tracking-wider select-all">
-                                  {c.codigo}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    copiarTexto(c.codigo, `${c.codigo}-code`)
-                                  }
-                                  title="Copiar código"
-                                  className="text-xs text-[#6B5A4D] hover:text-[#261811] font-sans uppercase font-bold ml-1 cursor-pointer"
+                              {/* Status e Ações Limpas */}
+                              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                                <span
+                                  className={`shrink-0 text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold ${statusPill}`}
                                 >
-                                  {copiadoLinkPorCodigo[`${c.codigo}-code`] ||
-                                    "Copiar"}
-                                </button>
-                              </div>
-                            </div>
+                                  {statusLabel}
+                                </span>
 
-                            {/* Linha 2: Membros e Familiares */}
-                            <div className="mb-4">
-                              <span className="block text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-2">
-                                Familiares cadastrados ({c.membros?.length || 0}
-                                ):
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                {c.membros?.map((m, idx) => (
-                                  <div
-                                    key={m.id || idx}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FAF7F2] border border-[#E3D8CB] rounded-[6px] text-xs font-serif text-[#261811]"
-                                  >
-                                    <span className="font-medium">
-                                      {m.nome}
-                                    </span>
-                                    {m.titular && (
-                                      <span className="text-[0.58rem] font-sans uppercase tracking-wider bg-[#261811] text-white px-1.5 py-0.5 rounded font-semibold">
-                                        Titular
-                                      </span>
-                                    )}
-                                    {m.criancaAte6Anos && (
-                                      <span className="text-[0.58rem] font-sans uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded font-semibold">
-                                        ≤ 6 anos
-                                      </span>
-                                    )}
-                                    {m.confirmouPresenca !== undefined && (
-                                      <span
-                                        className={`text-[0.62rem] font-sans ${
-                                          m.confirmouPresenca
-                                            ? "text-emerald-700 font-bold"
-                                            : "text-rose-700"
-                                        }`}
-                                      >
-                                        (
-                                        {m.confirmouPresenca
-                                          ? "✓ Confirmado"
-                                          : "✕ Não vai"}
-                                        )
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                                {(!c.membros || c.membros.length === 0) && (
-                                  <span className="text-xs font-serif italic text-[#8C7A6B]">
-                                    Nenhum membro detalhado cadastrado.
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Linha 3: Ações de Envio do Convite */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#F0EAE0]">
-                              <div className="flex flex-wrap items-center gap-2">
+                                {/* Botão Copiar Link */}
                                 <button
                                   type="button"
                                   onClick={() =>
                                     copiarTexto(linkOficial, c.codigo)
                                   }
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#261811] hover:bg-[#1A100B] text-white text-[0.68rem] font-sans tracking-wider uppercase font-semibold rounded-[5px] transition-colors cursor-pointer"
-                                  title="Gera link com abertura do envelope e dados pré-preenchidos"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] transition-all cursor-pointer font-medium"
+                                  title="Copiar link oficial do convite"
                                 >
-                                  <span>🔗</span>
+                                  <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                  </svg>
                                   <span>
-                                    {feedbackMsg || "Copiar Link do Convite"}
+                                    {copiadoConvite || "Copiar Link"}
                                   </span>
                                 </button>
+
+                                {/* Botão Copiar Link RSVP */}
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1159,54 +1182,52 @@ export default function AdminPage() {
                                       `${c.codigo}-rsvp`
                                     )
                                   }
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D8CDC0] hover:border-[#261811] text-[#261811] text-[0.68rem] font-sans tracking-wider uppercase font-semibold rounded-[5px] transition-colors cursor-pointer"
-                                  title="Gera link que abre direto na página RSVP"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-sans text-[#7D6B5D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#E3D8CB] rounded-[6px] transition-all cursor-pointer"
+                                  title="Copiar link direto para confirmação"
                                 >
-                                  <span>⚡</span>
-                                  <span>
-                                    {copiadoLinkPorCodigo[
-                                      `${c.codigo}-rsvp`
-                                    ] || "Copiar Link Direto RSVP"}
-                                  </span>
+                                  <svg className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>{copiadoRsvp || "Link RSVP"}</span>
                                 </button>
+
+                                {/* Botão WhatsApp */}
                                 <button
                                   type="button"
                                   onClick={() => abrirWhatsAppComConvite(c)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[0.68rem] font-sans tracking-wider uppercase font-semibold rounded-[5px] transition-colors cursor-pointer"
-                                  title="Abre o WhatsApp com mensagem carinhosa e o link do convite"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] transition-all cursor-pointer font-medium"
+                                  title="Enviar convite por WhatsApp"
                                 >
-                                  <span>💬</span>
+                                  <svg className="w-3.5 h-3.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  </svg>
                                   <span>WhatsApp</span>
                                 </button>
                               </div>
-
-                              <span className="text-[0.66rem] font-mono text-[#8C7A6B] bg-[#FAF7F2] px-2 py-1 rounded border border-[#E3D8CB]">
-                                ?convite={c.codigo}
-                              </span>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
 
-                      {filteredConvites.length === 0 && (
-                        <div className="bg-white border border-[#E3D8CB] rounded-[10px] p-12 text-center space-y-4">
-                          <p className="font-serif italic text-base text-[#8C7A6B]">
-                            {listaConvites.length === 0
-                              ? "Nenhum convite cadastrado no momento."
-                              : "Nenhum convite corresponde à sua busca."}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setConvitesSubTab("novo");
-                              setCadSucesso(null);
-                            }}
-                            className="px-6 py-2.5 bg-[#261811] text-white text-[0.72rem] font-sans tracking-wider uppercase font-semibold rounded-[6px] hover:bg-[#1A100B] transition-colors cursor-pointer"
-                          >
-                            + Cadastrar Novo Convite
-                          </button>
-                        </div>
-                      )}
+                        {filteredConvites.length === 0 && (
+                          <div className="py-12 text-center space-y-3">
+                            <p className="font-serif italic text-[#8C7A6B] text-base">
+                              {listaConvites.length === 0
+                                ? "Nenhum convite cadastrado ainda."
+                                : "Nenhum convite encontrado para esta busca."}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConvitesSubTab("novo");
+                                setCadSucesso(null);
+                              }}
+                              className="px-5 py-2 bg-[#261811] text-white text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] hover:bg-[#1A100B] transition-colors cursor-pointer"
+                            >
+                              + Cadastrar Primeiro Convite
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1267,7 +1288,7 @@ export default function AdminPage() {
                             }}
                             className="px-6 py-2.5 border border-[#261811] text-[#261811] text-[0.72rem] font-sans tracking-wider uppercase font-semibold rounded-[6px] hover:bg-[#261811] hover:text-white transition-colors cursor-pointer"
                           >
-                            📋 Ver Lista de Convites
+                            Ver Lista de Convites
                           </button>
                         </div>
                       </div>

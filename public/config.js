@@ -21,8 +21,8 @@ const wedding = {
   dateShort: "24/01/2027",
   dateISO: "2027-01-24",        // Formato ISO para Google Calendar
   day: "Domingo",
-  time: "16h30",
-  dateObj: new Date("2027-01-24T16:30:00"),
+  time: "15h30",
+  dateObj: new Date("2027-01-24T15:30:00"),
 
   /* ----------------------------------------------------------
      LOCAL
@@ -30,11 +30,11 @@ const wedding = {
   ceremony: {
     name: "Espaço Balboa",
     address: "Mairiporã — SP",
-    time: "16h30"
+    time: "15h30"
   },
 
   reception: {
-    description: "A partir das 15h30",
+    description: "Às 15h30",
     time: "15h30"
   },
 

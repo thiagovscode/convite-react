@@ -371,12 +371,12 @@ export default function RsvpModal() {
       aria-label="Página de Confirmação de Presença"
     >
       {/* Barra de Navegação Superior (Header Fixo de Página com Botão de Voltar) */}
-      <header className="sticky top-0 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DEC8] px-4 sm:px-8 py-3.5 sm:py-4 transition-all shadow-xs">
+      <header className="sticky top-0 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DEC8] px-3 sm:px-8 py-3 sm:py-4 transition-all shadow-xs">
         <div className="max-w-[760px] mx-auto flex items-center justify-between">
           <button
             type="button"
             onClick={close}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-sans tracking-[0.14em] uppercase text-[#6B5A4D] hover:text-[#261811] transition-colors py-1.5 px-3 -ml-3 rounded-[3px] hover:bg-[#EFE9DD] cursor-pointer font-medium"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-sans tracking-[0.14em] uppercase text-[#6B5A4D] hover:text-[#261811] transition-colors py-1.5 px-2.5 rounded-[6px] hover:bg-[#EFE9DD] cursor-pointer font-medium"
           >
             <span className="text-base leading-none">←</span>
             <span>Voltar ao Convite</span>
@@ -403,8 +403,8 @@ export default function RsvpModal() {
       </header>
 
       {/* Conteúdo Central da Página com Largura Confortável e Generosa */}
-      <main className="max-w-[760px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
-        <div className="bg-[#FFFFFF] border border-[#E3D8CB] shadow-[0_4px_24px_-8px_rgba(38,24,17,0.06)] p-6 sm:p-10 rounded-[6px] text-[#261811]">
+      <main className="max-w-[760px] mx-auto px-3 sm:px-6 md:px-8 py-4 sm:py-8 md:py-10 w-full">
+        <div className="bg-[#FFFFFF] border border-[#E3D8CB] shadow-[0_4px_24px_-8px_rgba(38,24,17,0.06)] p-4 sm:p-8 md:p-10 rounded-[10px] text-[#261811] w-full">
           
           {/* Header com Identificação */}
           <div className="flex justify-between items-start mb-6 border-b border-[#EAE0D5] pb-5 shrink-0">
@@ -497,6 +497,45 @@ export default function RsvpModal() {
                   </p>
                 </div>
 
+                {convitePreDefinido.status === "CONFIRMADO" && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-[8px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-left">
+                    <div className="space-y-0.5">
+                      <span className="text-[0.66rem] font-sans uppercase tracking-wider font-semibold text-emerald-800 block">
+                        Presença Já Confirmada
+                      </span>
+                      <p className="font-serif text-sm text-emerald-950 font-medium">
+                        Este convite já está confirmado na lista oficial do casamento.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const titular = convitePreDefinido.membros.find(m => m.titular) || convitePreDefinido.membros[0];
+                        const nomes = convitePreDefinido.membros
+                          .filter(m => m.confirmadoRsvp !== false)
+                          .map(m => m.nome);
+                        const crCount = convitePreDefinido.membros
+                          .filter(m => m.confirmadoRsvp !== false && !!m.criancaAte6Anos).length;
+                        const adCount = (nomes.length || 1) - crCount;
+
+                        setPasseInfo({
+                          convidado: convitePreDefinido.familia || titular?.nome || nome,
+                          telefone: convitePreDefinido.telefone || telefone,
+                          totalPessoas: nomes.length || 1,
+                          adultos: adCount > 0 ? adCount : 1,
+                          criancasAte6Anos: crCount,
+                          membrosConfirmados: nomes.length ? nomes : [nome],
+                          tokenOuId: convitePreDefinido.codigo
+                        });
+                        setMode("success");
+                      }}
+                      className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold transition-all shrink-0 cursor-pointer shadow-xs"
+                    >
+                      Ver Passe Digital (QR Code)
+                    </button>
+                  </div>
+                )}
+
                 {errorMsg && (
                   <div className="bg-[#F7F2EC] border-l-2 border-[#A8988B] py-3 px-4 text-[0.84rem] text-[#543D30] font-serif flex items-start gap-2.5 rounded-[3px]">
                     <span className="text-[#8C7A6B] text-base leading-none select-none">✦</span>
@@ -509,13 +548,13 @@ export default function RsvpModal() {
                   <label className="block font-sans text-[0.66rem] tracking-[0.18em] uppercase text-[#7D6B5D] font-medium mb-2.5">
                     Vocês comparecerão ao casamento?
                   </label>
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => setPresenca(true)}
-                      className={`min-h-[46px] py-2.5 px-3 border text-center transition-all duration-200 text-[0.88rem] sm:text-[0.92rem] font-serif rounded-[3px] shadow-none ${
+                      className={`min-h-[48px] py-3 px-4 border text-center transition-all duration-200 text-sm font-serif rounded-[6px] cursor-pointer ${
                         presenca
-                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2]"
+                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2] shadow-xs"
                           : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8C7A6B] hover:text-[#261811]"
                       }`}
                     >
@@ -524,9 +563,9 @@ export default function RsvpModal() {
                     <button
                       type="button"
                       onClick={() => setPresenca(false)}
-                      className={`min-h-[46px] py-2.5 px-3 border text-center transition-all duration-200 text-[0.88rem] sm:text-[0.92rem] font-serif rounded-[3px] shadow-none ${
+                      className={`min-h-[48px] py-3 px-4 border text-center transition-all duration-200 text-sm font-serif rounded-[6px] cursor-pointer ${
                         !presenca
-                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2]"
+                          ? "border-[#261811] bg-[#261811] text-[#FAF7F2] shadow-xs"
                           : "border-[#D8CDC0] bg-transparent text-[#6B5A4D] hover:border-[#8C7A6B] hover:text-[#261811]"
                       }`}
                     >
@@ -595,7 +634,7 @@ export default function RsvpModal() {
                       </span>
                     </div>
 
-                    <div className="divide-y divide-[#EAE0D5] border-y border-[#EAE0D5]">
+                    <div className="space-y-2.5">
                       {convitePreDefinido.membros
                         .filter(m => !m.titular && m.nome !== nome)
                         .map((m) => {
@@ -607,29 +646,40 @@ export default function RsvpModal() {
                               onClick={() => {
                                 setMembrosPresenca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
                               }}
-                              className={`py-3.5 px-2.5 -mx-2.5 rounded-[3px] transition-colors cursor-pointer select-none ${
-                                vai ? "hover:bg-[#F3EDE4]/50" : "opacity-65 hover:opacity-85 hover:bg-[#F3EDE4]/30"
+                              className={`p-3.5 sm:p-4 rounded-[8px] border transition-all cursor-pointer select-none ${
+                                vai 
+                                  ? "bg-[#FAF7F2] border-[#D8CDC0] shadow-xs" 
+                                  : "bg-[#FDFBF7] border-[#E8DEC8]/70 opacity-70 hover:opacity-90"
                               }`}
                             >
-                              <div className="flex items-center justify-between gap-3 group">
-                                <div className="flex items-center gap-3.5 min-w-0">
-                                  <WeddingCheckbox
-                                    size="md"
-                                    checked={vai}
-                                    onChange={(checked) => setMembrosPresenca(prev => ({ ...prev, [m.id]: checked }))}
-                                    ariaLabel={`Presença de ${m.nome}`}
-                                  />
-                                  <p className="font-serif text-[1.05rem] text-[#261811] font-medium group-hover:text-[#543D30] transition-colors truncate">
-                                    {m.nome}
-                                  </p>
+                              <div className="flex items-start sm:items-center justify-between gap-3">
+                                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                                  <div className="pt-0.5 sm:pt-0 shrink-0">
+                                    <WeddingCheckbox
+                                      size="md"
+                                      checked={vai}
+                                      onChange={(checked) => setMembrosPresenca(prev => ({ ...prev, [m.id]: checked }))}
+                                      ariaLabel={`Presença de ${m.nome}`}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-serif text-[1rem] sm:text-[1.05rem] text-[#261811] font-medium leading-snug break-words">
+                                      {m.nome}
+                                    </p>
+                                    {m.criancaAte6Anos && (
+                                      <span className="text-[0.68rem] font-sans text-amber-800 uppercase tracking-wider font-semibold block mt-0.5">
+                                        Criança indicada
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 
-                                <span className={`text-[0.74rem] font-sans shrink-0 transition-colors ${
+                                <span className={`text-[0.68rem] sm:text-[0.72rem] font-sans shrink-0 uppercase tracking-wider px-2.5 py-1 rounded-full font-semibold transition-colors ${
                                   vai
-                                    ? "text-[#52634C] font-medium tracking-wide"
-                                    : "text-[#A8988B]"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-[#EAE0D5] text-[#7D6B5D]"
                                 }`}>
-                                  {vai ? "✓ Confirmado" : "Não irá"}
+                                  {vai ? "Confirmado" : "Não irá"}
                                 </span>
                               </div>
 
@@ -640,7 +690,7 @@ export default function RsvpModal() {
                                     e.stopPropagation();
                                     setMembrosCrianca(prev => ({ ...prev, [m.id]: !prev[m.id] }));
                                   }}
-                                  className="pl-8 pt-2.5 pb-0.5 flex items-center gap-2.5 cursor-pointer select-none group/crianca"
+                                  className="mt-3 pt-2.5 border-t border-[#EAE0D5] pl-7 flex items-center gap-2.5 cursor-pointer select-none group/crianca"
                                 >
                                   <WeddingCheckbox
                                     size="sm"
@@ -648,8 +698,8 @@ export default function RsvpModal() {
                                     onChange={(checked) => setMembrosCrianca(prev => ({ ...prev, [m.id]: checked }))}
                                     ariaLabel={`Menor de 7 anos: ${m.nome}`}
                                   />
-                                  <span className="text-[0.82rem] font-serif text-[#786455] group-hover/crianca:text-[#261811] transition-colors">
-                                    Menor de 7 anos (0 a 6 anos)
+                                  <span className="text-xs sm:text-[0.82rem] font-serif text-[#786455] group-hover/crianca:text-[#261811] transition-colors leading-tight">
+                                    Criança menor de 7 anos (0 a 6 anos)
                                   </span>
                                 </div>
                               )}
@@ -667,8 +717,8 @@ export default function RsvpModal() {
                       const totalQtd = adultosQtd + criancasQtd;
 
                       return (
-                        <div className="py-2.5 px-3.5 bg-[#F7F2EC] border-l-2 border-[#A8988B] flex flex-wrap items-center justify-between gap-2 text-[#261811] rounded-[3px]">
-                          <span className="font-serif text-[0.88rem] text-[#261811]">
+                        <div className="py-3 px-4 bg-[#F7F2EC] border-l-2 border-[#A8988B] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-[#261811] rounded-[6px]">
+                          <span className="font-serif text-[0.88rem] text-[#261811] font-medium">
                             {totalQtd} {totalQtd === 1 ? "convidado confirmado" : "convidados confirmados"}
                           </span>
                           <span className="text-[0.82rem] font-serif italic text-[#786455]">
@@ -702,7 +752,7 @@ export default function RsvpModal() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full min-h-[48px] py-3.5 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-[0.78rem] tracking-[0.18em] uppercase transition-all duration-200 disabled:opacity-50 font-medium rounded-[3px] shadow-none hover:shadow-sm cursor-pointer"
+                    className="w-full min-h-[48px] py-3.5 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs tracking-[0.18em] uppercase transition-all duration-200 disabled:opacity-50 font-semibold rounded-[6px] shadow-sm hover:shadow cursor-pointer"
                   >
                     {loading ? "Confirmando..." : "CONFIRMAR PRESENÇA"}
                   </button>
