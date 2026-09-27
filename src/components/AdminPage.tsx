@@ -20,6 +20,8 @@ export interface MembroConviteCadastrado {
   criancaAte6Anos?: boolean;
   titular?: boolean;
   confirmouPresenca?: boolean;
+  confirmadoRsvp?: boolean;
+  presenteCheckin?: boolean;
   papel?: string;
 }
 
@@ -1135,6 +1137,16 @@ export default function AdminPage() {
                                         <span className="text-[0.65rem] text-amber-700">
                                           {" "}
                                           (≤ 6 anos)
+                                        </span>
+                                      )}
+                                      {m.confirmadoRsvp === true && (
+                                        <span className="inline-block ml-1 px-1.5 py-0.2 text-[0.62rem] font-sans font-semibold rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                          Vai
+                                        </span>
+                                      )}
+                                      {m.confirmadoRsvp === false && (
+                                        <span className="inline-block ml-1 px-1.5 py-0.2 text-[0.62rem] font-sans font-semibold rounded bg-rose-100 text-rose-800 border border-rose-300">
+                                          Não vai
                                         </span>
                                       )}
                                     </span>

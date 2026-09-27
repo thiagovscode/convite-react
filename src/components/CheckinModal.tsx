@@ -1140,12 +1140,16 @@ export default function CheckinModal() {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {m.confirmadoRsvp !== false ? (
-                                      <span className="text-[0.68rem] font-sans text-emerald-800 font-medium">
+                                    {m.confirmadoRsvp === true ? (
+                                      <span className="text-[0.68rem] font-sans text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                                         RSVP Confirmado
                                       </span>
+                                    ) : m.confirmadoRsvp === false ? (
+                                      <span className="text-[0.68rem] font-sans text-rose-800 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                        Não comparecerá
+                                      </span>
                                     ) : (
-                                      <span className="text-[0.68rem] font-sans text-amber-800 font-medium">
+                                      <span className="text-[0.68rem] font-sans text-amber-800 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                                         RSVP Pendente
                                       </span>
                                     )}

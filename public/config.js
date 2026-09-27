@@ -52,7 +52,7 @@ const wedding = {
   gifts: "https://www.amazon.com.br/hz/wishlist/ls/M9WM0ECW56XX?ref_=wl_share", // Link da Lista Amazon
   giftsFun: "https://noivos.casar.com/tainara-thiago#/presentes",         // Link da Lista de Presentes Divertidos
   pix: {
-    key: "tainaraethiago2027@email.com",
+    key: "00020101021126580014br.gov.bcb.pix0136c2d9c3ce-e657-4e48-9b90-7c4777c3d49b5204000053039865802BR5923THIAGO S DE VASCONCELOS6013FRANCISCO MOR62070503***63044B1E",
     name: "Tainara e Thiago",
     qrCode: "assets/images/pix_qr.png"
   },
