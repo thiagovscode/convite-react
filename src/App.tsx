@@ -10,14 +10,10 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     return (
-      params.get("recepcao") === "true" ||
-      params.get("checkin") === "true" ||
-      params.get("portaria") === "true" ||
       params.get("admin") === "true" ||
-      hash.includes("recepcao") ||
-      hash.includes("checkin") ||
-      hash.includes("portaria") ||
-      hash.includes("admin")
+      hash.includes("admin") ||
+      params.has("fornecedor") ||
+      hash.includes("fornecedor")
     );
   });
 

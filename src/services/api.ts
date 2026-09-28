@@ -56,7 +56,10 @@ export interface AdminRsvpResponse {
   success: boolean;
   resumoGeral: ResumoGeralCasamento;
   data: RsvpAdminItem[];
+  rsvps?: RsvpAdminItem[];
 }
+
+export type AdminRsvpItem = RsvpAdminItem;
 
 export const getApiBaseUrl = (): string => {
   const viteApiUrl = import.meta.env.VITE_API_URL;

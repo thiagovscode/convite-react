@@ -1,0 +1,421 @@
+import React, { useState } from "react";
+import type { ConviteCadastrado, NovoConviteFormState } from "../types";
+import { PAPEL_OPTIONS } from "../types";
+import { SectionTitle } from "../components/SectionTitle";
+import {
+  getLinkConviteCompleto,
+  getLinkRsvpDireto,
+  abrirWhatsAppConvite,
+} from "../utils/formatters";
+
+interface ConvitesTabProps {
+  listaConvites: ConviteCadastrado[];
+  filteredConvites: ConviteCadastrado[];
+  buscaConvites: string;
+  onBuscaChange: (v: string) => void;
+  conviteEmEdicao: ConviteCadastrado | null;
+  novoConvite: NovoConviteFormState;
+  onNovoConviteChange: React.Dispatch<React.SetStateAction<NovoConviteFormState>>;
+  cadLoading: boolean;
+  cadErro: string;
+  cadSucesso: { codigo: string; link: string; familia: string } | null;
+  onSalvarConvite: (e: React.FormEvent) => Promise<void>;
+  onIniciarEdicao: (c: ConviteCadastrado) => void;
+  onAbrirModalExclusao: (c: ConviteCadastrado) => void;
+  feedbackGeral: { tipo: "sucesso" | "erro"; msg: string } | null;
+  onDismissFeedback: () => void;
+}
+
+export function ConvitesTab({
+  listaConvites,
+  filteredConvites,
+  buscaConvites,
+  onBuscaChange,
+  conviteEmEdicao,
+  novoConvite,
+  onNovoConviteChange,
+  cadLoading,
+  cadErro,
+  cadSucesso,
+  onSalvarConvite,
+  onIniciarEdicao,
+  onAbrirModalExclusao,
+  feedbackGeral,
+  onDismissFeedback,
+}: ConvitesTabProps) {
+  const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
+  const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
+  const [copiadoFeedback, setCopiadoFeedback] = useState(false);
+
+  const copiarTexto = (texto: string, chave: string) => {
+    navigator.clipboard.writeText(texto);
+    setCopiadoCode((prev) => ({ ...prev, [chave]: "Copiado" }));
+    setTimeout(() => {
+      setCopiadoCode((prev) => {
+        const c = { ...prev };
+        delete c[chave];
+        return c;
+      });
+    }, 2500);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E8DFD5] pb-4">
+        <div>
+          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
+            Gestão de Convites
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
+            {subTab === "lista"
+              ? "Convites Oficiais & Códigos"
+              : conviteEmEdicao
+              ? `Editar: ${conviteEmEdicao.familia}`
+              : "Cadastrar Novo Convite"}
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSubTab("lista")}
+            className={`text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold transition-all cursor-pointer ${
+              subTab === "lista"
+                ? "bg-[#261811] text-[#FAF7F2] shadow-sm"
+                : "bg-white border border-[#D8CDC0] text-[#6B5A4D]"
+            }`}
+          >
+            Lista ({listaConvites.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubTab("novo")}
+            className={`text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold transition-all cursor-pointer ${
+              subTab === "novo"
+                ? "bg-[#261811] text-[#FAF7F2] shadow-sm"
+                : "bg-white border border-[#D8CDC0] text-[#6B5A4D]"
+            }`}
+          >
+            + Novo Convite
+          </button>
+        </div>
+      </div>
+
+      {feedbackGeral && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-sans rounded-[6px] flex justify-between items-center">
+          <span>{feedbackGeral.msg}</span>
+          <button type="button" onClick={onDismissFeedback} className="underline ml-2 cursor-pointer">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {subTab === "lista" ? (
+        <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#EAE0D5]">
+            <input
+              type="text"
+              value={buscaConvites}
+              onChange={(e) => onBuscaChange(e.target.value)}
+              placeholder="Buscar família, membro ou código..."
+              className="w-full sm:w-80 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+            />
+            <span className="text-xs font-sans text-[#8C7A6B]">
+              {filteredConvites.length} {filteredConvites.length === 1 ? "convite" : "convites"} encontrados
+            </span>
+          </div>
+
+          <div className="divide-y divide-[#EAE0D5]">
+            {filteredConvites.map((c) => {
+              const statusKey = (c.status || "PENDENTE").toUpperCase();
+              const linkOficial = getLinkConviteCompleto(c.codigo);
+              const linkRsvp = getLinkRsvpDireto(c.codigo);
+              const copiadoConvite = copiadoCode[c.codigo];
+              const copiadoRsvp = copiadoCode[`${c.codigo}-rsvp`];
+              const copiadoCodigo = copiadoCode[`${c.codigo}-code`];
+
+              return (
+                <div key={c.id || c.codigo} className="py-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="font-serif text-lg font-medium text-[#261811] leading-tight">
+                        {c.familia}
+                      </h3>
+                      {c.papel && (
+                        <span className="text-[0.62rem] font-sans tracking-[0.14em] uppercase px-2 py-0.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded text-[#6B5A4D] font-semibold">
+                          {c.papel}
+                        </span>
+                      )}
+                      <span
+                        onClick={() => copiarTexto(c.codigo, `${c.codigo}-code`)}
+                        className="font-mono text-xs font-bold text-[#261811] bg-[#FAF7F2] hover:bg-[#EAE0D5] px-2 py-0.5 rounded border border-[#D8CDC0] cursor-pointer"
+                        title="Copiar código"
+                      >
+                        {copiadoCodigo || c.codigo}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`self-start sm:self-auto text-[0.66rem] font-sans tracking-wider uppercase px-2.5 py-0.5 rounded-full font-semibold border ${
+                        statusKey === "CONFIRMADO"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : statusKey === "RECUSADO"
+                          ? "bg-rose-50 text-rose-800 border-rose-200"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      }`}
+                    >
+                      {statusKey === "CONFIRMADO" ? "Confirmado" : statusKey === "RECUSADO" ? "Não vai" : "Pendente"}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-sans text-[#6B5A4D] leading-relaxed">
+                    {c.telefone && <span>{c.telefone} · </span>}
+                    <span className="text-[#8C7A6B]">Membros: </span>
+                    {c.membros?.map((m, idx) => (
+                      <span key={m.id || idx}>
+                        {idx > 0 && ", "}
+                        <strong className="text-[#261811] font-normal">{m.nome}</strong>
+                        {m.titular && <span className="text-[#8C7A6B]"> (Titular)</span>}
+                        {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
+                        {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
+                      </span>
+                    ))}
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-1 border-t border-[#F5EFE6]">
+                    <button
+                      type="button"
+                      onClick={() => copiarTexto(linkOficial, c.codigo)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
+                    >
+                      <span>{copiadoConvite || "Copiar Link"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirWhatsAppConvite(c.familia, c.codigo, c.telefone)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] cursor-pointer min-h-[38px]"
+                    >
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copiarTexto(linkRsvp, `${c.codigo}-rsvp`)}
+                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#7D6B5D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#E3D8CB] rounded-[6px] cursor-pointer min-h-[38px]"
+                    >
+                      <span>{copiadoRsvp || "Link RSVP"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onIniciarEdicao(c);
+                        setSubTab("novo");
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
+                    >
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirModalExclusao(c)}
+                      className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-rose-700 hover:text-rose-900 bg-rose-50/70 hover:bg-rose-100 border border-rose-200 rounded-[6px] cursor-pointer min-h-[38px]"
+                    >
+                      <span>Excluir</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={onSalvarConvite} className="space-y-6">
+          {cadErro && (
+            <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-[6px] text-xs font-sans text-rose-950">
+              {cadErro}
+            </div>
+          )}
+
+          {cadSucesso && (
+            <div className="p-5 bg-emerald-50 border border-emerald-300 rounded-[10px] space-y-3">
+              <strong className="font-serif text-lg text-emerald-950 block">Convite salvo com sucesso!</strong>
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={cadSucesso.link}
+                  className="flex-1 bg-white border border-emerald-300 p-2 text-xs rounded"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(cadSucesso.link);
+                    setCopiadoFeedback(true);
+                    setTimeout(() => setCopiadoFeedback(false), 2000);
+                  }}
+                  className="bg-[#261811] text-white px-4 text-xs font-sans uppercase rounded font-semibold cursor-pointer"
+                >
+                  {copiadoFeedback ? "Copiado!" : "Copiar"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+            <SectionTitle>Dados da Família / Convidado</SectionTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
+                  Nome da Família ou Convidado Principal *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={novoConvite.familia}
+                  onChange={(e) => onNovoConviteChange((p) => ({ ...p, familia: e.target.value }))}
+                  placeholder="Ex: Família Vasconcelos"
+                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                />
+              </div>
+              <div>
+                <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
+                  Telefone / WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={novoConvite.telefone}
+                  onChange={(e) => onNovoConviteChange((p) => ({ ...p, telefone: e.target.value }))}
+                  placeholder="(11) 99999-9999"
+                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                />
+              </div>
+              <div>
+                <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
+                  Categoria / Papel
+                </label>
+                <select
+                  value={novoConvite.papel}
+                  onChange={(e) => onNovoConviteChange((p) => ({ ...p, papel: e.target.value }))}
+                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                >
+                  {PAPEL_OPTIONS.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+            <div className="flex items-center justify-between">
+              <SectionTitle>Membros Oficiais do Convite</SectionTitle>
+              <button
+                type="button"
+                onClick={() =>
+                  onNovoConviteChange((p) => ({
+                    ...p,
+                    membros: [
+                      ...p.membros,
+                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false },
+                    ],
+                  }))
+                }
+                className="text-[0.68rem] font-sans tracking-[0.14em] uppercase px-3 py-1.5 border border-[#261811] text-[#261811] rounded-[6px] font-semibold cursor-pointer"
+              >
+                + Adicionar Membro
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {novoConvite.membros.map((m, idx) => (
+                <div
+                  key={m.id}
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-[8px] border border-[#E8DFD5] bg-white"
+                >
+                  <input
+                    type="text"
+                    required
+                    value={m.nome}
+                    onChange={(e) =>
+                      onNovoConviteChange((prev) => ({
+                        ...prev,
+                        membros: prev.membros.map((item, i) =>
+                          i === idx ? { ...item, nome: e.target.value } : item
+                        ),
+                      }))
+                    }
+                    placeholder={m.titular ? "Nome do titular *" : `Nome do acompanhante ${idx + 1} *`}
+                    className="flex-1 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                  />
+                  <div className="flex items-center gap-3 justify-between sm:justify-start">
+                    <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={m.criancaAte6Anos}
+                        onChange={(e) =>
+                          onNovoConviteChange((prev) => ({
+                            ...prev,
+                            membros: prev.membros.map((item, i) =>
+                              i === idx ? { ...item, criancaAte6Anos: e.target.checked } : item
+                            ),
+                          }))
+                        }
+                        className="accent-[#261811]"
+                      />
+                      <span>≤ 6 anos</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!m.titular}
+                        onChange={(e) =>
+                          onNovoConviteChange((prev) => ({
+                            ...prev,
+                            membros: prev.membros.map((item, i) =>
+                              i === idx ? { ...item, titular: e.target.checked } : item
+                            ),
+                          }))
+                        }
+                        className="accent-[#261811]"
+                      />
+                      <span>Titular</span>
+                    </label>
+                    {novoConvite.membros.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onNovoConviteChange((prev) => ({
+                            ...prev,
+                            membros: prev.membros.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="text-rose-600 hover:text-rose-900 text-xs font-sans uppercase p-1 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setSubTab("lista")}
+              className="px-5 py-3 border border-[#D8CDC0] text-[#6B5A4D] rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={cadLoading}
+              className="px-6 py-3 bg-[#261811] hover:bg-[#1A100B] text-white rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold cursor-pointer disabled:opacity-50 min-h-[46px]"
+            >
+              {cadLoading ? "Salvando..." : "Salvar Convite"}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}

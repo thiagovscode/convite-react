@@ -32,7 +32,6 @@ function loadEnv() {
     path.resolve(process.cwd(), '.env'),
     path.resolve(process.cwd(), '.env.backup'),
     path.resolve(process.cwd(), '../convite-backend-v2/.env'),
-    path.resolve(process.cwd(), '../convite-cha-de-panela/.env'),
   ];
 
   for (const envPath of envPaths) {

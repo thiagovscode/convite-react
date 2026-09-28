@@ -7,8 +7,8 @@ import GallerySection from "./sections/GallerySection";
 import Footer from "./sections/Footer";
 import Modals from "./Modals";
 import RsvpModal from "./RsvpModal";
-import CheckinModal from "./CheckinModal";
 import AdminPage from "./AdminPage";
+import FornecedorCredencialModal from "./FornecedorCredencialModal";
 
 export default function OldLayout() {
   useEffect(() => {
@@ -52,8 +52,8 @@ export default function OldLayout() {
       </main>
       <Modals />
       <RsvpModal />
-      <CheckinModal />
       <AdminPage />
+      <FornecedorCredencialModal />
     </>
   );
 }

@@ -1,0 +1,531 @@
+import React, { useState, useEffect, useMemo } from "react";
+import type { Tab, UserRole, ConviteCadastrado, NovoConviteFormState } from "./types";
+import { AdminHeader } from "./components/AdminHeader";
+import { AdminLogin } from "./components/AdminLogin";
+import { DeleteConviteModal } from "./components/DeleteConviteModal";
+import { DashboardTab } from "./tabs/DashboardTab";
+import { ConvitesTab } from "./tabs/ConvitesTab";
+import { RsvpTab } from "./tabs/RsvpTab";
+import { PortariaTab } from "./tabs/PortariaTab";
+import { CortejoTab } from "./tabs/CortejoTab";
+import { FornecedoresTab } from "./tabs/FornecedoresTab";
+import { AuditoriaTab } from "./tabs/AuditoriaTab";
+
+// Services
+import {
+  autenticarAdmin,
+  buscarRelatorioRsvpAdmin,
+  buscarMetricasAdmin,
+  cadastrarConviteAdmin,
+  excluirConviteAdmin,
+  listarConvitesAdmin,
+} from "../../services/api";
+import type {
+  AdminRsvpResponse,
+  DashboardMetricas,
+  RsvpAdminItem,
+  AcompanhanteResponse,
+} from "../../services/api";
+import {
+  loginRecepcaoBackend,
+  buscarRelatorioAuditoriaBackend,
+  buscarParticipantesCerimoniaBackend,
+  buscarFornecedoresBackend,
+  validarSessaoRecepcaoBackend,
+  RECEPCAO_JWT_STORAGE_KEY,
+} from "../../services/convites";
+import type {
+  RelatorioAuditoria,
+  ParticipanteCerimonia,
+  FornecedorCasamento,
+} from "../../services/convites";
+import { getLinkConviteCompleto } from "./utils/formatters";
+
+export function AdminPanel() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>("admin");
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+
+  // Auth State
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+  // Dados Admin (Noivos)
+  const [data, setData] = useState<AdminRsvpResponse | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState("");
+  const [searchRsvp, setSearchRsvp] = useState("");
+  const [metricasBackend, setMetricasBackend] = useState<DashboardMetricas | null>(null);
+
+  // Convites
+  const [listaConvites, setListaConvites] = useState<ConviteCadastrado[]>([]);
+  const [buscaConvites, setBuscaConvites] = useState("");
+  const [feedbackGeral, setFeedbackGeral] = useState<{ tipo: "sucesso" | "erro"; msg: string } | null>(null);
+  const [conviteEmEdicao, setConviteEmEdicao] = useState<ConviteCadastrado | null>(null);
+  const [novoConvite, setNovoConvite] = useState<NovoConviteFormState>({
+    familia: "",
+    telefone: "",
+    email: "",
+    papel: "Convidados",
+    observacao: "",
+    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+  });
+  const [cadLoading, setCadLoading] = useState(false);
+  const [cadErro, setCadErro] = useState("");
+  const [cadSucesso, setCadSucesso] = useState<{ codigo: string; link: string; familia: string } | null>(null);
+
+  // Exclusão
+  const [conviteParaExcluir, setConviteParaExcluir] = useState<ConviteCadastrado | null>(null);
+  const [excluindoLoading, setExcluindoLoading] = useState(false);
+  const [excluirErro, setExcluirErro] = useState("");
+
+  // Dados Operacionais (Portaria, Cortejo, Fornecedores, Auditoria)
+  const [participantes, setParticipantes] = useState<ParticipanteCerimonia[]>([]);
+  const [fornecedores, setFornecedores] = useState<FornecedorCasamento[]>([]);
+  const [relatorioAuditoria, setRelatorioAuditoria] = useState<RelatorioAuditoria | null>(null);
+  const [auditoriaLoading, setAuditoriaLoading] = useState(false);
+
+  // ─── INICIALIZAÇÃO E SUPORTE A ROTAS (EXCLUSIVAMENTE #admin) ─────────────────
+  useEffect(() => {
+    const verificarAberturaUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+
+      const querAbrir = params.get("admin") === "true" || hash.includes("admin");
+
+      if (querAbrir) {
+        setIsOpen(true);
+        document.body.style.overflow = "hidden";
+      }
+    };
+
+    const tentarRestaurarSessao = async () => {
+      const adminToken = localStorage.getItem("CONVITE_ADMIN_TOKEN");
+      const recepcaoToken =
+        sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
+        localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
+
+      if (adminToken) {
+        try {
+          setUserRole("admin");
+          setIsLogged(true);
+          setActiveTab("dashboard");
+          await carregarDadosAdmin(adminToken);
+          carregarDadosOperacionais();
+          return;
+        } catch {
+          localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+        }
+      }
+
+      if (recepcaoToken) {
+        const valida = await validarSessaoRecepcaoBackend();
+        if (valida) {
+          setUserRole("recepcao");
+          setIsLogged(true);
+          setActiveTab("portaria");
+          carregarDadosOperacionais();
+        }
+      }
+    };
+
+    verificarAberturaUrl();
+    tentarRestaurarSessao();
+
+    window.addEventListener("popstate", verificarAberturaUrl);
+    window.addEventListener("hashchange", verificarAberturaUrl);
+    window.addEventListener("open-admin-panel", () => {
+      setIsOpen(true);
+      document.body.style.overflow = "hidden";
+    });
+
+    return () => {
+      window.removeEventListener("popstate", verificarAberturaUrl);
+      window.removeEventListener("hashchange", verificarAberturaUrl);
+    };
+  }, []);
+
+  const close = () => {
+    setIsOpen(false);
+    document.body.style.overflow = "";
+
+    const url = new URL(window.location.href);
+    if (url.hash.includes("admin")) {
+      url.hash = "";
+    }
+    url.searchParams.delete("admin");
+    window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+  };
+
+  // ─── LOGIN UNIFICADO COM ROTEAMENTO DE TELA INICIAL ──────────────────────────
+  const handleLogin = async (usr: string, pass: string) => {
+    setAuthError("");
+    setAuthLoading(true);
+
+    const userLimpo = usr.trim().toLowerCase();
+    const isProvavelRecepcao = userLimpo.includes("recep") || userLimpo.includes("portar");
+
+    try {
+      if (isProvavelRecepcao) {
+        const res = await loginRecepcaoBackend(usr.trim(), pass);
+        if (res.success) {
+          setUserRole("recepcao");
+          setIsLogged(true);
+          setActiveTab("portaria"); // TELA INICIAL DA RECEPÇÃO
+          carregarDadosOperacionais();
+          return;
+        }
+        const adminToken = await autenticarAdmin(usr.trim(), pass);
+        setUserRole("admin");
+        setIsLogged(true);
+        setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
+        await carregarDadosAdmin(adminToken);
+        carregarDadosOperacionais();
+      } else {
+        try {
+          const adminToken = await autenticarAdmin(usr.trim(), pass);
+          setUserRole("admin");
+          setIsLogged(true);
+          setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
+          await carregarDadosAdmin(adminToken);
+          carregarDadosOperacionais();
+        } catch (adminErr: any) {
+          const res = await loginRecepcaoBackend(usr.trim(), pass);
+          if (res.success) {
+            setUserRole("recepcao");
+            setIsLogged(true);
+            setActiveTab("portaria"); // TELA INICIAL DA RECEPÇÃO
+            carregarDadosOperacionais();
+            return;
+          }
+          throw adminErr;
+        }
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Usuário ou senha inválidos.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+    sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    setIsLogged(false);
+    setUserRole("admin");
+    setData(null);
+    setMetricasBackend(null);
+    setAuthError("");
+  };
+
+  // ─── CARREGADORES DE DADOS ───────────────────────────────────────────────────
+  const carregarDadosAdmin = async (token?: string) => {
+    setDataLoading(true);
+    setDataError("");
+    try {
+      const [result, convitesRes, metricasRes] = await Promise.all([
+        buscarRelatorioRsvpAdmin(token),
+        listarConvitesAdmin(token).catch(() => []),
+        buscarMetricasAdmin(token).catch(() => null),
+      ]);
+      setData(result);
+      if (Array.isArray(convitesRes)) setListaConvites(convitesRes);
+      if (metricasRes) setMetricasBackend(metricasRes);
+    } catch (err: any) {
+      setDataError(err.message || "Erro ao carregar dados administrativos.");
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const carregarDadosOperacionais = () => {
+    carregarAuditoria();
+    carregarParticipantes();
+    carregarFornecedores();
+  };
+
+  const carregarAuditoria = async () => {
+    setAuditoriaLoading(true);
+    const aud = await buscarRelatorioAuditoriaBackend();
+    if (aud) setRelatorioAuditoria(aud);
+    setAuditoriaLoading(false);
+  };
+
+  const carregarParticipantes = async () => {
+    const dataPart = await buscarParticipantesCerimoniaBackend();
+    if (dataPart && dataPart.participantes) {
+      setParticipantes(dataPart.participantes);
+    }
+  };
+
+  const carregarFornecedores = async () => {
+    const dataForn = await buscarFornecedoresBackend();
+    if (dataForn && dataForn.fornecedores) {
+      setFornecedores(dataForn.fornecedores);
+    }
+  };
+
+  // ─── CRUD DE CONVITES ────────────────────────────────────────────────────────
+  const handleSalvarConvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCadErro("");
+    setCadSucesso(null);
+
+    if (!novoConvite.familia.trim()) {
+      setCadErro("Informe o nome da família ou convidado principal.");
+      return;
+    }
+    if (novoConvite.membros.some((m) => !m.nome.trim())) {
+      setCadErro("Preencha o nome de todos os membros.");
+      return;
+    }
+
+    setCadLoading(true);
+    try {
+      const res = await cadastrarConviteAdmin({
+        codigo: conviteEmEdicao ? conviteEmEdicao.codigo : undefined,
+        familia: novoConvite.familia.trim(),
+        telefone: novoConvite.telefone.trim() || undefined,
+        email: novoConvite.email.trim() || undefined,
+        papel: novoConvite.papel.trim() || undefined,
+        observacao: novoConvite.observacao.trim() || undefined,
+        membros: novoConvite.membros.map((m) => ({
+          id: m.id,
+          nome: m.nome.trim(),
+          criancaAte6Anos: m.criancaAte6Anos,
+          titular: m.titular,
+          papel: m.papel,
+        })),
+      });
+
+      const link = getLinkConviteCompleto(res.codigo);
+      setCadSucesso({ codigo: res.codigo, link, familia: novoConvite.familia });
+      setConviteEmEdicao(null);
+      setNovoConvite({
+        familia: "",
+        telefone: "",
+        email: "",
+        papel: "Convidados",
+        observacao: "",
+        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+      });
+      await carregarDadosAdmin();
+    } catch (err: any) {
+      setCadErro(err.message || "Erro ao salvar convite.");
+    } finally {
+      setCadLoading(false);
+    }
+  };
+
+  const handleIniciarEdicao = (c: ConviteCadastrado) => {
+    setConviteEmEdicao(c);
+    setNovoConvite({
+      familia: c.familia || "",
+      telefone: c.telefone || "",
+      email: c.email || "",
+      papel: c.papel || "Convidados",
+      observacao: c.observacao || "",
+      membros: c.membros?.length
+        ? c.membros.map((m, idx) => ({
+            id: m.id || String(idx + 1),
+            nome: m.nome,
+            criancaAte6Anos: Boolean(m.criancaAte6Anos),
+            titular: Boolean(m.titular),
+            papel: m.papel,
+          }))
+        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+    });
+  };
+
+  const handleConfirmarExclusao = async () => {
+    if (!conviteParaExcluir) return;
+    setExcluindoLoading(true);
+    setExcluirErro("");
+    try {
+      await excluirConviteAdmin(conviteParaExcluir.codigo);
+      setFeedbackGeral({
+        tipo: "sucesso",
+        msg: `Convite de "${conviteParaExcluir.familia}" excluído com sucesso.`,
+      });
+      setConviteParaExcluir(null);
+      await carregarDadosAdmin();
+    } catch (err: any) {
+      setExcluirErro(err.message || "Não foi possível excluir o convite.");
+    } finally {
+      setExcluindoLoading(false);
+    }
+  };
+
+  // ─── CÁLCULOS MEMOIZADOS ─────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    if (metricasBackend) {
+      return {
+        totalConvites: metricasBackend.totalConvites,
+        totalPessoas: metricasBackend.totalPessoas,
+        totalConfirmados: metricasBackend.totalConfirmados,
+        totalRecusaram: metricasBackend.totalRecusaram,
+        totalPendentes: metricasBackend.totalPendentes,
+        totalAdultos: metricasBackend.totalAdultosConfirmados,
+        totalCriancasAte6Anos: metricasBackend.totalCriancasConfirmadas,
+      };
+    }
+    const rsvpList: RsvpAdminItem[] = data?.data || data?.rsvps || [];
+    const conf = rsvpList.filter((r) => r.presenca);
+    const rec = rsvpList.filter((r) => !r.presenca);
+    return {
+      totalConvites: listaConvites.length || rsvpList.length,
+      totalPessoas: rsvpList.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
+      totalConfirmados: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
+      totalRecusaram: rec.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
+      totalPendentes: 0,
+      totalAdultos: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.adultos || 1), 0),
+      totalCriancasAte6Anos: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.criancasAte6Anos || 0), 0),
+    };
+  }, [metricasBackend, data, listaConvites]);
+
+  const filteredRsvp = useMemo(() => {
+    const list: RsvpAdminItem[] = data?.data || data?.rsvps || [];
+    if (!searchRsvp.trim()) return list;
+    const q = searchRsvp.toLowerCase();
+    return list.filter(
+      (r: RsvpAdminItem) =>
+        r.nome.toLowerCase().includes(q) ||
+        r.telefone?.toLowerCase().includes(q) ||
+        r.acompanhantes?.some((a: AcompanhanteResponse) => a.nome.toLowerCase().includes(q))
+    );
+  }, [data, searchRsvp]);
+
+  const filteredConvites = useMemo(() => {
+    if (!buscaConvites.trim()) return listaConvites;
+    const q = buscaConvites.toLowerCase().trim();
+    return listaConvites.filter(
+      (c) =>
+        c.familia.toLowerCase().includes(q) ||
+        c.codigo.toLowerCase().includes(q) ||
+        c.telefone?.toLowerCase().includes(q) ||
+        c.membros?.some((m) => m.nome.toLowerCase().includes(q))
+    );
+  }, [listaConvites, buscaConvites]);
+
+  if (!isOpen) return null;
+
+  const tabsDisponiveis: { id: Tab; label: string }[] =
+    userRole === "recepcao"
+      ? [
+          { id: "portaria", label: "Portaria & Check-in" },
+          { id: "cortejo", label: "Cortejo" },
+          { id: "fornecedores", label: "Fornecedores" },
+          { id: "auditoria", label: "Buffet" },
+        ]
+      : [
+          { id: "dashboard", label: "Visão Geral" },
+          { id: "convites", label: "Convites" },
+          { id: "rsvp", label: "Presenças" },
+          { id: "fornecedores", label: "Fornecedores" },
+        ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[99999] bg-[#FAF7F2] text-[#261811] overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Painel Administrativo"
+    >
+      <AdminHeader
+        isLogged={isLogged}
+        userRole={userRole}
+        activeTab={activeTab}
+        tabsDisponiveis={tabsDisponiveis}
+        onSelectTab={setActiveTab}
+        onLogout={handleLogout}
+        onClose={close}
+      />
+
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-6 sm:py-8 w-full">
+        {!isLogged ? (
+          <AdminLogin onLogin={handleLogin} loading={authLoading} error={authError} />
+        ) : (
+          <>
+            {dataError && (
+              <div className="mb-6 p-4 bg-rose-50 border border-rose-300 rounded-[8px] text-sm text-rose-900 font-medium">
+                {dataError}
+              </div>
+            )}
+
+            {activeTab === "dashboard" && <DashboardTab stats={stats} />}
+
+            {activeTab === "convites" && (
+              <ConvitesTab
+                listaConvites={listaConvites}
+                filteredConvites={filteredConvites}
+                buscaConvites={buscaConvites}
+                onBuscaChange={setBuscaConvites}
+                conviteEmEdicao={conviteEmEdicao}
+                novoConvite={novoConvite}
+                onNovoConviteChange={setNovoConvite}
+                cadLoading={cadLoading}
+                cadErro={cadErro}
+                cadSucesso={cadSucesso}
+                onSalvarConvite={handleSalvarConvite}
+                onIniciarEdicao={handleIniciarEdicao}
+                onAbrirModalExclusao={setConviteParaExcluir}
+                feedbackGeral={feedbackGeral}
+                onDismissFeedback={() => setFeedbackGeral(null)}
+              />
+            )}
+
+            {activeTab === "rsvp" && (
+              <RsvpTab
+                filteredRsvp={filteredRsvp}
+                search={searchRsvp}
+                onSearchChange={setSearchRsvp}
+                loading={dataLoading}
+              />
+            )}
+
+            {activeTab === "portaria" && (
+              <PortariaTab
+                onRefreshData={() => {
+                  carregarDadosOperacionais();
+                  if (userRole === "admin") carregarDadosAdmin();
+                }}
+              />
+            )}
+
+            {activeTab === "cortejo" && (
+              <CortejoTab
+                participantes={participantes}
+                onParticipantesChange={setParticipantes}
+                onRefreshAuditoria={carregarAuditoria}
+              />
+            )}
+
+            {activeTab === "fornecedores" && (
+              <FornecedoresTab
+                userRole={userRole}
+                fornecedores={fornecedores}
+                onFornecedoresChange={setFornecedores}
+                onRefreshAuditoria={carregarAuditoria}
+                onRefreshFornecedores={carregarFornecedores}
+              />
+            )}
+
+            {activeTab === "auditoria" && (
+              <AuditoriaTab relatorio={relatorioAuditoria} loading={auditoriaLoading} />
+            )}
+          </>
+        )}
+      </main>
+
+      <DeleteConviteModal
+        convite={conviteParaExcluir}
+        loading={excluindoLoading}
+        error={excluirErro}
+        onCancel={() => setConviteParaExcluir(null)}
+        onConfirm={handleConfirmarExclusao}
+      />
+    </div>
+  );
+}

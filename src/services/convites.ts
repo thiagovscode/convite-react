@@ -145,7 +145,7 @@ export const RECEPCAO_JWT_STORAGE_KEY = "CASAMENTO_RECEPCAO_JWT_TOKEN";
 
 export function getRecepcaoAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined"
-    ? (sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
+    ? (sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem("CONVITE_ADMIN_TOKEN"))
     : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
@@ -466,7 +466,7 @@ export async function cadastrarFornecedorBackend(
   novo: Partial<FornecedorCasamento>
 ): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento }> {
   const baseUrl = getApiBaseUrl();
-  const url = baseUrl ? `${baseUrl}/api/recepcao/fornecedores` : `/api/recepcao/fornecedores`;
+  const url = baseUrl ? `${baseUrl}/api/admin/fornecedores` : `/api/admin/fornecedores`;
 
   try {
     const res = await fetch(url, {
@@ -483,3 +483,98 @@ export async function cadastrarFornecedorBackend(
     return { success: false, message: err.message || "Erro de conexão ao cadastrar fornecedor" };
   }
 }
+
+export async function excluirFornecedorBackend(
+  fornecedorId: string
+): Promise<{ success: boolean; message: string }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}`
+    : `/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: getRecepcaoAuthHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: true, message: data.message || "Fornecedor excluído com sucesso!" };
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, message: err.message || "Erro ao excluir fornecedor" };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Erro de conexão ao excluir fornecedor" };
+  }
+}
+
+export async function removerMembroFornecedorBackend(
+  fornecedorId: string,
+  membroId: string
+): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}`
+    : `/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: getRecepcaoAuthHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { success: true, message: data.message || "Membro removido da equipe", fornecedor: data.fornecedor };
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, message: err.message || "Erro ao remover membro da equipe" };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Erro de conexão ao remover membro da equipe" };
+  }
+}
+
+// 7. Busca pública da credencial do fornecedor (para que cada membro gere seu QR code)
+export async function buscarFornecedorPublico(id: string): Promise<FornecedorCasamento | null> {
+  if (!id || !id.trim()) return null;
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/convites/fornecedor/${encodeURIComponent(id.trim())}`
+    : `/api/convites/fornecedor/${encodeURIComponent(id.trim())}`;
+
+  try {
+    const res = await fetch(url);
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.error("Erro ao buscar credencial do fornecedor:", err);
+  }
+  return null;
+}
+
+export async function adicionarMembroPublicoFornecedor(
+  fornecedorId: string,
+  novoMembro: { nome: string; funcao?: string }
+): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento; membro?: MembroEquipeFornecedor }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/convites/fornecedor/${encodeURIComponent(fornecedorId)}/membros`
+    : `/api/convites/fornecedor/${encodeURIComponent(fornecedorId)}/membros`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(novoMembro)
+    });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, message: err.message || "Erro ao adicionar membro à equipe" };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Erro de conexão ao adicionar membro à equipe" };
+  }
+}
+
+
