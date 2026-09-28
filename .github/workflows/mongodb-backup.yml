@@ -28,15 +28,15 @@ jobs:
 
       - name: Executar mongodump
         env:
-          MONGO_CONNECTION_STRING: ${{ secrets.MONGODB_URI || secrets.MONGO_URI || secrets.MONGODB_URL || secrets.DATABASE_URL || secrets.MONGO_URL }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
-          if [ -z "$MONGO_CONNECTION_STRING" ]; then
+          if [ -z "$MONGODB_URI" ]; then
             echo "❌ ERRO: Nenhuma variável de conexão com o MongoDB encontrada nos Secrets do GitHub!"
-            echo "Configure a secret MONGODB_URI (ou MONGO_URI) nas configurações do repositório: Settings > Secrets and variables > Actions"
+            echo "Configure a secret MONGODB_URI nas configurações do repositório: Settings > Secrets and variables > Actions"
             exit 1
           fi
           echo "✓ Conectando ao MongoDB e gerando backup..."
-          mongodump --uri="$MONGO_CONNECTION_STRING" --archive=${{ env.filename }} --gzip
+          mongodump --uri="$MONGODB_URI" --archive=${{ env.filename }} --gzip
           echo "✓ Backup gerado e compactado com sucesso!"
 
       - name: Calcular Tamanho do Backup

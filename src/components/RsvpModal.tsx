@@ -73,6 +73,7 @@ export default function RsvpModal() {
 
   // Mapeamento de presença de cada membro: { [membroId]: boolean }
   const [membrosPresenca, setMembrosPresenca] = useState<Record<string, boolean>>({});
+  const [membrosCrianca, setMembrosCrianca] = useState<Record<string, boolean>>({});
 
   // Dados de Contato e Mensagem
   const [telefone, setTelefone] = useState("");
@@ -115,10 +116,13 @@ export default function RsvpModal() {
 
     // Inicializa todos os membros como confirmados (ou respeita se já vier com status individual)
     const mapP: Record<string, boolean> = {};
+    const mapC: Record<string, boolean> = {};
     membrosSanitizados.forEach(m => {
       mapP[m.id] = m.confirmadoRsvp !== false;
+      mapC[m.id] = Boolean(m.criancaAte6Anos);
     });
     setMembrosPresenca(mapP);
+    setMembrosCrianca(mapC);
 
     // Se já estava recusado no banco, sincroniza opção inicial
     if (conviteFormatado.status === "RECUSADO") {
@@ -275,7 +279,7 @@ export default function RsvpModal() {
     const titular = convitePreDefinido.membros.find(m => m.titular) || convitePreDefinido.membros[0];
     const confirmados = convitePreDefinido.membros.filter(m => m.confirmadoRsvp !== false);
     const nomes = confirmados.map(m => m.nome);
-    const crCount = confirmados.filter(m => !!m.criancaAte6Anos).length;
+    const crCount = confirmados.filter(m => !!(membrosCrianca[m.id] !== undefined ? membrosCrianca[m.id] : m.criancaAte6Anos)).length;
     const adCount = (nomes.length || 1) - crCount;
 
     setPasseInfo({
@@ -322,16 +326,18 @@ export default function RsvpModal() {
 
       const acompanhantesEnvio: AcompanhanteRequest[] = presenca
         ? membrosConfirmados
-            .filter(m => m.id !== titularEscolhido.id && m.nome.trim().toLowerCase() !== titularEscolhido.nome.trim().toLowerCase())
+            .filter(m => m.id !== titularEscolhido.id)
             .map(m => ({
+              id: m.id,
               nome: m.nome.trim(),
-              criancaAte6Anos: Boolean(m.criancaAte6Anos)
+              criancaAte6Anos: Boolean(membrosCrianca[m.id])
             }))
         : convitePreDefinido.membros
-            .filter(m => m.id !== titularEscolhido.id && m.nome.trim().toLowerCase() !== titularEscolhido.nome.trim().toLowerCase())
+            .filter(m => m.id !== titularEscolhido.id)
             .map(m => ({
+              id: m.id,
               nome: m.nome.trim(),
-              criancaAte6Anos: Boolean(m.criancaAte6Anos)
+              criancaAte6Anos: Boolean(membrosCrianca[m.id])
             }));
 
       const payload = {
@@ -349,7 +355,7 @@ export default function RsvpModal() {
 
       if (presenca) {
         const nomesConfirmadosPasse = [titularEscolhido.nome, ...acompanhantesEnvio.map(a => a.nome)];
-        const criancasTotal = membrosConfirmados.filter(m => !!m.criancaAte6Anos).length;
+        const criancasTotal = membrosConfirmados.filter(m => !!membrosCrianca[m.id]).length;
         const adultosTotal = membrosConfirmados.length - criancasTotal;
 
         setPasseInfo({
@@ -372,7 +378,8 @@ export default function RsvpModal() {
         telefone: telefone.trim(),
         membros: prev.membros.map(m => ({
           ...m,
-          confirmadoRsvp: presenca ? !!membrosPresenca[m.id] : false
+          confirmadoRsvp: presenca ? !!membrosPresenca[m.id] : false,
+          criancaAte6Anos: Boolean(membrosCrianca[m.id])
         }))
       } : null);
 
@@ -404,7 +411,7 @@ export default function RsvpModal() {
     ? convitePreDefinido.membros.filter(m => !!membrosPresenca[m.id])
     : [];
   const totalConfirmados = membrosConfirmadosAtualmente.length;
-  const criancasConfirmadas = membrosConfirmadosAtualmente.filter(m => !!m.criancaAte6Anos).length;
+  const criancasConfirmadas = membrosConfirmadosAtualmente.filter(m => !!membrosCrianca[m.id]).length;
   const adultosConfirmados = totalConfirmados - criancasConfirmadas;
 
   // Identificação do titular oficial (informativo)
@@ -745,16 +752,34 @@ export default function RsvpModal() {
                                         </span>
                                       )}
 
-                                      {/* 5. REGRA OBRIGATÓRIA PARA CRIANÇAS */}
-                                      {/* Identificação informativa discreta - Não editável e com os textos exatos solicitados */}
-                                      {m.criancaAte6Anos && (
-                                        <div className="mt-2 space-y-0.5">
-                                          <span className="inline-block text-[0.62rem] font-sans tracking-[0.16em] uppercase font-semibold text-[#8A6A4E] bg-[#F4EDE4] px-2 py-0.5 rounded-[4px] border border-[#E5DACD]">
-                                            CRIANÇA INDICADA
-                                          </span>
-                                          <p className="text-[0.76rem] sm:text-[0.8rem] font-serif text-[#786455] italic">
-                                            Criança menor de 7 anos (0 a 6 anos)
-                                          </p>
+                                      {/* OPÇÃO DE IDENTIFICAR CRIANÇA (0 A 6 ANOS) */}
+                                      {isSelected && (
+                                        <div 
+                                          className="mt-3 pt-2.5 border-t border-[#E8DFD5]/70 flex flex-wrap items-center justify-between gap-2"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <label className="inline-flex items-center gap-2.5 cursor-pointer select-none group">
+                                            <input
+                                              type="checkbox"
+                                              checked={!!membrosCrianca[m.id]}
+                                              onChange={(e) => {
+                                                setMembrosCrianca(prev => ({
+                                                  ...prev,
+                                                  [m.id]: e.target.checked
+                                                }));
+                                              }}
+                                              className="w-4 h-4 rounded border-[#C8BDB0] text-[#8A6A4E] focus:ring-[#8A6A4E]/30 accent-[#8A6A4E] cursor-pointer"
+                                            />
+                                            <span className="text-xs sm:text-[0.82rem] font-serif text-[#6B5A4D] group-hover:text-[#261811] transition-colors">
+                                              É criança menor de 7 anos (0 a 6 anos)
+                                            </span>
+                                          </label>
+
+                                          {membrosCrianca[m.id] && (
+                                            <span className="inline-block text-[0.60rem] font-sans tracking-[0.14em] uppercase font-semibold text-[#8A6A4E] bg-[#F4EDE4] px-1.5 py-0.5 rounded-[4px] border border-[#E5DACD]">
+                                              Isento buffet
+                                            </span>
+                                          )}
                                         </div>
                                       )}
                                     </div>

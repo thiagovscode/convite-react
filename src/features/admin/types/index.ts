@@ -7,7 +7,8 @@ export type Tab =
   | "portaria"
   | "cortejo"
   | "fornecedores"
-  | "auditoria";
+  | "auditoria"
+  | "configuracoes";
 
 export type UserRole = "admin" | "recepcao";
 
@@ -19,6 +20,7 @@ export interface MembroConviteCadastrado {
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   papel?: string;
+  vinculo?: string;
 }
 
 export interface ConviteCadastrado {
@@ -54,3 +56,21 @@ export const PAPEL_OPTIONS = [
   "Cortejo",
   "Fornecedor",
 ];
+
+export const PAPEL_MEMBRO_OPTIONS = [
+  "Convidado",
+  "Padrinho",
+  "Madrinha",
+  "Pai",
+  "Mãe",
+  "Daminha",
+  "Pajem",
+  "Cortejo",
+];
+
+export const VINCULO_OPTIONS = [
+  "Noivo",
+  "Noiva",
+  "Família / Ambos",
+];
+

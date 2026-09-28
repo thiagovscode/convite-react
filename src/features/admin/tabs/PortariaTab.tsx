@@ -12,6 +12,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
   const [codigoInput, setCodigoInput] = useState("");
   const [loadingBusca, setLoadingBusca] = useState(false);
   const [conviteAtual, setConviteAtual] = useState<ConvitePreDefinido | null>(null);
+  const [resultadosBusca, setResultadosBusca] = useState<ConvitePreDefinido[]>([]);
   const [selecaoPresenca, setSelecaoPresenca] = useState<Record<string, boolean>>({});
   const [salvandoCheckin, setSalvandoCheckin] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
@@ -107,6 +108,36 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     }
   };
 
+  const selecionarConvite = (c: ConvitePreDefinido) => {
+    setConviteAtual(c);
+    setResultadosBusca([]);
+    pararCamera();
+
+    const membros = c.membros || [];
+    const membrosPresentes = membros.filter((m) => Boolean(m.presenteCheckin));
+    const todosJaEntraram = membros.length > 0 && membrosPresentes.length === membros.length;
+
+    const sel: Record<string, boolean> = {};
+    membros.forEach((m) => {
+      sel[m.id] = m.presenteCheckin !== undefined ? m.presenteCheckin : m.confirmadoRsvp !== false;
+    });
+    setSelecaoPresenca(sel);
+
+    if (todosJaEntraram) {
+      const primeiroCheckin = membrosPresentes.find((m) => m.dataHoraCheckin)?.dataHoraCheckin;
+      const horarioFormatado = primeiroCheckin
+        ? new Date(primeiroCheckin).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        : "";
+      setErroCheckin(
+        `ALERTA: Entrada já registrada anteriormente para todos os membros deste convite${
+          horarioFormatado ? ` às ${horarioFormatado}` : ""
+        }!`
+      );
+    } else {
+      setMensagemSucesso("Convite localizado com sucesso.");
+    }
+  };
+
   const processarCodigo = async (termoBruto: string) => {
     const termo = termoBruto.trim();
     if (!termo) return;
@@ -114,51 +145,61 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     setLoadingBusca(true);
     setErroCheckin("");
     setMensagemSucesso("");
+    setResultadosBusca([]);
 
     let codigoLimpo = termo;
+    let isQrCodeJson = false;
+
     if (termo.startsWith("{")) {
       try {
         const parsed = JSON.parse(termo);
         codigoLimpo = parsed.codigo || parsed.id || termo;
+        isQrCodeJson = true;
       } catch {}
     } else if (termo.includes("http://") || termo.includes("https://")) {
       try {
         const url = new URL(termo);
         codigoLimpo = url.searchParams.get("convite") || url.searchParams.get("codigo") || termo;
+        isQrCodeJson = true;
       } catch {}
     }
 
     try {
-      const { buscarConvitePorCodigo } = await import("../../../services/convites");
-      const c = await buscarConvitePorCodigo(codigoLimpo);
+      const { buscarConvitePorCodigo, buscarConvitesPorTermoBackend } = await import(
+        "../../../services/convites"
+      );
+
+      // 1. Se for QR Code ou código limpo sem espaços, tenta busca direta por código
+      if (isQrCodeJson || (!codigoLimpo.includes(" ") && codigoLimpo.length <= 30)) {
+        const c = await buscarConvitePorCodigo(codigoLimpo);
+        if (c) {
+          setLoadingBusca(false);
+          selecionarConvite(c);
+          return;
+        }
+      }
+
+      // 2. Busca abrangente por termo (nome de membro, família, telefone ou código)
+      const lista = await buscarConvitesPorTermoBackend(termo);
       setLoadingBusca(false);
 
-      if (c) {
-        setConviteAtual(c);
-        pararCamera();
-
-        const membros = c.membros || [];
-        const membrosPresentes = membros.filter((m) => Boolean(m.presenteCheckin));
-        const todosJaEntraram = membros.length > 0 && membrosPresentes.length === membros.length;
-
-        const sel: Record<string, boolean> = {};
-        membros.forEach((m) => {
-          sel[m.id] = m.presenteCheckin !== undefined ? m.presenteCheckin : m.confirmadoRsvp !== false;
-        });
-        setSelecaoPresenca(sel);
-
-        if (todosJaEntraram) {
-          setErroCheckin("ALERTA: Todos os membros deste convite já realizaram entrada anteriormente!");
-        } else {
-          setMensagemSucesso("Convite localizado com sucesso.");
-        }
+      if (lista.length === 1) {
+        selecionarConvite(lista[0]);
+      } else if (lista.length > 1) {
+        setConviteAtual(null);
+        setResultadosBusca(lista);
+        setMensagemSucesso(
+          `${lista.length} convites encontrados para "${termo}". Escolha o participante abaixo:`
+        );
       } else {
         setConviteAtual(null);
-        setErroCheckin("Convite não encontrado. Confira o nome ou código digitado.");
+        setErroCheckin(
+          `Nenhum convidado ou convite encontrado para "${termo}". Verifique se o nome ou sobrenome foi digitado corretamente.`
+        );
       }
     } catch {
       setLoadingBusca(false);
-      setErroCheckin("Erro ao buscar convite no servidor.");
+      setErroCheckin("Erro de conexão ao buscar convite no servidor.");
     }
   };
 
@@ -289,6 +330,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                 setConviteAtual(null);
                 setCodigoInput("");
                 setMensagemSucesso("");
+                setResultadosBusca([]);
                 inputBuscaRef.current?.focus();
               }}
               className="text-xs uppercase underline tracking-wider cursor-pointer ml-3"
@@ -298,6 +340,77 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
           </div>
         )}
       </div>
+
+      {/* LISTA DE RESULTADOS QUANDO HOUVER MÚLTIPLOS CONVITES ENCONTRADOS */}
+      {resultadosBusca.length > 0 && !conviteAtual && (
+        <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#EAE0D5] pb-3">
+            <span className="font-sans text-[0.66rem] tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold block">
+              Resultados da Busca ({resultadosBusca.length})
+            </span>
+            <span className="text-xs font-serif italic text-[#8C7A6B]">
+              Selecione o participante ou família para abrir a ficha de entrada:
+            </span>
+          </div>
+
+          <div className="divide-y divide-[#EAE0D5]">
+            {resultadosBusca.map((c) => {
+              const membrosPresentes = c.membros?.filter((m) => Boolean(m.presenteCheckin)) || [];
+              const todosEntraram =
+                c.membros && c.membros.length > 0 && membrosPresentes.length === c.membros.length;
+
+              return (
+                <div
+                  key={c.id || c.codigo}
+                  className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF7F2]/60 p-3 rounded-[8px] transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <strong className="font-serif text-lg text-[#261811]">{c.familia}</strong>
+                      {c.papel && (
+                        <span className="text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded text-[#6B5A4D] font-semibold">
+                          {c.papel}
+                        </span>
+                      )}
+                      <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                        #{c.codigo}
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-sans text-[#6B5A4D]">
+                      <span className="text-[#8C7A6B]">Membros: </span>
+                      {c.membros?.map((m, idx) => (
+                        <span key={m.id || idx}>
+                          {idx > 0 && ", "}
+                          <strong className="text-[#261811] font-normal">{m.nome}</strong>
+                          {m.papel && m.papel !== "Convidado" && (
+                            <span className="text-[#8C7A6B] font-semibold"> [{m.papel}]</span>
+                          )}
+                          {m.presenteCheckin && (
+                            <span className="text-emerald-800 font-semibold"> (Presente)</span>
+                          )}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => selecionarConvite(c)}
+                    className={`px-4 py-2.5 text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer whitespace-nowrap ${
+                      todosEntraram
+                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                        : "bg-[#261811] hover:bg-[#1A100B] text-white"
+                    }`}
+                  >
+                    {todosEntraram ? "Ver Ficha (Já Entraram)" : "Abrir Ficha de Entrada →"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {conviteAtual && (
         <div className="bg-white border-2 border-[#261811] rounded-[12px] p-5 sm:p-8 shadow-[0_8px_30px_-8px_rgba(38,24,17,0.1)] space-y-6">
@@ -395,13 +508,18 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                         <span className="font-serif text-base text-[#261811] font-medium block">
                           {m.nome}
                         </span>
-                        <div className="flex items-center gap-2 text-[0.68rem] font-sans text-[#8C7A6B]">
-                          {m.titular && <span>Titular</span>}
-                          {m.criancaAte6Anos && <span className="text-amber-800">Criança (≤ 6 anos)</span>}
+                        <div className="flex items-center gap-2 text-[0.68rem] font-sans text-[#8C7A6B] flex-wrap mt-0.5">
+                          {m.titular && <span className="font-semibold text-[#543D30]">Titular</span>}
+                          {m.papel && m.papel !== "Convidado" && (
+                            <span className="bg-[#261811] text-[#FAF7F2] px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[0.6rem]">
+                              ★ {m.papel}{m.vinculo ? ` · ${m.vinculo}` : ""}
+                            </span>
+                          )}
+                          {m.criancaAte6Anos && <span className="text-amber-800 font-medium">Criança (≤ 6 anos)</span>}
                           {m.confirmadoRsvp === true && (
                             <span className="text-emerald-800 font-semibold">✓ Confirmou</span>
                           )}
-                          {m.confirmadoRsvp === false && <span className="text-rose-800">Recusou</span>}
+                          {m.confirmadoRsvp === false && <span className="text-rose-800 font-bold">Recusou</span>}
                         </div>
                       </div>
                     </div>

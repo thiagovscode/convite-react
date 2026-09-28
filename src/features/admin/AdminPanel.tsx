@@ -10,6 +10,14 @@ import { PortariaTab } from "./tabs/PortariaTab";
 import { CortejoTab } from "./tabs/CortejoTab";
 import { FornecedoresTab } from "./tabs/FornecedoresTab";
 import { AuditoriaTab } from "./tabs/AuditoriaTab";
+import { ConfiguracoesTab } from "./tabs/ConfiguracoesTab";
+import {
+  buscarClassificacoesBackend,
+} from "../../services/classificacoes";
+import type {
+  PapelParticipante,
+  VinculoParticipante,
+} from "../../services/classificacoes";
 
 // Services
 import {
@@ -85,6 +93,10 @@ export function AdminPanel() {
   const [fornecedores, setFornecedores] = useState<FornecedorCasamento[]>([]);
   const [relatorioAuditoria, setRelatorioAuditoria] = useState<RelatorioAuditoria | null>(null);
   const [auditoriaLoading, setAuditoriaLoading] = useState(false);
+
+  // Classificações (Papéis & Vínculos Dinâmicos)
+  const [papeis, setPapeis] = useState<PapelParticipante[]>([]);
+  const [vinculos, setVinculos] = useState<VinculoParticipante[]>([]);
 
   // ─── INICIALIZAÇÃO E SUPORTE A ROTAS (EXCLUSIVAMENTE #admin) ─────────────────
   useEffect(() => {
@@ -244,6 +256,17 @@ export function AdminPanel() {
     carregarAuditoria();
     carregarParticipantes();
     carregarFornecedores();
+    carregarClassificacoes();
+  };
+
+  const carregarClassificacoes = async () => {
+    try {
+      const classif = await buscarClassificacoesBackend();
+      if (classif && classif.papeis) setPapeis(classif.papeis);
+      if (classif && classif.vinculos) setVinculos(classif.vinculos);
+    } catch (err) {
+      console.error("Erro ao carregar classificações:", err);
+    }
   };
 
   const carregarAuditoria = async () => {
@@ -333,9 +356,10 @@ export function AdminPanel() {
             nome: m.nome,
             criancaAte6Anos: Boolean(m.criancaAte6Anos),
             titular: Boolean(m.titular),
-            papel: m.papel,
+            papel: m.papel || "Convidado",
+            vinculo: m.vinculo || "",
           }))
-        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", vinculo: "" }],
     });
   };
 
@@ -423,7 +447,11 @@ export function AdminPanel() {
           { id: "dashboard", label: "Visão Geral" },
           { id: "convites", label: "Convites" },
           { id: "rsvp", label: "Presenças" },
+          { id: "portaria", label: "Portaria" },
+          { id: "cortejo", label: "Cortejo" },
           { id: "fornecedores", label: "Fornecedores" },
+          { id: "auditoria", label: "Buffet" },
+          { id: "configuracoes", label: "Papéis & Vínculos" },
         ];
 
   return (
@@ -473,6 +501,8 @@ export function AdminPanel() {
                 onAbrirModalExclusao={setConviteParaExcluir}
                 feedbackGeral={feedbackGeral}
                 onDismissFeedback={() => setFeedbackGeral(null)}
+                papeis={papeis}
+                vinculos={vinculos}
               />
             )}
 
@@ -514,6 +544,14 @@ export function AdminPanel() {
 
             {activeTab === "auditoria" && (
               <AuditoriaTab relatorio={relatorioAuditoria} loading={auditoriaLoading} />
+            )}
+
+            {activeTab === "configuracoes" && (
+              <ConfiguracoesTab
+                papeis={papeis}
+                vinculos={vinculos}
+                onRefresh={carregarClassificacoes}
+              />
             )}
           </>
         )}

@@ -25,6 +25,7 @@ export interface ParticipanteCerimonia {
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   dataHoraEntrada?: string;
+  statusCortejo?: string; // AGUARDANDO_CHEGADA, NO_LOCAL, PRONTO_CORTEJO, ENTROU_CORTEJO
   criancaAte6Anos?: boolean;
   idade?: number | string;
 }
@@ -139,6 +140,38 @@ export async function buscarConvitePorCodigo(codigo: string): Promise<ConvitePre
   }
 
   return null;
+}
+
+/**
+ * Busca convites por termo (nome da família, nome de qualquer membro, telefone ou código)
+ * GET /api/recepcao/busca?termo=...
+ */
+export async function buscarConvitesPorTermoBackend(termo: string): Promise<ConvitePreDefinido[]> {
+  const limpo = termo.trim();
+  if (!limpo) return [];
+
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/recepcao/busca?termo=${encodeURIComponent(limpo)}`
+    : `/api/recepcao/busca?termo=${encodeURIComponent(limpo)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: getRecepcaoAuthHeaders(),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.error("Erro na busca por termo no backend:", err);
+  }
+
+  return [];
 }
 
 export const RECEPCAO_JWT_STORAGE_KEY = "CASAMENTO_RECEPCAO_JWT_TOKEN";
@@ -365,15 +398,23 @@ export async function buscarParticipantesCerimoniaBackend(): Promise<{ total: nu
   return { total: 0, confirmadosRsvp: 0, presentes: 0, participantes: [] };
 }
 
-export async function checkinParticipanteBackend(id: string, presente?: boolean): Promise<{ success: boolean; message: string; participante?: ParticipanteCerimonia }> {
+export async function checkinParticipanteBackend(
+  id: string,
+  presente?: boolean,
+  statusCortejo?: string
+): Promise<{ success: boolean; message: string; participante?: ParticipanteCerimonia }> {
   const baseUrl = getApiBaseUrl();
   const url = baseUrl ? `${baseUrl}/api/recepcao/participantes/${encodeURIComponent(id)}/checkin` : `/api/recepcao/participantes/${encodeURIComponent(id)}/checkin`;
 
   try {
+    const payload: Record<string, any> = {};
+    if (presente !== undefined) payload.presente = presente;
+    if (statusCortejo !== undefined) payload.statusCortejo = statusCortejo;
+
     const res = await fetch(url, {
       method: "POST",
       headers: getRecepcaoAuthHeaders(),
-      body: JSON.stringify(presente !== undefined ? { presente } : {})
+      body: JSON.stringify(payload)
     });
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();

@@ -1,0 +1,170 @@
+import { getApiBaseUrl } from './api';
+
+export interface PapelParticipante {
+  id?: string;
+  nome: string;
+  cortejo?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface VinculoParticipante {
+  id?: string;
+  nome: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClassificacoesResponse {
+  papeis: PapelParticipante[];
+  vinculos: VinculoParticipante[];
+}
+
+function getAdminAuthHeaders(token?: string): Record<string, string> {
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN') || '';
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
+/**
+ * Busca a lista consolidada de papéis e vínculos (Público / Cache)
+ */
+export async function buscarClassificacoesBackend(): Promise<ClassificacoesResponse> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/classificacoes` : '/api/classificacoes';
+
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.error('Erro ao buscar classificações:', err);
+  }
+
+  // Fallback padrão se offline ou erro
+  return {
+    papeis: [
+      { nome: 'Convidado', cortejo: false },
+      { nome: 'Padrinho', cortejo: true },
+      { nome: 'Madrinha', cortejo: true },
+      { nome: 'Pai', cortejo: true },
+      { nome: 'Mãe', cortejo: true },
+      { nome: 'Daminha', cortejo: true },
+      { nome: 'Pajem', cortejo: true },
+      { nome: 'Cortejo', cortejo: true },
+    ],
+    vinculos: [
+      { nome: 'Noivo' },
+      { nome: 'Noiva' },
+      { nome: 'Casal / Família' },
+    ],
+  };
+}
+
+/**
+ * Cria ou atualiza um papel (Admin)
+ */
+export async function salvarPapelAdmin(
+  dados: { id?: string; nome: string; cortejo?: boolean },
+  token?: string
+): Promise<{ success: boolean; message: string; papel?: PapelParticipante }> {
+  const baseUrl = getApiBaseUrl();
+  const isEdicao = Boolean(dados.id);
+  const endpoint = isEdicao
+    ? `/api/admin/configuracoes/papeis/${encodeURIComponent(dados.id!)}`
+    : '/api/admin/configuracoes/papeis';
+  const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+  const res = await fetch(url, {
+    method: isEdicao ? 'PUT' : 'POST',
+    headers: getAdminAuthHeaders(token),
+    body: JSON.stringify(dados),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { success: false, message: json.message || 'Erro ao salvar papel.' };
+  }
+  return json;
+}
+
+/**
+ * Exclui um papel (Admin)
+ */
+export async function excluirPapelAdmin(
+  id: string,
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/configuracoes/papeis/${encodeURIComponent(id)}`
+    : `/api/admin/configuracoes/papeis/${encodeURIComponent(id)}`;
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: getAdminAuthHeaders(token),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { success: false, message: json.message || 'Erro ao excluir papel.' };
+  }
+  return json;
+}
+
+/**
+ * Cria ou atualiza um vínculo (Admin)
+ */
+export async function salvarVinculoAdmin(
+  dados: { id?: string; nome: string },
+  token?: string
+): Promise<{ success: boolean; message: string; vinculo?: VinculoParticipante }> {
+  const baseUrl = getApiBaseUrl();
+  const isEdicao = Boolean(dados.id);
+  const endpoint = isEdicao
+    ? `/api/admin/configuracoes/vinculos/${encodeURIComponent(dados.id!)}`
+    : '/api/admin/configuracoes/vinculos';
+  const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+  const res = await fetch(url, {
+    method: isEdicao ? 'PUT' : 'POST',
+    headers: getAdminAuthHeaders(token),
+    body: JSON.stringify(dados),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { success: false, message: json.message || 'Erro ao salvar vínculo.' };
+  }
+  return json;
+}
+
+/**
+ * Exclui um vínculo (Admin)
+ */
+export async function excluirVinculoAdmin(
+  id: string,
+  token?: string
+): Promise<{ success: boolean; message: string }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/configuracoes/vinculos/${encodeURIComponent(id)}`
+    : `/api/admin/configuracoes/vinculos/${encodeURIComponent(id)}`;
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: getAdminAuthHeaders(token),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { success: false, message: json.message || 'Erro ao excluir vínculo.' };
+  }
+  return json;
+}

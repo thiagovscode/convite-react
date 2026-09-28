@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import type { ConviteCadastrado, NovoConviteFormState } from "../types";
-import { PAPEL_OPTIONS } from "../types";
+import { PAPEL_OPTIONS, PAPEL_MEMBRO_OPTIONS, VINCULO_OPTIONS } from "../types";
 import { SectionTitle } from "../components/SectionTitle";
 import {
   getLinkConviteCompleto,
   getLinkRsvpDireto,
   abrirWhatsAppConvite,
 } from "../utils/formatters";
+
+import type { PapelParticipante, VinculoParticipante } from "../../../services/classificacoes";
 
 interface ConvitesTabProps {
   listaConvites: ConviteCadastrado[];
@@ -24,6 +26,8 @@ interface ConvitesTabProps {
   onAbrirModalExclusao: (c: ConviteCadastrado) => void;
   feedbackGeral: { tipo: "sucesso" | "erro"; msg: string } | null;
   onDismissFeedback: () => void;
+  papeis?: PapelParticipante[];
+  vinculos?: VinculoParticipante[];
 }
 
 export function ConvitesTab({
@@ -42,10 +46,15 @@ export function ConvitesTab({
   onAbrirModalExclusao,
   feedbackGeral,
   onDismissFeedback,
+  papeis = [],
+  vinculos = [],
 }: ConvitesTabProps) {
   const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
   const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
   const [copiadoFeedback, setCopiadoFeedback] = useState(false);
+
+  const listaPapeisDisponiveis = papeis.length > 0 ? papeis.map((p) => p.nome) : PAPEL_MEMBRO_OPTIONS;
+  const listaVinculosDisponiveis = vinculos.length > 0 ? vinculos.map((v) => v.nome) : VINCULO_OPTIONS;
 
   const copiarTexto = (texto: string, chave: string) => {
     navigator.clipboard.writeText(texto);
@@ -176,6 +185,9 @@ export function ConvitesTab({
                         {idx > 0 && ", "}
                         <strong className="text-[#261811] font-normal">{m.nome}</strong>
                         {m.titular && <span className="text-[#8C7A6B]"> (Titular)</span>}
+                        {m.papel && m.papel !== "Convidado" && (
+                          <span className="text-[#8C7A6B] font-semibold"> [{m.papel}{m.vinculo ? ` · ${m.vinculo}` : ""}]</span>
+                        )}
                         {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
                         {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
                       </span>
@@ -296,7 +308,7 @@ export function ConvitesTab({
                   onChange={(e) => onNovoConviteChange((p) => ({ ...p, papel: e.target.value }))}
                   className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
                 >
-                  {PAPEL_OPTIONS.map((o) => (
+                  {listaPapeisDisponiveis.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
                 </select>
@@ -314,7 +326,7 @@ export function ConvitesTab({
                     ...p,
                     membros: [
                       ...p.membros,
-                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false },
+                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false, papel: "Convidado", vinculo: "" },
                     ],
                   }))
                 }
@@ -328,56 +340,103 @@ export function ConvitesTab({
               {novoConvite.membros.map((m, idx) => (
                 <div
                   key={m.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-[8px] border border-[#E8DFD5] bg-white"
+                  className="flex flex-col gap-2.5 p-3.5 rounded-[8px] border border-[#E8DFD5] bg-[#FAF7F2]/40"
                 >
-                  <input
-                    type="text"
-                    required
-                    value={m.nome}
-                    onChange={(e) =>
-                      onNovoConviteChange((prev) => ({
-                        ...prev,
-                        membros: prev.membros.map((item, i) =>
-                          i === idx ? { ...item, nome: e.target.value } : item
-                        ),
-                      }))
-                    }
-                    placeholder={m.titular ? "Nome do titular *" : `Nome do acompanhante ${idx + 1} *`}
-                    className="flex-1 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
-                  />
-                  <div className="flex items-center gap-3 justify-between sm:justify-start">
-                    <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={m.criancaAte6Anos}
-                        onChange={(e) =>
-                          onNovoConviteChange((prev) => ({
-                            ...prev,
-                            membros: prev.membros.map((item, i) =>
-                              i === idx ? { ...item, criancaAte6Anos: e.target.checked } : item
-                            ),
-                          }))
-                        }
-                        className="accent-[#261811]"
-                      />
-                      <span>≤ 6 anos</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!m.titular}
-                        onChange={(e) =>
-                          onNovoConviteChange((prev) => ({
-                            ...prev,
-                            membros: prev.membros.map((item, i) =>
-                              i === idx ? { ...item, titular: e.target.checked } : item
-                            ),
-                          }))
-                        }
-                        className="accent-[#261811]"
-                      />
-                      <span>Titular</span>
-                    </label>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                    <input
+                      type="text"
+                      required
+                      value={m.nome}
+                      onChange={(e) =>
+                        onNovoConviteChange((prev) => ({
+                          ...prev,
+                          membros: prev.membros.map((item, i) =>
+                            i === idx ? { ...item, nome: e.target.value } : item
+                          ),
+                        }))
+                      }
+                      placeholder={m.titular ? "Nome do titular *" : `Nome do acompanhante ${idx + 1} *`}
+                      className="flex-1 bg-white border border-[#D8CDC0] px-3.5 py-2 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                    />
+
+                    <select
+                      value={m.papel || "Convidado"}
+                      onChange={(e) =>
+                        onNovoConviteChange((prev) => ({
+                          ...prev,
+                          membros: prev.membros.map((item, i) =>
+                            i === idx ? { ...item, papel: e.target.value } : item
+                          ),
+                        }))
+                      }
+                      className="bg-white border border-[#D8CDC0] px-3 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+                      title="Papel individual deste participante no evento"
+                    >
+                      {listaPapeisDisponiveis.map((papelOpt) => (
+                        <option key={papelOpt} value={papelOpt}>
+                          {papelOpt}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={m.vinculo || ""}
+                      onChange={(e) =>
+                        onNovoConviteChange((prev) => ({
+                          ...prev,
+                          membros: prev.membros.map((item, i) =>
+                            i === idx ? { ...item, vinculo: e.target.value } : item
+                          ),
+                        }))
+                      }
+                      className="bg-white border border-[#D8CDC0] px-3 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+                      title="Vínculo com a celebração"
+                    >
+                      <option value="">Vínculo (opcional)</option>
+                      {listaVinculosDisponiveis.map((vincOpt) => (
+                        <option key={vincOpt} value={vincOpt}>
+                          {vincOpt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-3 justify-between sm:justify-start pt-1 border-t border-[#EAE0D5]/60">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m.criancaAte6Anos}
+                          onChange={(e) =>
+                            onNovoConviteChange((prev) => ({
+                              ...prev,
+                              membros: prev.membros.map((item, i) =>
+                                i === idx ? { ...item, criancaAte6Anos: e.target.checked } : item
+                              ),
+                            }))
+                          }
+                          className="accent-[#261811]"
+                        />
+                        <span>≤ 6 anos</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-sans text-[#6B5A4D] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!m.titular}
+                          onChange={(e) =>
+                            onNovoConviteChange((prev) => ({
+                              ...prev,
+                              membros: prev.membros.map((item, i) =>
+                                i === idx ? { ...item, titular: e.target.checked } : item
+                              ),
+                            }))
+                          }
+                          className="accent-[#261811]"
+                        />
+                        <span>Titular</span>
+                      </label>
+                    </div>
+
                     {novoConvite.membros.length > 1 && (
                       <button
                         type="button"
@@ -387,9 +446,9 @@ export function ConvitesTab({
                             membros: prev.membros.filter((_, i) => i !== idx),
                           }))
                         }
-                        className="text-rose-600 hover:text-rose-900 text-xs font-sans uppercase p-1 cursor-pointer"
+                        className="text-rose-600 hover:text-rose-900 text-xs font-sans uppercase p-1 cursor-pointer ml-auto"
                       >
-                        ✕
+                        ✕ Remover
                       </button>
                     )}
                   </div>

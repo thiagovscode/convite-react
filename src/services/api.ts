@@ -1,4 +1,5 @@
 export interface AcompanhanteRequest {
+  id?: string;
   nome: string;
   criancaAte6Anos: boolean; // true = menor de 7 anos (0 a 6 anos); false = 7 anos ou mais / adulto
 }
