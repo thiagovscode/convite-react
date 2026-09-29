@@ -434,7 +434,7 @@ export function ConvitesTab({
 
           <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
             <SectionTitle>Dados da Família / Convidado</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               <div className="sm:col-span-2">
                 <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
                   Nome da Família ou Convidado Principal *
@@ -445,10 +445,10 @@ export function ConvitesTab({
                   value={novoConvite.familia}
                   onChange={(e) => onNovoConviteChange((p) => ({ ...p, familia: e.target.value }))}
                   placeholder="Ex: Família Vasconcelos"
-                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-1">
                 <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
                   Telefone / WhatsApp
                 </label>
@@ -457,7 +457,7 @@ export function ConvitesTab({
                   value={novoConvite.telefone}
                   onChange={(e) => onNovoConviteChange((p) => ({ ...p, telefone: e.target.value }))}
                   placeholder="(11) 99999-9999"
-                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
+                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
                 />
               </div>
             </div>
