@@ -65,7 +65,6 @@ export function ConvitesTab({
     parAtual?: string;
   } | null>(null);
   const [parSelecionado, setParSelecionado] = useState<string>("");
-  const [parCustomizado, setParCustomizado] = useState<string>("");
   const [salvandoPar, setSalvandoPar] = useState(false);
   const [erroPar, setErroPar] = useState("");
 
@@ -107,7 +106,6 @@ export function ConvitesTab({
       parAtual: m.par || "",
     });
     setParSelecionado(m.par || "");
-    setParCustomizado("");
     setErroPar("");
   };
 
@@ -116,11 +114,7 @@ export function ConvitesTab({
     setSalvandoPar(true);
     setErroPar("");
     try {
-      const nomeFinal = forcarVazio
-        ? ""
-        : parSelecionado === "__OUTRO__"
-        ? parCustomizado.trim()
-        : parSelecionado.trim();
+      const nomeFinal = forcarVazio ? "" : parSelecionado.trim();
 
       await definirParCortejoAdmin({
         codigoConvite: modalParAberto.codigoConvite,
@@ -655,10 +649,7 @@ export function ConvitesTab({
 
               <select
                 value={parSelecionado}
-                onChange={(e) => {
-                  setParSelecionado(e.target.value);
-                  if (e.target.value !== "__OUTRO__") setParCustomizado("");
-                }}
+                onChange={(e) => setParSelecionado(e.target.value)}
                 className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
               >
                 <option value="">— Sem par (Entra sozinho) —</option>
@@ -667,20 +658,7 @@ export function ConvitesTab({
                     {cand.nome} ({cand.papel}) · {cand.familia}
                   </option>
                 ))}
-                <option value="__OUTRO__">Outra pessoa (digitar nome)...</option>
               </select>
-
-              {parSelecionado === "__OUTRO__" && (
-                <input
-                  type="text"
-                  required
-                  value={parCustomizado}
-                  onChange={(e) => setParCustomizado(e.target.value)}
-                  placeholder="Nome do par que acompanhará..."
-                  className="w-full bg-white border border-[#D8CDC0] px-3 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
-                  autoFocus
-                />
-              )}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-[#EAE0D5] text-xs font-sans">
