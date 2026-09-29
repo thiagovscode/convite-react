@@ -162,11 +162,11 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
           </div>
         </div>
 
-        {/* Exportação para o Maitre */}
+        {/* Exportação para o Buffet */}
         <div className="p-4 bg-[#FAF7F2] border border-[#E8DFD5] rounded-[8px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="space-y-0.5">
             <strong className="font-serif text-sm sm:text-base text-[#261811] block">
-              Exportar Relatório para o Maitre
+              Exportar Relatório para o Buffet
             </strong>
             <p className="font-serif italic text-xs text-[#6B5A4D]">
               Envie a contagem oficial consolidada direto para o buffet via WhatsApp.

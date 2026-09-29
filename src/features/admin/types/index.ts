@@ -21,6 +21,7 @@ export interface MembroConviteCadastrado {
   presenteCheckin?: boolean;
   papel?: string;
   vinculo?: string;
+  par?: string;
   participaCortejo?: boolean;
 }
 

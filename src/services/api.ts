@@ -202,6 +202,7 @@ export interface NovoMembroAdminRequest {
   titular?: boolean;
   papel?: string;
   vinculo?: string;
+  par?: string;
   participaCortejo?: boolean;
 }
 
@@ -360,6 +361,34 @@ export async function buscarMetricasAdmin(token?: string): Promise<DashboardMetr
   const json = await response.json();
   if (!response.ok) {
     throw new Error(json.message || 'Erro ao buscar métricas no servidor.');
+  }
+  return json;
+}
+
+/**
+ * Define ou atualiza o par de um participante do cortejo
+ * PUT /api/admin/convites/definir-par
+ */
+export async function definirParCortejoAdmin(
+  dados: { codigoConvite?: string; membroId?: string; nomeMembro?: string; nomePar?: string },
+  token?: string
+): Promise<{ success: boolean; message: string; convite?: any }> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const url = baseUrl ? `${baseUrl}/api/admin/convites/definir-par` : '/api/admin/convites/definir-par';
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authToken ? `Bearer ${authToken}` : '',
+    },
+    body: JSON.stringify(dados),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.message || 'Erro ao definir par.');
   }
   return json;
 }

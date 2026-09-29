@@ -39,10 +39,10 @@ export function CortejoTab({
     <div className="space-y-6">
       <div>
         <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
-          Cortejo &amp; Honra
+          Cerimônia
         </p>
         <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
-          Padrinhos, Madrinhas e Cerimonial
+          Cortejo
         </h1>
       </div>
 

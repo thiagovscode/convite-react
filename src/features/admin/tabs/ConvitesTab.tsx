@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import type { ConviteCadastrado, NovoConviteFormState } from "../types";
+import React, { useState, useMemo } from "react";
+import type { ConviteCadastrado, NovoConviteFormState, MembroConviteCadastrado } from "../types";
 import { PAPEL_OPTIONS, PAPEL_MEMBRO_OPTIONS } from "../types";
 import { SectionTitle } from "../components/SectionTitle";
 import {
@@ -10,6 +10,7 @@ import {
 
 import type { PapelParticipante, VinculoParticipante } from "../../../services/classificacoes";
 import { isPapelCortejo } from "../../../services/classificacoes";
+import { definirParCortejoAdmin } from "../../../services/api";
 
 interface ConvitesTabProps {
   listaConvites: ConviteCadastrado[];
@@ -29,6 +30,7 @@ interface ConvitesTabProps {
   onDismissFeedback: () => void;
   papeis?: PapelParticipante[];
   vinculos?: VinculoParticipante[];
+  onRecarregarDados?: () => Promise<void>;
 }
 
 export function ConvitesTab({
@@ -48,10 +50,94 @@ export function ConvitesTab({
   feedbackGeral,
   onDismissFeedback,
   papeis = [],
+  onRecarregarDados,
 }: ConvitesTabProps) {
   const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
   const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
   const [copiadoFeedback, setCopiadoFeedback] = useState(false);
+
+  // Gerenciamento de Par do Cortejo
+  const [modalParAberto, setModalParAberto] = useState<{
+    codigoConvite: string;
+    membroId?: string;
+    nomeMembro: string;
+    papel?: string;
+    parAtual?: string;
+  } | null>(null);
+  const [parSelecionado, setParSelecionado] = useState<string>("");
+  const [parCustomizado, setParCustomizado] = useState<string>("");
+  const [salvandoPar, setSalvandoPar] = useState(false);
+  const [erroPar, setErroPar] = useState("");
+
+  const outrosCandidatosPar = useMemo(() => {
+    if (!modalParAberto) return [];
+    const nomeAtual = modalParAberto.nomeMembro.trim().toLowerCase();
+    const lista: { nome: string; papel: string; familia: string }[] = [];
+    const jaAdicionados = new Set<string>();
+
+    for (const c of listaConvites) {
+      if (c.membros) {
+        for (const m of c.membros) {
+          if (!m.nome) continue;
+          const nomeTrim = m.nome.trim();
+          const nomeLimpo = nomeTrim.toLowerCase();
+          if (nomeLimpo === nomeAtual) continue;
+
+          const ehCortejo = isPapelCortejo(m.papel, papeis) || m.participaCortejo;
+          if (ehCortejo && !jaAdicionados.has(nomeLimpo)) {
+            jaAdicionados.add(nomeLimpo);
+            lista.push({
+              nome: nomeTrim,
+              papel: m.papel || "Cortejo",
+              familia: c.familia,
+            });
+          }
+        }
+      }
+    }
+    return lista;
+  }, [modalParAberto, listaConvites, papeis]);
+
+  const handleAbrirModalPar = (c: ConviteCadastrado, m: MembroConviteCadastrado) => {
+    setModalParAberto({
+      codigoConvite: c.codigo,
+      membroId: m.id,
+      nomeMembro: m.nome,
+      papel: m.papel,
+      parAtual: m.par || "",
+    });
+    setParSelecionado(m.par || "");
+    setParCustomizado("");
+    setErroPar("");
+  };
+
+  const handleConfirmarDefinicaoPar = async (forcarVazio?: boolean) => {
+    if (!modalParAberto) return;
+    setSalvandoPar(true);
+    setErroPar("");
+    try {
+      const nomeFinal = forcarVazio
+        ? ""
+        : parSelecionado === "__OUTRO__"
+        ? parCustomizado.trim()
+        : parSelecionado.trim();
+
+      await definirParCortejoAdmin({
+        codigoConvite: modalParAberto.codigoConvite,
+        membroId: modalParAberto.membroId,
+        nomeMembro: modalParAberto.nomeMembro,
+        nomePar: nomeFinal,
+      });
+      setModalParAberto(null);
+      if (onRecarregarDados) {
+        await onRecarregarDados();
+      }
+    } catch (err: any) {
+      setErroPar(err.message || "Erro ao atualizar par.");
+    } finally {
+      setSalvandoPar(false);
+    }
+  };
 
   const listaPapeisDisponiveis = papeis.length > 0 ? papeis.map((p) => p.nome) : PAPEL_MEMBRO_OPTIONS;
 
@@ -243,7 +329,31 @@ export function ConvitesTab({
                           <span className="text-[#8C7A6B] font-semibold"> [{m.papel}]</span>
                         )}
                         {(isPapelCortejo(m.papel, papeis) || m.participaCortejo) && (
-                          <span className="text-[0.60rem] font-sans uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded ml-1">Cortejo</span>
+                          <span className="inline-flex items-center gap-1 ml-1 align-baseline">
+                            <span className="text-[0.60rem] font-sans uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded">Cortejo</span>
+                            {m.par ? (
+                              <span className="inline-flex items-center gap-1 text-[0.65rem] font-sans bg-amber-50 text-amber-950 border border-amber-300 px-1.5 py-0.5 rounded font-medium shadow-xs">
+                                <span>Par: <strong>{m.par}</strong></span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAbrirModalPar(c, m)}
+                                  className="text-amber-800 hover:text-amber-950 font-bold ml-0.5 cursor-pointer"
+                                  title="Alterar ou desvincular par deste integrante"
+                                >
+                                  ✎
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAbrirModalPar(c, m)}
+                                className="text-[0.65rem] font-sans text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border border-dashed border-amber-300 px-1.5 py-0.5 rounded font-medium cursor-pointer transition-colors"
+                                title="Definir par no cortejo (opcional - entra sozinho se não tiver par)"
+                              >
+                                + Definir Par
+                              </button>
+                            )}
+                          </span>
                         )}
                         {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
                         {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
@@ -521,6 +631,106 @@ export function ConvitesTab({
             </button>
           </div>
         </form>
+      )}
+
+      {/* MODAL PARA DEFINIÇÃO DE PAR NO CORTEJO */}
+      {modalParAberto && (
+        <div
+          className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => !salvandoPar && setModalParAberto(null)}
+        >
+          <div
+            className="bg-white border border-[#D8CDC0] rounded-[12px] p-6 max-w-md w-full shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <span className="text-[0.66rem] font-sans tracking-widest uppercase text-[#8C7A6B] font-semibold block">
+                Cortejo da Cerimônia
+              </span>
+              <h3 className="font-serif text-xl text-[#261811] mt-0.5">
+                Definir Par para {modalParAberto.nomeMembro}
+              </h3>
+              <p className="text-xs font-sans text-[#6B5A4D] mt-1 leading-relaxed">
+                {modalParAberto.papel && <strong className="text-[#261811]">[{modalParAberto.papel}]</strong>}{" "}
+                Nem todo integrante precisa de par. Caso vá entrar desacompanhado(a), selecione a opção de entrar sozinho.
+              </p>
+            </div>
+
+            {erroPar && (
+              <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-900 text-xs font-sans">
+                {erroPar}
+              </div>
+            )}
+
+            <div className="space-y-3 pt-2">
+              <label className="block text-xs font-sans font-medium text-[#543D30]">
+                Quem acompanhará este integrante na entrada?
+              </label>
+
+              <select
+                value={parSelecionado}
+                onChange={(e) => {
+                  setParSelecionado(e.target.value);
+                  if (e.target.value !== "__OUTRO__") setParCustomizado("");
+                }}
+                className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2.5 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+              >
+                <option value="">— Sem par (Entra sozinho) —</option>
+                {outrosCandidatosPar.map((cand) => (
+                  <option key={cand.nome} value={cand.nome}>
+                    {cand.nome} ({cand.papel}) · {cand.familia}
+                  </option>
+                ))}
+                <option value="__OUTRO__">Outra pessoa (digitar nome)...</option>
+              </select>
+
+              {parSelecionado === "__OUTRO__" && (
+                <input
+                  type="text"
+                  required
+                  value={parCustomizado}
+                  onChange={(e) => setParCustomizado(e.target.value)}
+                  placeholder="Nome do par que acompanhará..."
+                  className="w-full bg-white border border-[#D8CDC0] px-3 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+                  autoFocus
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#EAE0D5] text-xs font-sans">
+              <button
+                type="button"
+                disabled={salvandoPar}
+                onClick={() => setModalParAberto(null)}
+                className="px-3.5 py-2 text-[#6B5A4D] hover:text-[#261811] cursor-pointer"
+              >
+                Cancelar
+              </button>
+
+              <div className="flex items-center gap-2">
+                {modalParAberto.parAtual && (
+                  <button
+                    type="button"
+                    disabled={salvandoPar}
+                    onClick={() => handleConfirmarDefinicaoPar(true)}
+                    className="px-3 py-2 text-rose-800 hover:text-rose-950 font-medium cursor-pointer"
+                  >
+                    Remover Par
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={salvandoPar}
+                  onClick={() => handleConfirmarDefinicaoPar(false)}
+                  className="px-4 py-2 bg-[#261811] text-[#FAF7F2] rounded-[6px] font-semibold hover:bg-black cursor-pointer transition-colors shadow-xs"
+                >
+                  {salvandoPar ? "Salvando..." : "Confirmar Par"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
