@@ -41,7 +41,7 @@ const wedding = {
   /* ----------------------------------------------------------
      DETALHES
   ---------------------------------------------------------- */
-  dresscode: "Esporte Fino",
+  dresscode: "Elegante",
   parking: "Estacionamento gratuito disponível no local",
 
   /* ----------------------------------------------------------
