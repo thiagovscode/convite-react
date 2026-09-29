@@ -311,12 +311,15 @@ export function AdminPanel() {
 
     setCadLoading(true);
     try {
+      const papelCortejoMembro = novoConvite.membros.find((m) => isPapelCortejo(m.papel || "Convidado", papeis))?.papel;
+      const papelDerivado = papelCortejoMembro || novoConvite.membros[0]?.papel || "Convidado";
+
       const res = await cadastrarConviteAdmin({
         codigo: conviteEmEdicao ? conviteEmEdicao.codigo : undefined,
         familia: novoConvite.familia.trim(),
         telefone: novoConvite.telefone.trim() || undefined,
         email: novoConvite.email.trim() || undefined,
-        papel: novoConvite.papel.trim() || undefined,
+        papel: papelDerivado,
         observacao: novoConvite.observacao.trim() || undefined,
         membros: novoConvite.membros.map((m, idx) => {
           const papelMembro = m.papel || "Convidado";

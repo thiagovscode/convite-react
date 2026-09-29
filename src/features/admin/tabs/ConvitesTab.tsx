@@ -454,7 +454,7 @@ export function ConvitesTab({
                   className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
                   Telefone / WhatsApp
                 </label>
@@ -465,20 +465,6 @@ export function ConvitesTab({
                   placeholder="(11) 99999-9999"
                   className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
                 />
-              </div>
-              <div>
-                <label className="block text-[0.66rem] font-sans tracking-[0.18em] uppercase text-[#8C7A6B] font-semibold mb-1">
-                  Categoria / Papel
-                </label>
-                <select
-                  value={novoConvite.papel}
-                  onChange={(e) => onNovoConviteChange((p) => ({ ...p, papel: e.target.value }))}
-                  className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm rounded-[6px] focus:outline-none focus:border-[#261811]"
-                >
-                  {listaPapeisDisponiveis.map((o) => (
-                    <option key={o}>{o}</option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>
