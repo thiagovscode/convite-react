@@ -334,7 +334,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
                       </td>
 
                       <td className="py-3 px-3 text-[#786455] text-xs">
-                        {c.papel || "Convidado comum"}
+                        {c.papel || "Convidado"}
                       </td>
 
                       <td className="py-3 px-3 text-right">

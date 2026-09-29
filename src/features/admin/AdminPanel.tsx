@@ -78,7 +78,7 @@ export function AdminPanel() {
     email: "",
     papel: "Convidados",
     observacao: "",
-    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
+    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", participaCortejo: false }],
   });
   const [cadLoading, setCadLoading] = useState(false);
   const [cadErro, setCadErro] = useState("");
@@ -319,7 +319,7 @@ export function AdminPanel() {
         papel: novoConvite.papel.trim() || undefined,
         observacao: novoConvite.observacao.trim() || undefined,
         membros: novoConvite.membros.map((m, idx) => {
-          const papelMembro = m.papel || "Convidado comum";
+          const papelMembro = m.papel || "Convidado";
           const ehCortejo = isPapelCortejo(papelMembro, papeis);
           return {
             id: m.id,
@@ -327,7 +327,7 @@ export function AdminPanel() {
             criancaAte6Anos: m.criancaAte6Anos,
             titular: idx === 0,
             papel: papelMembro,
-            participaCortejo: ehCortejo || Boolean(m.participaCortejo),
+            participaCortejo: ehCortejo,
           };
         }),
       });
@@ -341,7 +341,7 @@ export function AdminPanel() {
         email: "",
         papel: "Convidados",
         observacao: "",
-        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
+        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", participaCortejo: false }],
       });
       await carregarDadosAdmin();
     } catch (err: any) {
@@ -361,7 +361,7 @@ export function AdminPanel() {
       observacao: c.observacao || "",
       membros: c.membros?.length
         ? c.membros.map((m, idx) => {
-            const papelNormalizado = (m.papel === "Convidado" || !m.papel) ? "Convidado comum" : m.papel;
+            const papelNormalizado = (m.papel === "Convidado comum" || !m.papel) ? "Convidado" : m.papel;
             const ehCortejo = isPapelCortejo(papelNormalizado, papeis);
             return {
               id: m.id || String(idx + 1),
@@ -369,10 +369,10 @@ export function AdminPanel() {
               criancaAte6Anos: Boolean(m.criancaAte6Anos),
               titular: idx === 0,
               papel: papelNormalizado,
-              participaCortejo: ehCortejo || Boolean(m.participaCortejo),
+              participaCortejo: ehCortejo,
             };
           })
-        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
+        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", participaCortejo: false }],
     });
   };
 
@@ -461,7 +461,7 @@ export function AdminPanel() {
           { id: "convites", label: "Convites" },
           { id: "rsvp", label: "Presenças" },
           { id: "fornecedores", label: "Fornecedores" },
-          { id: "configuracoes", label: "Papéis & Vínculos" },
+          { id: "configuracoes", label: "Papéis" },
         ];
 
   return (

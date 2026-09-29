@@ -64,7 +64,7 @@ export async function buscarClassificacoesBackend(): Promise<ClassificacoesRespo
 }
 
 export const PAPEIS_PADRAO: PapelParticipante[] = [
-  { nome: 'Convidado comum', cortejo: false },
+  { nome: 'Convidado', cortejo: false },
   { nome: 'Padrinho', cortejo: true },
   { nome: 'Madrinha', cortejo: true },
   { nome: 'Pai', cortejo: true },
@@ -87,21 +87,23 @@ export function isPapelCortejo(
   if (!papelNome) return false;
   const nomeLimpo = papelNome.trim().toLowerCase();
 
-  // 1. Prioridade absoluta: buscar na lista dinâmica vinda da API/Banco de dados
+  // "Convidado" (ou sem papel especial) não é cortejo
+  if (nomeLimpo === 'convidado' || nomeLimpo === 'convidado comum' || nomeLimpo === '') {
+    return false;
+  }
+
+  // 1. Se o papel estiver cadastrado dinamicamente na API/Banco, respeita a configuração
   if (papeisCadastrados && papeisCadastrados.length > 0) {
     const encontrado = papeisCadastrados.find(
       (p) => (p.nome || '').trim().toLowerCase() === nomeLimpo
     );
-    if (encontrado) {
+    if (encontrado && encontrado.cortejo !== undefined) {
       return Boolean(encontrado.cortejo);
     }
   }
 
-  // 2. Fallback resiliente caso a lista da API ainda não tenha carregado
-  const padrao = PAPEIS_PADRAO.find(
-    (p) => p.nome.trim().toLowerCase() === nomeLimpo
-  );
-  return Boolean(padrao?.cortejo);
+  // 2. Qualquer papel específico diferente de "Convidado" já é considerado integrante do cortejo!
+  return true;
 }
 
 /**

@@ -70,10 +70,10 @@ export function ConvitesTab({
     const linhas = alvos.flatMap((convite) => {
       const membros = convite.membros && convite.membros.length > 0
         ? convite.membros
-        : [{ nome: convite.familia, titular: true, criancaAte6Anos: false, papel: convite.papel || "Convidado comum", participaCortejo: false }];
+        : [{ nome: convite.familia, titular: true, criancaAte6Anos: false, papel: convite.papel || "Convidado", participaCortejo: false }];
 
       return membros.map((m) => {
-        const papel = m.papel || "Convidado comum";
+        const papel = m.papel || "Convidado";
         const ehCortejo = isPapelCortejo(papel, papeis);
         const participaCortejo = ehCortejo || Boolean(m.participaCortejo);
 
@@ -242,7 +242,7 @@ export function ConvitesTab({
                         {m.papel && m.papel !== "Convidado" && m.papel !== "Convidado comum" && (
                           <span className="text-[#8C7A6B] font-semibold"> [{m.papel}]</span>
                         )}
-                        {m.participaCortejo && (
+                        {(isPapelCortejo(m.papel, papeis) || m.participaCortejo) && (
                           <span className="text-[0.60rem] font-sans uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded ml-1">Cortejo</span>
                         )}
                         {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
@@ -388,7 +388,7 @@ export function ConvitesTab({
                     ...p,
                     membros: [
                       ...p.membros,
-                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false, papel: "Convidado comum", participaCortejo: false },
+                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false, papel: "Convidado", participaCortejo: false },
                     ],
                   }))
                 }
@@ -400,7 +400,7 @@ export function ConvitesTab({
 
             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {novoConvite.membros.map((m, idx) => {
-                const papelAtual = m.papel || "Convidado comum";
+                const papelAtual = m.papel || "Convidado";
                 const ehCortejo = isPapelCortejo(papelAtual, papeis);
 
                 return (
@@ -443,7 +443,7 @@ export function ConvitesTab({
                             ),
                           }));
                         }}
-                        className="bg-white border border-[#D8CDC0] px-3 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811] min-w-[170px]"
+                        className="bg-white border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811] min-w-[170px]"
                         title="Papel no Evento"
                       >
                         {listaPapeisDisponiveis.map((papelOpt) => (
@@ -456,30 +456,13 @@ export function ConvitesTab({
 
                     <div className="flex flex-wrap items-center gap-3 justify-between sm:justify-start pt-1.5 border-t border-[#EAE0D5]/60 text-xs font-sans text-[#6B5A4D]">
                       <div className="flex flex-wrap items-center gap-3.5">
-                        {ehCortejo ? (
+                        {ehCortejo && (
                           <span
                             className="inline-flex items-center gap-1.5 font-medium text-amber-900 bg-amber-50 border border-amber-300/80 px-2.5 py-1 rounded text-xs select-none shadow-xs"
                             title="Este papel já integra automaticamente o cortejo de honra da cerimônia"
                           >
                             <span>✨ Integrante do Cortejo</span>
                           </span>
-                        ) : (
-                          <label className="flex items-center gap-1.5 cursor-pointer select-none font-medium text-[#543D30] hover:text-[#261811] px-2 py-1 rounded border border-transparent hover:border-[#D8CDC0] transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(m.participaCortejo)}
-                              onChange={(e) =>
-                                onNovoConviteChange((prev) => ({
-                                  ...prev,
-                                  membros: prev.membros.map((item, i) =>
-                                    i === idx ? { ...item, participaCortejo: e.target.checked } : item
-                                  ),
-                                }))
-                              }
-                              className="accent-[#261811] w-3.5 h-3.5"
-                            />
-                            <span>Participa do cortejo</span>
-                          </label>
                         )}
 
                         <label className="flex items-center gap-1.5 cursor-pointer select-none font-medium text-[#543D30] hover:text-[#261811] px-2 py-1 rounded border border-transparent hover:border-[#D8CDC0] transition-colors">

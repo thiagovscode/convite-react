@@ -90,7 +90,7 @@ export function ConfiguracoesTab({
           Papéis dos Participantes
         </h1>
         <p className="text-xs font-serif italic text-[#6B5A4D] mt-1">
-          Defina as funções das pessoas na celebração (ex: Convidado comum, Padrinho, Madrinha, Daminha, Pajem).
+          Defina as funções das pessoas na celebração (ex: Convidado, Padrinho, Madrinha, Daminha, Pajem).
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export function ConfiguracoesTab({
         <div>
           <SectionTitle>Papel no Evento ({papeis.length})</SectionTitle>
           <p className="text-[0.72rem] font-sans text-[#8C7A6B] mt-1">
-            Papéis marcados com <strong className="text-[#261811]">Participa do cortejo</strong> têm essa opção sugerida por padrão no cadastro e seus participantes são enviados para a cerimônia.
+            Papéis marcados com <strong className="text-[#261811]">Participa do cortejo</strong> integram automaticamente a cerimônia e o cortejo de honra.
           </p>
         </div>
 
@@ -133,7 +133,7 @@ export function ConfiguracoesTab({
               required
               value={novoPapelNome}
               onChange={(e) => setNovoPapelNome(e.target.value)}
-              placeholder="Ex: Convidado comum, Padrinho, Daminha, Pajem, Florista..."
+              placeholder="Ex: Convidado, Padrinho, Daminha, Pajem, Florista..."
               className="flex-1 bg-white border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
             />
 

@@ -58,7 +58,7 @@ export const PAPEL_OPTIONS = [
 ];
 
 export const PAPEL_MEMBRO_OPTIONS = [
-  "Convidado comum",
+  "Convidado",
   "Padrinho",
   "Madrinha",
   "Pai",
