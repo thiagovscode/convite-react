@@ -13,6 +13,7 @@ import { AuditoriaTab } from "./tabs/AuditoriaTab";
 import { ConfiguracoesTab } from "./tabs/ConfiguracoesTab";
 import {
   buscarClassificacoesBackend,
+  isPapelCortejo,
 } from "../../services/classificacoes";
 import type {
   PapelParticipante,
@@ -77,7 +78,7 @@ export function AdminPanel() {
     email: "",
     papel: "Convidados",
     observacao: "",
-    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
   });
   const [cadLoading, setCadLoading] = useState(false);
   const [cadErro, setCadErro] = useState("");
@@ -124,7 +125,8 @@ export function AdminPanel() {
           setIsLogged(true);
           setActiveTab("dashboard");
           await carregarDadosAdmin(adminToken);
-          carregarDadosOperacionais();
+          carregarClassificacoes();
+          carregarFornecedores();
           return;
         } catch {
           localStorage.removeItem("CONVITE_ADMIN_TOKEN");
@@ -193,7 +195,8 @@ export function AdminPanel() {
         setIsLogged(true);
         setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
         await carregarDadosAdmin(adminToken);
-        carregarDadosOperacionais();
+        carregarClassificacoes();
+        carregarFornecedores();
       } else {
         try {
           const adminToken = await autenticarAdmin(usr.trim(), pass);
@@ -201,7 +204,8 @@ export function AdminPanel() {
           setIsLogged(true);
           setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
           await carregarDadosAdmin(adminToken);
-          carregarDadosOperacionais();
+          carregarClassificacoes();
+          carregarFornecedores();
         } catch (adminErr: any) {
           const res = await loginRecepcaoBackend(usr.trim(), pass);
           if (res.success) {
@@ -314,13 +318,18 @@ export function AdminPanel() {
         email: novoConvite.email.trim() || undefined,
         papel: novoConvite.papel.trim() || undefined,
         observacao: novoConvite.observacao.trim() || undefined,
-        membros: novoConvite.membros.map((m) => ({
-          id: m.id,
-          nome: m.nome.trim(),
-          criancaAte6Anos: m.criancaAte6Anos,
-          titular: m.titular,
-          papel: m.papel,
-        })),
+        membros: novoConvite.membros.map((m, idx) => {
+          const papelMembro = m.papel || "Convidado comum";
+          const ehCortejo = isPapelCortejo(papelMembro, papeis);
+          return {
+            id: m.id,
+            nome: m.nome.trim(),
+            criancaAte6Anos: m.criancaAte6Anos,
+            titular: idx === 0,
+            papel: papelMembro,
+            participaCortejo: ehCortejo || Boolean(m.participaCortejo),
+          };
+        }),
       });
 
       const link = getLinkConviteCompleto(res.codigo);
@@ -332,7 +341,7 @@ export function AdminPanel() {
         email: "",
         papel: "Convidados",
         observacao: "",
-        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true }],
+        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
       });
       await carregarDadosAdmin();
     } catch (err: any) {
@@ -351,15 +360,19 @@ export function AdminPanel() {
       papel: c.papel || "Convidados",
       observacao: c.observacao || "",
       membros: c.membros?.length
-        ? c.membros.map((m, idx) => ({
-            id: m.id || String(idx + 1),
-            nome: m.nome,
-            criancaAte6Anos: Boolean(m.criancaAte6Anos),
-            titular: Boolean(m.titular),
-            papel: m.papel || "Convidado",
-            vinculo: m.vinculo || "",
-          }))
-        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", vinculo: "" }],
+        ? c.membros.map((m, idx) => {
+            const papelNormalizado = (m.papel === "Convidado" || !m.papel) ? "Convidado comum" : m.papel;
+            const ehCortejo = isPapelCortejo(papelNormalizado, papeis);
+            return {
+              id: m.id || String(idx + 1),
+              nome: m.nome,
+              criancaAte6Anos: Boolean(m.criancaAte6Anos),
+              titular: idx === 0,
+              papel: papelNormalizado,
+              participaCortejo: ehCortejo || Boolean(m.participaCortejo),
+            };
+          })
+        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado comum", participaCortejo: false }],
     });
   };
 
@@ -447,10 +460,7 @@ export function AdminPanel() {
           { id: "dashboard", label: "Visão Geral" },
           { id: "convites", label: "Convites" },
           { id: "rsvp", label: "Presenças" },
-          { id: "portaria", label: "Portaria" },
-          { id: "cortejo", label: "Cortejo" },
           { id: "fornecedores", label: "Fornecedores" },
-          { id: "auditoria", label: "Buffet" },
           { id: "configuracoes", label: "Papéis & Vínculos" },
         ];
 
@@ -543,7 +553,11 @@ export function AdminPanel() {
             )}
 
             {activeTab === "auditoria" && (
-              <AuditoriaTab relatorio={relatorioAuditoria} loading={auditoriaLoading} />
+              <AuditoriaTab
+                relatorio={relatorioAuditoria}
+                loading={auditoriaLoading}
+                onRefresh={carregarAuditoria}
+              />
             )}
 
             {activeTab === "configuracoes" && (

@@ -11,6 +11,7 @@ export interface MembroAutorizado {
   recepcionista?: string;
   papel?: string; // Ex: Padrinho, Madrinha, Pai dos Noivos, Mãe dos Noivos, etc.
   vinculo?: string; // Ex: Noivo, Noiva, Casal
+  participaCortejo?: boolean;
   idade?: number | string;
 }
 

@@ -21,6 +21,7 @@ export interface MembroConviteCadastrado {
   presenteCheckin?: boolean;
   papel?: string;
   vinculo?: string;
+  participaCortejo?: boolean;
 }
 
 export interface ConviteCadastrado {
@@ -53,24 +54,29 @@ export const PAPEL_OPTIONS = [
   "Madrinhas",
   "Pais dos Noivos",
   "Família Próxima",
-  "Cortejo",
   "Fornecedor",
 ];
 
 export const PAPEL_MEMBRO_OPTIONS = [
-  "Convidado",
+  "Convidado comum",
   "Padrinho",
   "Madrinha",
   "Pai",
   "Mãe",
   "Daminha",
   "Pajem",
-  "Cortejo",
+  "Florista",
+  "Outro",
 ];
 
 export const VINCULO_OPTIONS = [
   "Noivo",
   "Noiva",
-  "Família / Ambos",
+  "Pai/Mãe",
+  "Irmão/Irmã",
+  "Família",
+  "Amigo(a)",
+  "Colega",
+  "Outro",
 ];
 

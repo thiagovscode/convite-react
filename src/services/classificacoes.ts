@@ -49,22 +49,59 @@ export async function buscarClassificacoesBackend(): Promise<ClassificacoesRespo
 
   // Fallback padrão se offline ou erro
   return {
-    papeis: [
-      { nome: 'Convidado', cortejo: false },
-      { nome: 'Padrinho', cortejo: true },
-      { nome: 'Madrinha', cortejo: true },
-      { nome: 'Pai', cortejo: true },
-      { nome: 'Mãe', cortejo: true },
-      { nome: 'Daminha', cortejo: true },
-      { nome: 'Pajem', cortejo: true },
-      { nome: 'Cortejo', cortejo: true },
-    ],
+    papeis: PAPEIS_PADRAO,
     vinculos: [
       { nome: 'Noivo' },
       { nome: 'Noiva' },
-      { nome: 'Casal / Família' },
+      { nome: 'Pai/Mãe' },
+      { nome: 'Irmão/Irmã' },
+      { nome: 'Família' },
+      { nome: 'Amigo(a)' },
+      { nome: 'Colega' },
+      { nome: 'Outro' },
     ],
   };
+}
+
+export const PAPEIS_PADRAO: PapelParticipante[] = [
+  { nome: 'Convidado comum', cortejo: false },
+  { nome: 'Padrinho', cortejo: true },
+  { nome: 'Madrinha', cortejo: true },
+  { nome: 'Pai', cortejo: true },
+  { nome: 'Mãe', cortejo: true },
+  { nome: 'Daminha', cortejo: true },
+  { nome: 'Pajem', cortejo: true },
+  { nome: 'Florista', cortejo: true },
+  { nome: 'Outro', cortejo: false },
+];
+
+/**
+ * Determina dinamicamente se um papel pertence ao cortejo.
+ * A fonte da verdade prioritária é a configuração dinâmica cadastrada (API/Banco).
+ * Se o papel foi criado ou editado pelo usuário com cortejo=true, esta função respeita imediatamente.
+ */
+export function isPapelCortejo(
+  papelNome?: string,
+  papeisCadastrados?: PapelParticipante[]
+): boolean {
+  if (!papelNome) return false;
+  const nomeLimpo = papelNome.trim().toLowerCase();
+
+  // 1. Prioridade absoluta: buscar na lista dinâmica vinda da API/Banco de dados
+  if (papeisCadastrados && papeisCadastrados.length > 0) {
+    const encontrado = papeisCadastrados.find(
+      (p) => (p.nome || '').trim().toLowerCase() === nomeLimpo
+    );
+    if (encontrado) {
+      return Boolean(encontrado.cortejo);
+    }
+  }
+
+  // 2. Fallback resiliente caso a lista da API ainda não tenha carregado
+  const padrao = PAPEIS_PADRAO.find(
+    (p) => p.nome.trim().toLowerCase() === nomeLimpo
+  );
+  return Boolean(padrao?.cortejo);
 }
 
 /**

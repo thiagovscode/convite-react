@@ -457,17 +457,27 @@ export function FornecedoresTab({
                             : "bg-[#FAF7F2] border-[#D8CDC0] text-[#543D30]"
                         }`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (f.id) handleToggleMembro(f.id, m.id, !!m.presente);
-                          }}
-                          className="cursor-pointer hover:opacity-80"
-                          title="Clique para alternar presença"
-                        >
-                          {m.presente ? "✓ " : "○ "}
-                          {m.nome} {m.funcao ? `(${m.funcao})` : ""}
-                        </button>
+                        {isNoivos ? (
+                          <span
+                            className="select-none"
+                            title={m.presente ? "Presente (Check-in via Recepção)" : "Aguardando entrada"}
+                          >
+                            {m.presente ? "✓ " : "○ "}
+                            {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (f.id) handleToggleMembro(f.id, m.id, !!m.presente);
+                            }}
+                            className="cursor-pointer hover:opacity-80"
+                            title="Clique para alternar presença na portaria"
+                          >
+                            {m.presente ? "✓ " : "○ "}
+                            {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                          </button>
+                        )}
 
                         {isNoivos && f.id && (
                           <button

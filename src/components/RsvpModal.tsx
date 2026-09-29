@@ -114,18 +114,23 @@ export default function RsvpModal() {
       setTelefone(v || conviteFormatado.telefone);
     }
 
-    // Inicializa todos os membros como confirmados (ou respeita se já vier com status individual)
+    // Inicializa presenças de acordo com o status atual do convite no banco
+    const isJaConfirmado = conviteFormatado.status === "CONFIRMADO";
+    const isRecusado = conviteFormatado.status === "RECUSADO";
+
     const mapP: Record<string, boolean> = {};
     const mapC: Record<string, boolean> = {};
     membrosSanitizados.forEach(m => {
-      mapP[m.id] = m.confirmadoRsvp !== false;
+      // Se o convite já estava confirmado no banco, respeita se o membro confirmou (=== true)
+      // Se o convite está PENDENTE, NÃO pré-seta como confirmado! Inicia pendente (false) para que o convidado marque explicitamente quem vai
+      mapP[m.id] = isJaConfirmado ? m.confirmadoRsvp === true : false;
       mapC[m.id] = Boolean(m.criancaAte6Anos);
     });
     setMembrosPresenca(mapP);
     setMembrosCrianca(mapC);
 
     // Se já estava recusado no banco, sincroniza opção inicial
-    if (conviteFormatado.status === "RECUSADO") {
+    if (isRecusado) {
       setPresenca(false);
     } else {
       setPresenca(true);
@@ -277,7 +282,7 @@ export default function RsvpModal() {
   const abrirPasseDigitalExistente = () => {
     if (!convitePreDefinido) return;
     const titular = convitePreDefinido.membros.find(m => m.titular) || convitePreDefinido.membros[0];
-    const confirmados = convitePreDefinido.membros.filter(m => m.confirmadoRsvp !== false);
+    const confirmados = convitePreDefinido.membros.filter(m => m.confirmadoRsvp === true);
     const nomes = confirmados.map(m => m.nome);
     const crCount = confirmados.filter(m => !!(membrosCrianca[m.id] !== undefined ? membrosCrianca[m.id] : m.criancaAte6Anos)).length;
     const adCount = (nomes.length || 1) - crCount;
@@ -541,16 +546,6 @@ export default function RsvpModal() {
                       <h2 className="font-serif text-xl sm:text-2xl text-[#261811] font-light tracking-[-0.01em]">
                         {convitePreDefinido.familia}
                       </h2>
-                      {titularOficial && (
-                        <div className="flex items-center gap-1.5 pt-0.5">
-                          <span className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-[#8C7A6B] font-medium">
-                            Titular:
-                          </span>
-                          <span className="font-serif text-sm sm:text-[0.92rem] text-[#453126] font-medium">
-                            {titularOficial.nome}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     <button
@@ -746,12 +741,6 @@ export default function RsvpModal() {
                                         {m.nome}
                                       </p>
 
-                                      {m.titular && (
-                                        <span className="inline-block text-[0.62rem] font-sans tracking-[0.14em] uppercase font-semibold text-[#8C7A6B] bg-[#F0EAE1] px-1.5 py-0.5 rounded-[3px] border border-[#E0D5C7] mt-0.5">
-                                          Titular
-                                        </span>
-                                      )}
-
                                       {/* OPÇÃO DE IDENTIFICAR CRIANÇA (0 A 6 ANOS) */}
                                       {isSelected && (
                                         <div 
@@ -777,7 +766,7 @@ export default function RsvpModal() {
 
                                           {membrosCrianca[m.id] && (
                                             <span className="inline-block text-[0.60rem] font-sans tracking-[0.14em] uppercase font-semibold text-[#8A6A4E] bg-[#F4EDE4] px-1.5 py-0.5 rounded-[4px] border border-[#E5DACD]">
-                                              Isento buffet
+                                              Criança (0 a 6 anos)
                                             </span>
                                           )}
                                         </div>
@@ -793,7 +782,7 @@ export default function RsvpModal() {
                                         : "bg-[#F3EFE9] text-[#8C7A6B] border border-[#E5DACD]"
                                     }`}
                                   >
-                                    {isSelected ? "Confirmado" : "Não irá"}
+                                    {isSelected ? "Vai comparecer" : "Não irá"}
                                   </span>
                                 </div>
                               );

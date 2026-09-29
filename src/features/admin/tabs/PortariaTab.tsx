@@ -119,7 +119,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
     const sel: Record<string, boolean> = {};
     membros.forEach((m) => {
-      sel[m.id] = m.presenteCheckin !== undefined ? m.presenteCheckin : m.confirmadoRsvp !== false;
+      sel[m.id] = m.presenteCheckin !== undefined ? Boolean(m.presenteCheckin) : m.confirmadoRsvp === true;
     });
     setSelecaoPresenca(sel);
 
@@ -509,10 +509,9 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                           {m.nome}
                         </span>
                         <div className="flex items-center gap-2 text-[0.68rem] font-sans text-[#8C7A6B] flex-wrap mt-0.5">
-                          {m.titular && <span className="font-semibold text-[#543D30]">Titular</span>}
-                          {m.papel && m.papel !== "Convidado" && (
+                          {m.papel && m.papel !== "Convidado" && m.papel !== "Convidado comum" && (
                             <span className="bg-[#261811] text-[#FAF7F2] px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[0.6rem]">
-                              ★ {m.papel}{m.vinculo ? ` · ${m.vinculo}` : ""}
+                              ★ {m.papel}
                             </span>
                           )}
                           {m.criancaAte6Anos && <span className="text-amber-800 font-medium">Criança (≤ 6 anos)</span>}

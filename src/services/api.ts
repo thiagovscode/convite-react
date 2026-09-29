@@ -202,6 +202,7 @@ export interface NovoMembroAdminRequest {
   titular?: boolean;
   papel?: string;
   vinculo?: string;
+  participaCortejo?: boolean;
 }
 
 export interface CadastrarConviteAdminRequest {
