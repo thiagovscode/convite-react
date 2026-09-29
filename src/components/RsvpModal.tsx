@@ -507,7 +507,7 @@ export default function RsvpModal() {
                           required
                           value={termoBuscaConvite}
                           onChange={(e) => setTermoBuscaConvite(e.target.value)}
-                          placeholder="Ex: fulana, silva, vasconcelos"
+                          placeholder="Ex: Silva, Vasconcelos ou código do convite"
                           className="flex-1 bg-[#FFFFFF] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-base placeholder:text-[#A8988B] placeholder:italic focus:outline-none focus:border-[#261811] rounded-[8px] transition-colors"
                         />
                         <button
