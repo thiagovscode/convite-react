@@ -164,7 +164,10 @@ export default function Envelope({ onAnimationComplete }: EnvelopeProps) {
             </div>
             
             {/* Selo — decorativo */}
-            <div className="absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90px] h-[90px] flex items-center justify-center">
+            <div 
+              className="absolute top-[100%] left-1/2 w-[90px] h-[90px] flex items-center justify-center z-50 pointer-events-none"
+              style={{ transform: 'translate3d(-50%, -50%, 2px)', WebkitTransform: 'translate3d(-50%, -50%, 2px)' }}
+            >
               <img 
                 src={seloSvg} 
                 alt=""

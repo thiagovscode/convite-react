@@ -187,9 +187,15 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
             playCheckinSuccessSound();
             triggerHaptic();
             setConviteAtual(null);
-            setResultadosBusca([]);
+            const ficaAteFim = Boolean(
+              parsed.permaneceAteFim ||
+              res.fornecedor?.equipe?.find((m: any) => m.id === parsed.membroId)?.permaneceAteFim
+            );
+            const tagFim = ficaAteFim
+              ? " ⭐ [Fica até o fim · Contabilizado como Convidado]"
+              : "";
             setMensagemSucesso(
-              `✅ Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}`
+              `✅ Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}${tagFim}`
             );
             onRefreshData?.();
           } else {

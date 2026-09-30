@@ -98,6 +98,7 @@ export default function FornecedorCredencialModal() {
       membroId: membroSelecionado.id,
       nome: membroSelecionado.nome,
       funcao: membroSelecionado.funcao || "Equipe",
+      permaneceAteFim: Boolean(membroSelecionado.permaneceAteFim),
       horarioPrevisto: fornecedor.horarioPrevisto || "A definir",
       evento: "Casamento Tainara & Thiago",
       data: "2027-01-24",
@@ -267,9 +268,14 @@ export default function FornecedorCredencialModal() {
                   <h3 className="font-serif text-lg font-medium text-[#261811]">
                     {membroSelecionado.nome}
                   </h3>
-                  <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B]">
+                  <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] block">
                     {membroSelecionado.funcao || "Equipe"} · {fornecedor.empresa}
                   </span>
+                  {membroSelecionado.permaneceAteFim && (
+                    <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-full text-[0.62rem] font-sans font-semibold uppercase tracking-wider">
+                      <span>⭐ Permanece até o fim (Convidado)</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-2 bg-white rounded-[10px] inline-block shadow-xs border border-[#E8DFD5]">

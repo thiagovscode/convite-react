@@ -6,6 +6,7 @@ import {
   atualizarFornecedorBackend,
   excluirFornecedorBackend,
   adicionarMembroFornecedorBackend,
+  atualizarMembroFornecedorBackend,
   removerMembroFornecedorBackend,
   checkinMembroFornecedorBackend,
 } from "../../../services/convites";
@@ -260,11 +261,14 @@ export function FornecedoresTab({
     }
   };
 
+  const [novoMembroPermaneceAteFim, setNovoMembroPermaneceAteFim] = useState(false);
+
   const handleAdicionarMembro = async (fornecedorId: string) => {
     if (!novoMembroNome.trim()) return;
     const res = await adicionarMembroFornecedorBackend(fornecedorId, {
       nome: novoMembroNome.trim(),
       funcao: novoMembroFuncao.trim() || "Equipe",
+      permaneceAteFim: novoMembroPermaneceAteFim,
     });
     if (res.success && res.fornecedor) {
       onFornecedoresChange((prev) =>
@@ -272,7 +276,25 @@ export function FornecedoresTab({
       );
       setNovoMembroNome("");
       setNovoMembroFuncao("");
+      setNovoMembroPermaneceAteFim(false);
       setFornecedorAdicionandoMembro(null);
+      onRefreshAuditoria?.();
+    }
+  };
+
+  const handleTogglePermaneceAteFim = async (
+    fornecedorId: string,
+    membroId: string,
+    statusAtual: boolean
+  ) => {
+    const res = await atualizarMembroFornecedorBackend(fornecedorId, membroId, {
+      permaneceAteFim: !statusAtual,
+    });
+    if (res.success && res.fornecedor) {
+      onFornecedoresChange((prev) =>
+        prev.map((f) => (f.id === fornecedorId ? res.fornecedor! : f))
+      );
+      onRefreshAuditoria?.();
     }
   };
 
@@ -523,6 +545,15 @@ export function FornecedoresTab({
                       onChange={(e) => setNovoMembroFuncao(e.target.value)}
                       className="bg-white border border-[#D8CDC0] text-xs px-2.5 py-1.5 rounded focus:outline-none focus:border-[#261811] w-44"
                     />
+                    <label className="flex items-center gap-1.5 text-xs text-[#543D30] cursor-pointer select-none py-1">
+                      <input
+                        type="checkbox"
+                        checked={novoMembroPermaneceAteFim}
+                        onChange={(e) => setNovoMembroPermaneceAteFim(e.target.checked)}
+                        className="accent-[#261811] rounded"
+                      />
+                      <span>⭐ Fica até o fim (conta como convidado)</span>
+                    </label>
                     <button
                       type="button"
                       onClick={() => f.id && handleAdicionarMembro(f.id)}
@@ -570,6 +601,30 @@ export function FornecedoresTab({
                             title="Clique para alternar presença na portaria"
                           >
                             {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                          </button>
+                        )}
+
+                        {m.permaneceAteFim && (
+                          <span
+                            className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-full text-[0.6rem] font-bold"
+                            title="Este profissional fica até o fim e conta como convidado (Buffet/Assento)"
+                          >
+                            ⭐ Fica até o fim
+                          </span>
+                        )}
+
+                        {isNoivos && f.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, !!m.permaneceAteFim)}
+                            className={`px-1 rounded text-[0.72rem] transition-colors cursor-pointer ${
+                              m.permaneceAteFim
+                                ? "text-amber-700 hover:text-amber-900 font-bold"
+                                : "text-stone-400 hover:text-amber-600"
+                            }`}
+                            title={m.permaneceAteFim ? "Fica até o fim (clique para desmarcar)" : "Clique para marcar que este profissional fica até o fim (contar como convidado)"}
+                          >
+                            {m.permaneceAteFim ? "★" : "☆"}
                           </button>
                         )}
 

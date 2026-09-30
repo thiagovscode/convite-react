@@ -37,6 +37,7 @@ export interface MembroEquipeFornecedor {
   funcao?: string; // Maestro, Violino, Fotógrafo Principal, Assistente, etc.
   presente: boolean;
   dataHoraEntrada?: string;
+  permaneceAteFim?: boolean; // Permanece até o fim do evento e conta como convidado
 }
 
 export interface FornecedorCasamento {
@@ -669,7 +670,7 @@ export async function checkinMembroFornecedorBackend(
 
 export async function adicionarMembroFornecedorBackend(
   fornecedorId: string,
-  novoMembro: { nome: string; funcao?: string }
+  novoMembro: { nome: string; funcao?: string; permaneceAteFim?: boolean }
 ): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento }> {
   const baseUrl = getApiBaseUrl();
   const url = baseUrl
@@ -689,6 +690,32 @@ export async function adicionarMembroFornecedorBackend(
     return { success: false, message: err.message || "Erro ao adicionar membro à equipe" };
   } catch (err: any) {
     return { success: false, message: err.message || "Erro de conexão ao adicionar membro à equipe" };
+  }
+}
+
+export async function atualizarMembroFornecedorBackend(
+  fornecedorId: string,
+  membroId: string,
+  dados: Partial<MembroEquipeFornecedor>
+): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}`
+    : `/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: getRecepcaoAuthHeaders(),
+      body: JSON.stringify(dados)
+    });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, message: err.message || "Erro ao atualizar membro da equipe" };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Erro de conexão ao atualizar membro da equipe" };
   }
 }
 
@@ -823,7 +850,7 @@ export async function buscarFornecedorPublico(id: string): Promise<FornecedorCas
 
 export async function adicionarMembroPublicoFornecedor(
   fornecedorId: string,
-  novoMembro: { nome: string; funcao?: string }
+  novoMembro: { nome: string; funcao?: string; permaneceAteFim?: boolean }
 ): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento; membro?: MembroEquipeFornecedor }> {
   const baseUrl = getApiBaseUrl();
   const url = baseUrl
