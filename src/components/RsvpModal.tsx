@@ -281,22 +281,30 @@ export default function RsvpModal() {
   // Abre visualização do passe digital já existente
   const abrirPasseDigitalExistente = () => {
     if (!convitePreDefinido) return;
-    const titular = convitePreDefinido.membros.find(m => m.titular) || convitePreDefinido.membros[0];
     const confirmados = convitePreDefinido.membros.filter(m => m.confirmadoRsvp === true);
-    const nomes = confirmados.map(m => m.nome);
-    const crCount = confirmados.filter(m => !!(membrosCrianca[m.id] !== undefined ? membrosCrianca[m.id] : m.criancaAte6Anos)).length;
-    const adCount = (nomes.length || 1) - crCount;
+    // Se confirmados estiver vazio (por exemplo, status CONFIRMADO geral antes de sincronizar individual), considera todos os membros
+    const membrosEfetivos = confirmados.length > 0 ? confirmados : (convitePreDefinido.membros.length > 0 ? convitePreDefinido.membros : []);
+    const nomes = membrosEfetivos.map(m => m.nome).filter(Boolean);
+    const crCount = membrosEfetivos.filter(m => !!(membrosCrianca[m.id] !== undefined ? membrosCrianca[m.id] : m.criancaAte6Anos)).length;
+    const adCount = Math.max(0, (nomes.length || 1) - crCount);
 
     setPasseInfo({
-      convidado: convitePreDefinido.familia || titular?.nome || "Convidado",
+      convidado: convitePreDefinido.familia || (membrosEfetivos[0] ? membrosEfetivos[0].nome : "Convidado"),
       telefone: convitePreDefinido.telefone || telefone,
       totalPessoas: nomes.length > 0 ? nomes.length : 1,
       adultos: adCount > 0 ? adCount : 1,
       criancasAte6Anos: crCount,
-      membrosConfirmados: nomes.length > 0 ? nomes : [convitePreDefinido.familia],
+      membrosConfirmados: nomes.length > 0 ? nomes : [convitePreDefinido.familia || (membrosEfetivos[0] ? membrosEfetivos[0].nome : "Convidado")],
       tokenOuId: convitePreDefinido.codigo
     });
     setMode("success");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      const modalContainer = document.getElementById("rsvp-modal-scroll-container");
+      if (modalContainer) {
+        modalContainer.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 50);
   };
 
   // Submissão da confirmação de presença
@@ -324,21 +332,21 @@ export default function RsvpModal() {
     setLoading(true);
 
     try {
-      const titularPadrao = convitePreDefinido.membros.find(m => m.titular) || convitePreDefinido.membros[0];
-      const titularEscolhido = presenca
-        ? (convitePreDefinido.membros.find(m => m.titular && !!membrosPresenca[m.id]) || membrosConfirmados[0])
-        : titularPadrao;
+      // Define contato principal como o primeiro membro que vai comparecer (ou primeiro do convite se recusado)
+      const membroPrincipal = presenca
+        ? (membrosConfirmados[0] || convitePreDefinido.membros[0])
+        : (convitePreDefinido.membros[0] || { id: "1", nome: convitePreDefinido.familia });
 
       const acompanhantesEnvio: AcompanhanteRequest[] = presenca
         ? membrosConfirmados
-            .filter(m => m.id !== titularEscolhido.id)
+            .filter(m => m.id !== membroPrincipal.id)
             .map(m => ({
               id: m.id,
               nome: m.nome.trim(),
               criancaAte6Anos: Boolean(membrosCrianca[m.id])
             }))
         : convitePreDefinido.membros
-            .filter(m => m.id !== titularEscolhido.id)
+            .filter(m => m.id !== membroPrincipal.id)
             .map(m => ({
               id: m.id,
               nome: m.nome.trim(),
@@ -346,7 +354,7 @@ export default function RsvpModal() {
             }));
 
       const payload = {
-        nome: titularEscolhido.nome.trim(),
+        nome: membroPrincipal.nome.trim(),
         telefone: telefone.trim(),
         email: email.trim() || undefined,
         presenca,
@@ -359,17 +367,17 @@ export default function RsvpModal() {
       setSuccessData(response);
 
       if (presenca) {
-        const nomesConfirmadosPasse = [titularEscolhido.nome, ...acompanhantesEnvio.map(a => a.nome)];
+        const nomesConfirmadosPasse = membrosConfirmados.map(m => m.nome);
         const criancasTotal = membrosConfirmados.filter(m => !!membrosCrianca[m.id]).length;
         const adultosTotal = membrosConfirmados.length - criancasTotal;
 
         setPasseInfo({
-          convidado: convitePreDefinido.familia,
+          convidado: convitePreDefinido.familia || membroPrincipal.nome || "Convidado",
           telefone: telefone.trim(),
-          totalPessoas: response.resumo?.totalPessoas || membrosConfirmados.length,
-          adultos: response.resumo?.adultos || adultosTotal,
-          criancasAte6Anos: response.resumo?.criancasAte6Anos || criancasTotal,
-          membrosConfirmados: nomesConfirmadosPasse,
+          totalPessoas: response.resumo?.totalPessoas || membrosConfirmados.length || 1,
+          adultos: response.resumo?.adultos ?? adultosTotal,
+          criancasAte6Anos: response.resumo?.criancasAte6Anos ?? criancasTotal,
+          membrosConfirmados: nomesConfirmadosPasse.length > 0 ? nomesConfirmadosPasse : [convitePreDefinido.familia || membroPrincipal.nome || "Convidado"],
           tokenOuId: convitePreDefinido.codigo
         });
       } else {
@@ -390,6 +398,13 @@ export default function RsvpModal() {
 
       setEditandoResposta(false);
       setMode("success");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        const modalContainer = document.getElementById("rsvp-modal-scroll-container");
+        if (modalContainer) {
+          modalContainer.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 50);
     } catch (err: any) {
       const msg = err?.message || "";
       if (
@@ -419,11 +434,9 @@ export default function RsvpModal() {
   const criancasConfirmadas = membrosConfirmadosAtualmente.filter(m => !!membrosCrianca[m.id]).length;
   const adultosConfirmados = totalConfirmados - criancasConfirmadas;
 
-  // Identificação do titular oficial (informativo)
-  const titularOficial = convitePreDefinido?.membros.find(m => m.titular) || convitePreDefinido?.membros[0];
-
   return (
     <div
+      id="rsvp-modal-scroll-container"
       className="fixed inset-0 z-[99999] overflow-y-auto overflow-x-hidden bg-[#FAF7F2] text-[#261811] animate-fade-in"
       role="dialog"
       aria-modal="true"
@@ -467,18 +480,20 @@ export default function RsvpModal() {
       <main className="max-w-[680px] mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full">
         <div className="bg-[#FFFFFF] border border-[#E8DFD5] shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] p-5 sm:p-9 md:p-10 rounded-[12px] text-[#261811] w-full">
 
-          {/* 1. CABEÇALHO */}
-          <div className="text-center sm:text-left border-b border-[#EAE0D5] pb-5 mb-6">
-            <span className="font-sans text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold block mb-1">
-              R.S.V.P.
-            </span>
-            <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light tracking-[-0.01em]">
-              Confirmação de presença
-            </h1>
-            <p className="font-serif italic text-xs sm:text-sm text-[#6B5A4D] leading-relaxed mt-1.5 max-w-[540px]">
-              Será uma alegria celebrar este momento com vocês. Por favor, confirme a presença da sua família.
-            </p>
-          </div>
+          {/* 1. CABEÇALHO (Aparece no formulário de preenchimento) */}
+          {mode === "guest" && (
+            <div className="text-center sm:text-left border-b border-[#EAE0D5] pb-5 mb-6">
+              <span className="font-sans text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold block mb-1">
+                R.S.V.P.
+              </span>
+              <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light tracking-[-0.01em]">
+                Confirmação de presença
+              </h1>
+              <p className="font-serif italic text-xs sm:text-sm text-[#6B5A4D] leading-relaxed mt-1.5 max-w-[540px]">
+                Será uma alegria celebrar este momento com vocês. Por favor, confirme a presença da sua família.
+              </p>
+            </div>
+          )}
 
           {/* ========================================================= */}
           {/* MODO GUEST: FLUXO DE CONFIRMAÇÃO OU CONSULTA              */}
@@ -942,7 +957,7 @@ export default function RsvpModal() {
           {/* MODO SUCCESS: PASSE DIGITAL COM QR CODE OU AGRADECIMENTO  */}
           {/* ========================================================= */}
           {mode === "success" && (
-            <div className="py-2 text-center space-y-4 animate-fade-in overflow-y-auto max-h-[82dvh] pr-1">
+            <div className="py-2 text-center space-y-4 animate-fade-in w-full">
               {passeInfo ? (
                 <QrCodePass
                   convidado={passeInfo.convidado}

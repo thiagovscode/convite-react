@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import QRCode from "qrcode";
 
 interface QrCodePassProps {
@@ -22,28 +22,54 @@ export default function QrCodePass({
   onClose,
 }: QrCodePassProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [qrSvg, setQrSvg] = useState<string>("");
   const passCardRef = useRef<HTMLDivElement>(null);
 
-  // Código de acesso limpo e exclusivo (ex: TN-4827 ou código do convite)
-  const validationCode = tokenOuId 
-    ? tokenOuId.toUpperCase() 
-    : `TN-${Math.floor(1000 + Math.random() * 9000)}`;
-  
-  const qrPayload = JSON.stringify({
-    tipo: "INGRESSO_CASAMENTO_TAINARA_THIAGO",
-    codigo: validationCode,
-    titular: convidado,
-    total: totalPessoas,
-    adultos: adultos,
-    criancas: criancasAte6Anos,
-    membros: membrosConfirmados || [convidado],
-    dataEvento: "2027-01-24",
-    local: "Espaço Balboa, Mairiporã - SP"
-  });
+  // Código de acesso limpo e estável (ex: TN-4827 ou código do convite)
+  const validationCode = useMemo(() => {
+    return tokenOuId && tokenOuId.trim()
+      ? tokenOuId.trim().toUpperCase()
+      : `TN-${Math.floor(1000 + Math.random() * 9000)}`;
+  }, [tokenOuId]);
+
+  const membrosLista = useMemo(() => {
+    if (membrosConfirmados && membrosConfirmados.length > 0) {
+      return membrosConfirmados;
+    }
+    return [convidado];
+  }, [membrosConfirmados, convidado]);
+
+  const qrPayload = useMemo(() => {
+    return JSON.stringify({
+      tipo: "INGRESSO_CASAMENTO_TAINARA_THIAGO",
+      codigo: validationCode,
+      titular: convidado,
+      total: totalPessoas,
+      adultos: adultos,
+      criancas: criancasAte6Anos,
+      membros: membrosLista,
+      dataEvento: "2027-01-24",
+      local: "Espaço Balboa, Mairiporã - SP"
+    });
+  }, [validationCode, convidado, totalPessoas, adultos, criancasAte6Anos, membrosLista]);
 
   useEffect(() => {
+    // 1. Gera SVG nativo imediato (100% infalível, dispensa canvas e não perde nitidez)
+    QRCode.toString(qrPayload, {
+      type: "svg",
+      margin: 1.5,
+      color: {
+        dark: "#261811",
+        light: "#FFFFFF",
+      },
+      errorCorrectionLevel: "M",
+    })
+      .then((svg) => setQrSvg(svg))
+      .catch((err) => console.error("Erro ao gerar SVG do QR Code:", err));
+
+    // 2. Gera DataURL para compartilhamento e download na galeria de fotos
     QRCode.toDataURL(qrPayload, {
-      width: 280,
+      width: 320,
       margin: 1.5,
       color: {
         dark: "#261811",
@@ -52,7 +78,7 @@ export default function QrCodePass({
       errorCorrectionLevel: "M",
     })
       .then((url) => setQrDataUrl(url))
-      .catch((err) => console.error("Erro ao gerar QR Code:", err));
+      .catch((err) => console.error("Erro ao gerar PNG do QR Code:", err));
   }, [qrPayload]);
 
   const [salvando, setSalvando] = useState(false);
@@ -147,8 +173,13 @@ export default function QrCodePass({
 
         {/* QR Code Container com Respiro Generoso */}
         <div className="pt-1 pb-1 flex flex-col items-center justify-center space-y-3">
-          <div className="p-3 bg-white border border-[#D8CDC0] rounded-[3px] shadow-[0_2px_8px_-3px_rgba(22,14,10,0.06)]">
-            {qrDataUrl ? (
+          <div className="p-3 bg-white border border-[#D8CDC0] rounded-[3px] shadow-[0_2px_8px_-3px_rgba(22,14,10,0.06)] flex items-center justify-center">
+            {qrSvg ? (
+              <div 
+                className="w-40 h-40 sm:w-44 sm:h-44 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+            ) : qrDataUrl ? (
               <img 
                 src={qrDataUrl} 
                 alt={`QR Code de entrada para ${convidado}`} 
