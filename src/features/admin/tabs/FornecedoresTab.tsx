@@ -552,7 +552,7 @@ export function FornecedoresTab({
                         onChange={(e) => setNovoMembroPermaneceAteFim(e.target.checked)}
                         className="accent-[#261811] rounded"
                       />
-                      <span>Fica até o fim (conta como convidado)</span>
+                      <span>Permanece até o fim</span>
                     </label>
                     <button
                       type="button"
@@ -607,9 +607,9 @@ export function FornecedoresTab({
                         {m.permaneceAteFim && (
                           <span
                             className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-full text-[0.6rem] font-bold"
-                            title="Este profissional fica até o fim e conta como convidado (Buffet/Assento)"
+                            title="Este profissional permanece até o fim"
                           >
-                            Fica até o fim
+                            Permanece até o fim
                           </span>
                         )}
 
@@ -622,9 +622,9 @@ export function FornecedoresTab({
                                 ? "border-amber-400 text-amber-900 bg-amber-50 font-semibold"
                                 : "border-stone-300 text-stone-500 hover:text-stone-800"
                             }`}
-                            title={m.permaneceAteFim ? "Fica até o fim (clique para desmarcar)" : "Clique para marcar que este profissional fica até o fim (contar como convidado)"}
+                            title={m.permaneceAteFim ? "Permanece até o fim (clique para desmarcar)" : "Clique para marcar que este profissional permanece até o fim"}
                           >
-                            {m.permaneceAteFim ? "Fica" : "+ Fica"}
+                            {m.permaneceAteFim ? "Permanece" : "+ Fica"}
                           </button>
                         )}
 

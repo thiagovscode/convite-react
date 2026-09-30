@@ -192,7 +192,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               res.fornecedor?.equipe?.find((m: any) => m.id === parsed.membroId)?.permaneceAteFim
             );
             const tagFim = ficaAteFim
-              ? " [Fica até o fim · Contabilizado como Convidado]"
+              ? " [Permanece até o fim]"
               : "";
             setMensagemSucesso(
               `Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}${tagFim}`
