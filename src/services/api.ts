@@ -154,6 +154,16 @@ export async function autenticarAdmin(username: string, password: string): Promi
   throw new Error('Token não retornado pelo servidor.');
 }
 
+function tratarErroAutenticacao(response: Response) {
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('CONVITE_ADMIN_TOKEN');
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sessao-jwt-expirada"));
+    }
+    throw new Error('Sua sessão de 2 horas expirou. Faça login novamente.');
+  }
+}
+
 /**
  * Busca a listagem e resumo geral de confirmações
  * GET /api/admin/rsvp/casamento
@@ -176,10 +186,7 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
     },
   });
 
-  if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('CONVITE_ADMIN_TOKEN');
-    throw new Error('Sessão expirada. Faça login novamente.');
-  }
+  tratarErroAutenticacao(response);
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -248,6 +255,8 @@ export async function cadastrarConviteAdmin(
     body: JSON.stringify(dados),
   });
 
+  tratarErroAutenticacao(response);
+
   const json = await response.json();
   if (!response.ok) {
     throw new Error(json.message || 'Erro ao cadastrar convite no servidor.');
@@ -276,6 +285,8 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
       'Authorization': `Bearer ${authToken}`,
     },
   });
+
+  tratarErroAutenticacao(response);
 
   const json = await response.json();
   if (!response.ok) {
@@ -310,6 +321,8 @@ export async function excluirConviteAdmin(
       'Authorization': `Bearer ${authToken}`,
     },
   });
+
+  tratarErroAutenticacao(response);
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -356,6 +369,8 @@ export async function buscarMetricasAdmin(token?: string): Promise<DashboardMetr
       'Authorization': `Bearer ${authToken}`,
     },
   });
+
+  tratarErroAutenticacao(response);
 
   const json = await response.json();
   if (!response.ok) {

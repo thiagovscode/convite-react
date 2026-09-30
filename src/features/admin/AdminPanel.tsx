@@ -50,6 +50,26 @@ import type {
 } from "../../services/convites";
 import { getLinkConviteCompleto } from "./utils/formatters";
 
+// Extrai o timestamp de expiração (em milissegundos) da claim 'exp' do payload JWT
+function parseJwtExp(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const parsed = JSON.parse(jsonPayload);
+    return typeof parsed.exp === "number" ? parsed.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AdminPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
@@ -120,26 +140,39 @@ export function AdminPanel() {
         localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
 
       if (adminToken) {
-        try {
-          setUserRole("admin");
-          setIsLogged(true);
-          setActiveTab("dashboard");
-          await carregarDadosAdmin(adminToken);
-          carregarClassificacoes();
-          carregarFornecedores();
-          return;
-        } catch {
+        const exp = parseJwtExp(adminToken);
+        if (exp && exp <= Date.now()) {
           localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+          setAuthError("Sua sessão de 2 horas expirou. Faça login novamente.");
+        } else {
+          try {
+            setUserRole("admin");
+            setIsLogged(true);
+            setActiveTab("dashboard");
+            await carregarDadosAdmin(adminToken);
+            carregarClassificacoes();
+            carregarFornecedores();
+            return;
+          } catch {
+            localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+          }
         }
       }
 
       if (recepcaoToken) {
-        const valida = await validarSessaoRecepcaoBackend();
-        if (valida) {
-          setUserRole("recepcao");
-          setIsLogged(true);
-          setActiveTab("portaria");
-          carregarDadosOperacionais();
+        const exp = parseJwtExp(recepcaoToken);
+        if (exp && exp <= Date.now()) {
+          sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+          localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+          setAuthError("Sua sessão de 2 horas expirou. Faça login novamente.");
+        } else {
+          const valida = await validarSessaoRecepcaoBackend();
+          if (valida) {
+            setUserRole("recepcao");
+            setIsLogged(true);
+            setActiveTab("portaria");
+            carregarDadosOperacionais();
+          }
         }
       }
     };
@@ -163,6 +196,55 @@ export function AdminPanel() {
       document.body.style.overflow = "";
     };
   }, []);
+
+  // ─── DESLOGAMENTO AUTOMÁTICO APÓS 2 HORAS (EXPIRAÇÃO DO TOKEN JWT) ───────────
+  useEffect(() => {
+    if (!isLogged) return;
+
+    const token =
+      localStorage.getItem("CONVITE_ADMIN_TOKEN") ||
+      sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
+      localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
+
+    if (!token) {
+      handleLogout();
+      return;
+    }
+
+    const expMs = parseJwtExp(token);
+    if (!expMs) return;
+
+    const tempoRestante = expMs - Date.now();
+
+    if (tempoRestante <= 0) {
+      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+      return;
+    }
+
+    // Timer pontual disparado exatamente após 2 horas
+    const timer = setTimeout(() => {
+      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+    }, tempoRestante);
+
+    // Verificação contínua a cada 10s (cobre suspensão/retorno do navegador)
+    const interval = setInterval(() => {
+      if (Date.now() >= expMs) {
+        handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+      }
+    }, 10000);
+
+    const handleSessaoExpirada = () => {
+      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+    };
+
+    window.addEventListener("sessao-jwt-expirada", handleSessaoExpirada);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener("sessao-jwt-expirada", handleSessaoExpirada);
+    };
+  }, [isLogged]);
 
   const close = () => {
     setIsOpen(false);
@@ -229,7 +311,7 @@ export function AdminPanel() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (motivo?: string) => {
     localStorage.removeItem("CONVITE_ADMIN_TOKEN");
     sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
     localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
@@ -237,7 +319,7 @@ export function AdminPanel() {
     setUserRole("admin");
     setData(null);
     setMetricasBackend(null);
-    setAuthError("");
+    setAuthError(motivo || "");
   };
 
   // ─── CARREGADORES DE DADOS ───────────────────────────────────────────────────
