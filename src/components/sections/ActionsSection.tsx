@@ -19,7 +19,12 @@ export default function ActionsSection() {
             window.dispatchEvent(new Event('open-rsvp-modal'));
           }}
         >
-          <span className="ed-link-text">Confirmar Presença</span>
+          <div className="flex flex-col items-start text-left">
+            <span className="ed-link-text">Confirmar Presença</span>
+            <span className="text-[0.66rem] tracking-[0.2em] uppercase text-[#7A5E44] mt-1 font-sans font-medium">
+              Até 23 de dezembro de 2026
+            </span>
+          </div>
           <span className="ed-link-arrow">&rarr;</span>
         </button>
 

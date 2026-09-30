@@ -60,9 +60,20 @@ function WeddingCheckbox({
   );
 }
 
+export const RSVP_DEADLINE_STR = "23 de dezembro de 2026";
+export const RSVP_DEADLINE_SHORT = "23/12/2026";
+// 23 de Dezembro de 2026 às 23:59:59 no horário local
+export const RSVP_DEADLINE_DATE = new Date(2026, 11, 23, 23, 59, 59);
+
+export const isPrazoRsvpExpirado = () => {
+  return Date.now() > RSVP_DEADLINE_DATE.getTime();
+};
+
 export default function RsvpModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"guest" | "success">("guest");
+
+  const prazoEncerrado = isPrazoRsvpExpirado();
 
   // Estado de Presença Geral (Sim = true / Não = false)
   const [presenca, setPresenca] = useState<boolean>(true);
@@ -312,6 +323,11 @@ export default function RsvpModal() {
     e.preventDefault();
     setErrorMsg("");
 
+    if (prazoEncerrado) {
+      setErrorMsg(`O prazo para confirmação ou alteração de presença encerrou em ${RSVP_DEADLINE_STR}. Para dúvidas ou solicitações especiais, por favor contate os noivos diretamente.`);
+      return;
+    }
+
     if (!convitePreDefinido) {
       setErrorMsg("Nenhum convite selecionado. Por favor, localize seu convite primeiro.");
       return;
@@ -483,15 +499,33 @@ export default function RsvpModal() {
           {/* 1. CABEÇALHO (Aparece no formulário de preenchimento) */}
           {mode === "guest" && (
             <div className="text-center sm:text-left border-b border-[#EAE0D5] pb-5 mb-6">
-              <span className="font-sans text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold block mb-1">
-                R.S.V.P.
-              </span>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <span className="font-sans text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold block">
+                  R.S.V.P.
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FAF7F2] border border-[#E0D5C7] rounded-full font-sans text-[0.65rem] tracking-[0.14em] uppercase text-[#6B5A4D] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8A6A4E]" />
+                  <span>Prazo final: {RSVP_DEADLINE_SHORT}</span>
+                </span>
+              </div>
               <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light tracking-[-0.01em]">
                 Confirmação de presença
               </h1>
               <p className="font-serif italic text-xs sm:text-sm text-[#6B5A4D] leading-relaxed mt-1.5 max-w-[540px]">
-                Será uma alegria celebrar este momento com vocês. Por favor, confirme a presença da sua família.
+                Será uma alegria celebrar este momento com vocês. Por favor, confirme ou altere a resposta da sua família até {RSVP_DEADLINE_STR}.
               </p>
+
+              {prazoEncerrado && (
+                <div className="mt-3.5 p-3.5 bg-[#FBF5F2] border border-[#E3B8AF] text-[#6E2A22] rounded-[8px] text-left space-y-1">
+                  <div className="flex items-center gap-1.5 font-sans text-xs tracking-wider uppercase font-semibold">
+                    <span>⚠</span>
+                    <span>Prazo de resposta encerrado</span>
+                  </div>
+                  <p className="font-serif text-xs leading-relaxed text-[#7C3D34]">
+                    O prazo para confirmação e alteração encerrou em {RSVP_DEADLINE_STR}. Para qualquer solicitação especial, entre em contato diretamente com os noivos.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -592,7 +626,7 @@ export default function RsvpModal() {
                         </div>
 
                         <p className="font-serif text-sm sm:text-base text-[#264A31] leading-relaxed">
-                          Este convite já está confirmado na lista oficial do casamento.
+                          Este convite já está confirmado na lista oficial do casamento. Você pode visualizar o seu passe digital ou atualizar quais membros comparecerão até {RSVP_DEADLINE_STR}.
                         </p>
 
                         <div className="pt-1">
@@ -612,18 +646,26 @@ export default function RsvpModal() {
                       {/* Ações Elegantes e Claras: Alterar Resposta vs Alterar Convite */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <div className="p-4 bg-[#FAF7F2] border border-[#E8DFD5] rounded-[8px] space-y-2">
-                          <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-[#8C7A6B] font-semibold">
-                            Modificar confirmação
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-[#8C7A6B] font-semibold">
+                              Modificar confirmação
+                            </span>
+                            <span className="text-[0.60rem] font-sans tracking-wider uppercase text-[#8C7A6B]">
+                              Até {RSVP_DEADLINE_SHORT}
+                            </span>
+                          </div>
                           <p className="font-serif italic text-xs text-[#786455]">
-                            Deseja atualizar quais membros da família irão ao casamento?
+                            {prazoEncerrado
+                              ? "O prazo para alterações encerrou em 23/12/2026. Para qualquer ajuste, fale com os noivos."
+                              : "Deseja atualizar quais membros da família irão ao casamento?"}
                           </p>
                           <button
                             type="button"
+                            disabled={prazoEncerrado}
                             onClick={() => setEditandoResposta(true)}
-                            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FFFFFF] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] text-xs font-sans tracking-[0.12em] uppercase font-semibold rounded-[6px] transition-colors cursor-pointer min-h-[42px]"
+                            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FFFFFF] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] text-xs font-sans tracking-[0.12em] uppercase font-semibold rounded-[6px] transition-colors cursor-pointer min-h-[42px] disabled:opacity-40 disabled:cursor-not-allowed"
                           >
-                            <span>Alterar resposta</span>
+                            <span>{prazoEncerrado ? "Prazo encerrado" : "Alterar resposta"}</span>
                           </button>
                         </div>
 
@@ -848,7 +890,7 @@ export default function RsvpModal() {
                             Ficamos com o coração apertado por não podermos celebrar este momento tão sonhado juntos. A presença da sua família com certeza fará muita falta na celebração.
                           </p>
                           <p className="font-serif italic text-xs sm:text-sm text-[#786455] leading-relaxed">
-                            Agradecemos de coração por nos avisar com antecedência. Caso algo mude e vocês consigam comparecer, saibam que poderão retornar a este mesmo link e atualizar sua resposta a qualquer momento até o fechamento da lista!
+                            Agradecemos de coração por nos avisar com antecedência. Caso algo mude e vocês consigam comparecer, saibam que poderão retornar a este mesmo link e atualizar sua resposta até {RSVP_DEADLINE_STR}!
                           </p>
                         </div>
                       )}
@@ -928,11 +970,13 @@ export default function RsvpModal() {
                       <div className="pt-2 pb-1">
                         <button
                           type="submit"
-                          disabled={loading || (presenca && totalConfirmados === 0)}
+                          disabled={loading || prazoEncerrado || (presenca && totalConfirmados === 0)}
                           className="w-full min-h-[52px] py-4 px-6 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs sm:text-[0.82rem] tracking-[0.2em] uppercase transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed font-semibold rounded-[8px] shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center gap-2"
                         >
                           {loading ? (
                             <span>Enviando confirmação...</span>
+                          ) : prazoEncerrado ? (
+                            <span>PRAZO ENCERRADO EM {RSVP_DEADLINE_SHORT}</span>
                           ) : presenca ? (
                             totalConfirmados === 0 ? (
                               <span>SELECIONE OS CONVIDADOS</span>
@@ -992,21 +1036,22 @@ export default function RsvpModal() {
                       Sabemos que, mesmo à distância, o carinho e as boas energias de vocês estarão com a gente no altar.
                     </p>
                     <p className="text-xs text-[#8C7A6B] pt-2">
-                      Caso seus planos mudem e vocês consigam comparecer, saibam que poderão atualizar sua resposta a qualquer momento por este mesmo link antes do fechamento da lista oficial!
+                      Caso seus planos mudem e vocês consigam comparecer, saibam que poderão atualizar sua resposta por este mesmo link até {RSVP_DEADLINE_STR}!
                     </p>
                   </div>
 
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
                       type="button"
+                      disabled={prazoEncerrado}
                       onClick={() => {
                         setMode("guest");
                         setPresenca(true);
                         setEditandoResposta(true);
                       }}
-                      className="w-full sm:w-auto py-3 px-6 bg-[#FFFFFF] hover:bg-[#F5EFE6] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] transition-colors min-h-[46px] cursor-pointer"
+                      className="w-full sm:w-auto py-3 px-6 bg-[#FFFFFF] hover:bg-[#F5EFE6] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] transition-colors min-h-[46px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Alterar Resposta
+                      {prazoEncerrado ? "Prazo Encerrado" : "Alterar Resposta"}
                     </button>
                     <button
                       type="button"
