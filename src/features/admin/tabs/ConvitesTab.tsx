@@ -502,7 +502,7 @@ export function ConvitesTab({
                             className="inline-flex items-center gap-1.5 font-medium text-amber-900 bg-amber-50 border border-amber-300/80 px-2.5 py-1 rounded text-xs select-none shadow-xs"
                             title="Este papel já integra automaticamente o cortejo de honra da cerimônia"
                           >
-                            <span>✨ Integrante do Cortejo</span>
+                            <span>Integrante do Cortejo</span>
                           </span>
                         )}
 

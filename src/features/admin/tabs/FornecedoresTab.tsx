@@ -617,14 +617,14 @@ export function FornecedoresTab({
                           <button
                             type="button"
                             onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, !!m.permaneceAteFim)}
-                            className={`px-1 rounded text-[0.72rem] transition-colors cursor-pointer ${
+                            className={`px-1.5 py-0.5 rounded text-[0.6rem] transition-colors cursor-pointer border ${
                               m.permaneceAteFim
-                                ? "text-amber-700 hover:text-amber-900 font-bold"
-                                : "text-stone-400 hover:text-amber-600"
+                                ? "border-amber-400 text-amber-900 bg-amber-50 font-semibold"
+                                : "border-stone-300 text-stone-500 hover:text-stone-800"
                             }`}
                             title={m.permaneceAteFim ? "Fica até o fim (clique para desmarcar)" : "Clique para marcar que este profissional fica até o fim (contar como convidado)"}
                           >
-                            {m.permaneceAteFim ? "★" : "☆"}
+                            {m.permaneceAteFim ? "Fica" : "+ Fica"}
                           </button>
                         )}
 

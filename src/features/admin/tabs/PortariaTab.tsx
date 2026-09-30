@@ -195,7 +195,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               ? " [Fica até o fim · Contabilizado como Convidado]"
               : "";
             setMensagemSucesso(
-              `✅ Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}${tagFim}`
+              `Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}${tagFim}`
             );
             onRefreshData?.();
           } else {
@@ -598,7 +598,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                         <div className="flex items-center gap-2 text-[0.68rem] font-sans text-[#8C7A6B] flex-wrap mt-0.5">
                           {m.papel && m.papel !== "Convidado" && m.papel !== "Convidado comum" && (
                             <span className="bg-[#261811] text-[#FAF7F2] px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[0.6rem]">
-                              ★ {m.papel}
+                              {m.papel}
                             </span>
                           )}
                           {m.criancaAte6Anos && <span className="text-amber-800 font-medium">Criança (≤ 6 anos)</span>}

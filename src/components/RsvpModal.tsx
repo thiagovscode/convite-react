@@ -518,7 +518,6 @@ export default function RsvpModal() {
               {prazoEncerrado && (
                 <div className="mt-3.5 p-3.5 bg-[#FBF5F2] border border-[#E3B8AF] text-[#6E2A22] rounded-[8px] text-left space-y-1">
                   <div className="flex items-center gap-1.5 font-sans text-xs tracking-wider uppercase font-semibold">
-                    <span>⚠</span>
                     <span>Prazo de resposta encerrado</span>
                   </div>
                   <p className="font-serif text-xs leading-relaxed text-[#7C3D34]">

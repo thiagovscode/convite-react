@@ -87,7 +87,7 @@ const wedding = {
      GOOGLE CALENDAR
   ---------------------------------------------------------- */
   calendar: {
-    title:    "Casamento Tainara & Thiago 💍",
+    title:    "Casamento Tainara & Thiago",
     details:  "Celebração do casamento de Tainara e Thiago. Espaço Balboa, Mairiporã - SP.",
     location: "Espaço Balboa, Mairiporã - SP"
   }
