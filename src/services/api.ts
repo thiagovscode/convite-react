@@ -199,7 +199,6 @@ export interface NovoMembroAdminRequest {
   id?: string;
   nome: string;
   criancaAte6Anos: boolean;
-  titular?: boolean;
   papel?: string;
   vinculo?: string;
   par?: string;

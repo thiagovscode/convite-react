@@ -43,7 +43,7 @@ export default function QrCodePass({
     return JSON.stringify({
       tipo: "INGRESSO_CASAMENTO_TAINARA_THIAGO",
       codigo: validationCode,
-      titular: convidado,
+      convidado: convidado,
       total: totalPessoas,
       adultos: adultos,
       criancas: criancasAte6Anos,

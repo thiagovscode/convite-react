@@ -16,7 +16,6 @@ export interface MembroConviteCadastrado {
   id?: string;
   nome: string;
   criancaAte6Anos?: boolean;
-  titular?: boolean;
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   papel?: string;

@@ -78,7 +78,7 @@ export function AdminPanel() {
     email: "",
     papel: "Convidados",
     observacao: "",
-    membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", participaCortejo: false }],
+    membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false }],
   });
   const [cadLoading, setCadLoading] = useState(false);
   const [cadErro, setCadErro] = useState("");
@@ -325,14 +325,13 @@ export function AdminPanel() {
         email: novoConvite.email.trim() || undefined,
         papel: papelDerivado,
         observacao: novoConvite.observacao.trim() || undefined,
-        membros: novoConvite.membros.map((m, idx) => {
+        membros: novoConvite.membros.map((m) => {
           const papelMembro = m.papel || "Convidado";
           const ehCortejo = isPapelCortejo(papelMembro, papeis);
           return {
             id: m.id,
             nome: m.nome.trim(),
             criancaAte6Anos: m.criancaAte6Anos,
-            titular: idx === 0,
             papel: papelMembro,
             par: m.par?.trim() || undefined,
             participaCortejo: ehCortejo,
@@ -349,7 +348,7 @@ export function AdminPanel() {
         email: "",
         papel: "Convidados",
         observacao: "",
-        membros: [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", par: "", participaCortejo: false }],
+        membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
       });
       await carregarDadosAdmin();
     } catch (err: any) {
@@ -357,6 +356,20 @@ export function AdminPanel() {
     } finally {
       setCadLoading(false);
     }
+  };
+
+  const handleNovoConvite = () => {
+    setConviteEmEdicao(null);
+    setCadErro("");
+    setCadSucesso(null);
+    setNovoConvite({
+      familia: "",
+      telefone: "",
+      email: "",
+      papel: "Convidados",
+      observacao: "",
+      membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
+    });
   };
 
   const handleIniciarEdicao = (c: ConviteCadastrado) => {
@@ -375,13 +388,12 @@ export function AdminPanel() {
               id: m.id || String(idx + 1),
               nome: m.nome,
               criancaAte6Anos: Boolean(m.criancaAte6Anos),
-              titular: idx === 0,
               papel: papelNormalizado,
               par: m.par || "",
               participaCortejo: ehCortejo,
             };
           })
-        : [{ id: "1", nome: "", criancaAte6Anos: false, titular: true, papel: "Convidado", par: "", participaCortejo: false }],
+        : [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
     });
   };
 
@@ -639,6 +651,7 @@ export function AdminPanel() {
                 cadSucesso={cadSucesso}
                 onSalvarConvite={handleSalvarConvite}
                 onIniciarEdicao={handleIniciarEdicao}
+                onNovoConviteClick={handleNovoConvite}
                 onAbrirModalExclusao={setConviteParaExcluir}
                 feedbackGeral={feedbackGeral}
                 onDismissFeedback={() => setFeedbackGeral(null)}

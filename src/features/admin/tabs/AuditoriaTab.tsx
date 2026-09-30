@@ -13,7 +13,6 @@ interface ConvidadoBuffet {
   familia: string;
   codigoConvite: string;
   criancaAte6Anos: boolean;
-  titular: boolean;
   papel?: string;
   vinculo?: string;
   confirmadoRsvp?: boolean;
@@ -55,7 +54,6 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
             familia: fam.familia,
             codigoConvite: fam.codigo,
             criancaAte6Anos: Boolean(m.criancaAte6Anos),
-            titular: Boolean(m.titular),
             papel: m.papel || fam.papel,
             vinculo: m.vinculo || fam.vinculo,
             confirmadoRsvp: m.confirmadoRsvp,

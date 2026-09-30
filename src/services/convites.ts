@@ -4,7 +4,6 @@ export interface MembroAutorizado {
   id: string;
   nome: string;
   criancaAte6Anos: boolean; // true = menor de 7 anos (0 a 6 anos); false = adulto / >= 7 anos
-  titular?: boolean;
   confirmadoRsvp?: boolean;
   presenteCheckin?: boolean;
   dataHoraCheckin?: string;
@@ -112,7 +111,111 @@ if (typeof window !== "undefined") {
   }
 }
 
-// 1. Busca convite pelo código via requisição HTTP direta ao backend (MongoDB)
+export const CACHE_PORTARIA_KEY = "CACHE_PORTARIA_CONVITES_V2";
+export const FILA_OFFLINE_KEY = "FILA_OFFLINE_CHECKINS_V2";
+
+export function getFilaOfflineCheckins(): Array<{
+  codigo: string;
+  presencas: Array<{ membroId: string; presente: boolean }>;
+  operador: string;
+  timestamp: number;
+}> {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(FILA_OFFLINE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function salvarNoCacheOffline(convite: ConvitePreDefinido | ConvitePreDefinido[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(CACHE_PORTARIA_KEY);
+    const map: Record<string, ConvitePreDefinido> = raw ? JSON.parse(raw) : {};
+    const lista = Array.isArray(convite) ? convite : [convite];
+    lista.forEach((c) => {
+      if (c && c.codigo) {
+        map[c.codigo.toLowerCase().trim()] = c;
+      }
+    });
+    localStorage.setItem(CACHE_PORTARIA_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export function buscarNoCacheOfflinePorCodigo(codigo: string): ConvitePreDefinido | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(CACHE_PORTARIA_KEY);
+    if (!raw) return null;
+    const map: Record<string, ConvitePreDefinido> = JSON.parse(raw);
+    return map[codigo.toLowerCase().trim()] || null;
+  } catch {
+    return null;
+  }
+}
+
+export function buscarNoCacheOfflinePorTermo(termo: string): ConvitePreDefinido[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CACHE_PORTARIA_KEY);
+    if (!raw) return [];
+    const map: Record<string, ConvitePreDefinido> = JSON.parse(raw);
+    const q = termo.toLowerCase().trim();
+    return Object.values(map).filter((c) => {
+      if (c.codigo && c.codigo.toLowerCase().includes(q)) return true;
+      if (c.familia && c.familia.toLowerCase().includes(q)) return true;
+      if (c.telefone && c.telefone.toLowerCase().includes(q)) return true;
+      if (c.membros && c.membros.some((m) => m.nome && m.nome.toLowerCase().includes(q))) return true;
+      return false;
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function sincronizarFilaOffline(): Promise<{ sincronizados: number; erros: number }> {
+  const fila = getFilaOfflineCheckins();
+  if (!fila.length) return { sincronizados: 0, erros: 0 };
+
+  let sincronizados = 0;
+  let erros = 0;
+  const restante: typeof fila = [];
+
+  for (const item of fila) {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const url = baseUrl ? `${baseUrl}/api/recepcao/checkin` : `/api/recepcao/checkin`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: getRecepcaoAuthHeaders(),
+        body: JSON.stringify({
+          codigo: item.codigo,
+          presencas: item.presencas,
+          recepcionista: item.operador,
+        }),
+      });
+      if (res.ok) {
+        sincronizados++;
+      } else {
+        restante.push(item);
+        erros++;
+      }
+    } catch {
+      restante.push(item);
+      erros++;
+    }
+  }
+
+  try {
+    localStorage.setItem(FILA_OFFLINE_KEY, JSON.stringify(restante));
+  } catch {}
+
+  return { sincronizados, erros };
+}
+
+// 1. Busca convite pelo código via requisição HTTP direta ao backend (MongoDB) com fallback offline
 export async function buscarConvitePorCodigo(codigo: string): Promise<ConvitePreDefinido | null> {
   const limpo = codigo.toLowerCase().trim();
   if (!limpo) return null;
@@ -133,20 +236,25 @@ export async function buscarConvitePorCodigo(codigo: string): Promise<ConvitePre
       if (contentType.includes("application/json")) {
         const data = await res.json();
         if (data && (data.codigo || data.familia)) {
+          salvarNoCacheOffline(data);
           return data;
         }
       }
     }
   } catch (err) {
-    console.error("Erro ao buscar convite no servidor:", err);
+    console.warn("Rede indisponível. Buscando convite no cache local offline...", err);
   }
+
+  // Fallback cache local (offline)
+  const cached = buscarNoCacheOfflinePorCodigo(limpo);
+  if (cached) return cached;
 
   return null;
 }
 
 /**
  * Busca convites por termo (nome da família, nome de qualquer membro, telefone ou código)
- * GET /api/recepcao/busca?termo=...
+ * GET /api/recepcao/busca?termo=... com fallback offline
  */
 export async function buscarConvitesPorTermoBackend(termo: string): Promise<ConvitePreDefinido[]> {
   const limpo = termo.trim();
@@ -166,12 +274,17 @@ export async function buscarConvitesPorTermoBackend(termo: string): Promise<Conv
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
+        salvarNoCacheOffline(data);
         return data;
       }
     }
   } catch (err) {
-    console.error("Erro na busca por termo no backend:", err);
+    console.warn("Rede indisponível na busca. Buscando termo no cache local offline...", err);
   }
+
+  // Fallback cache local (offline)
+  const cachedList = buscarNoCacheOfflinePorTermo(limpo);
+  if (cachedList.length > 0) return cachedList;
 
   return [];
 }
@@ -261,7 +374,6 @@ export async function cadastrarConviteAdmin(dados: {
   membros: Array<{
     nome: string;
     criancaAte6Anos: boolean;
-    titular?: boolean;
     papel?: string;
     vinculo?: string;
   }>;
@@ -329,12 +441,12 @@ export async function listarConvitesAdmin(): Promise<ConvitePreDefinido[]> {
   return [];
 }
 
-// 3. Registrar check-in individual por membro no banco de dados
+// 3. Registrar check-in individual por membro no banco de dados (com suporte offline resiliente)
 export async function registrarCheckinBackend(
   codigo: string,
   presencas: Array<{ membroId: string; presente: boolean }>,
   operador: string = "Recepção"
-): Promise<{ success: boolean; message: string; convite?: any }> {
+): Promise<{ success: boolean; message: string; convite?: any; offline?: boolean }> {
   const baseUrl = getApiBaseUrl();
   const url = baseUrl ? `${baseUrl}/api/recepcao/checkin` : `/api/recepcao/checkin`;
 
@@ -350,13 +462,48 @@ export async function registrarCheckinBackend(
     });
     if (res.ok) {
       const data = await res.json();
+      // Atualiza cache local
+      const c = buscarNoCacheOfflinePorCodigo(codigo);
+      if (c && c.membros) {
+        presencas.forEach(p => {
+          const m = c.membros.find(x => x.id === p.membroId);
+          if (m) {
+            m.presenteCheckin = p.presente;
+            m.dataHoraCheckin = new Date().toISOString();
+          }
+        });
+        salvarNoCacheOffline(c);
+      }
       return { success: true, message: data.message || "Check-in realizado com sucesso", convite: data.convite };
     }
     const isJson = res.headers.get("content-type")?.includes("application/json");
     const err = isJson ? await res.json().catch(() => ({})) : {};
     return { success: false, message: err.message || "Erro ao registrar check-in." };
   } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao registrar check-in." };
+    // Modo Offline: salva no cache local e enfileira para sincronização
+    try {
+      const c = buscarNoCacheOfflinePorCodigo(codigo);
+      if (c && c.membros) {
+        presencas.forEach(p => {
+          const m = c.membros.find(x => x.id === p.membroId);
+          if (m) {
+            m.presenteCheckin = p.presente;
+            m.dataHoraCheckin = new Date().toISOString();
+          }
+        });
+        salvarNoCacheOffline(c);
+      }
+      const fila = getFilaOfflineCheckins();
+      fila.push({ codigo, presencas, operador, timestamp: Date.now() });
+      localStorage.setItem(FILA_OFFLINE_KEY, JSON.stringify(fila));
+      return {
+        success: true,
+        message: "Check-in registrado localmente (Modo Offline) - será sincronizado automaticamente quando a conexão retornar.",
+        offline: true
+      };
+    } catch {
+      return { success: false, message: "Erro de conexão ao registrar check-in." };
+    }
   }
 }
 

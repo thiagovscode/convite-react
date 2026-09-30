@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import type { ConviteCadastrado } from "../types";
 
 interface DeleteConviteModalProps {
@@ -16,13 +16,27 @@ export function DeleteConviteModal({
   onCancel,
   onConfirm,
 }: DeleteConviteModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loading, onCancel]);
+
   if (!convite) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="modal-delete-convite-title"
       className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) onCancel();
+      }}
     >
       <div className="bg-[#FAF7F2] border border-[#D8CDC0] rounded-[12px] p-6 sm:p-8 max-w-[500px] w-full shadow-2xl space-y-5 text-[#261811]">
         <div className="flex items-start gap-3.5">
@@ -32,7 +46,7 @@ export function DeleteConviteModal({
             </svg>
           </div>
           <div>
-            <h3 className="font-serif text-xl sm:text-2xl text-[#261811] font-light">
+            <h3 id="modal-delete-convite-title" className="font-serif text-xl sm:text-2xl text-[#261811] font-light">
               Excluir Convite
             </h3>
             <p className="text-xs font-sans text-[#6B5A4D] mt-1">

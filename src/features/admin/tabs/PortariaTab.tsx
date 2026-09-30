@@ -1,7 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import type { ConvitePreDefinido } from "../../../services/convites";
-import { registrarCheckinBackend } from "../../../services/convites";
+import {
+  registrarCheckinBackend,
+  getFilaOfflineCheckins,
+  sincronizarFilaOffline,
+} from "../../../services/convites";
 import { playCheckinSuccessSound, triggerHaptic } from "../utils/sound";
 
 interface PortariaTabProps {
@@ -17,6 +21,27 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
   const [salvandoCheckin, setSalvandoCheckin] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [erroCheckin, setErroCheckin] = useState("");
+  const [filaOffline, setFilaOffline] = useState(0);
+  const [sincronizandoOffline, setSincronizandoOffline] = useState(false);
+
+  const atualizarContadorOffline = () => {
+    setFilaOffline(getFilaOfflineCheckins().length);
+  };
+
+  useEffect(() => {
+    atualizarContadorOffline();
+
+    const handleOnline = async () => {
+      setSincronizandoOffline(true);
+      await sincronizarFilaOffline();
+      setSincronizandoOffline(false);
+      atualizarContadorOffline();
+      onRefreshData?.();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
 
   // Câmera & Leitor
   const [cameraAberta, setCameraAberta] = useState(false);
@@ -242,6 +267,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
     const res = await registrarCheckinBackend(conviteAtual.codigo, presencas, "Portaria");
     setSalvandoCheckin(false);
+    atualizarContadorOffline();
 
     if (res.success) {
       playCheckinSuccessSound();
@@ -266,13 +292,42 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
+        <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#705E51] font-semibold mb-1">
           Portaria &amp; Acolhimento
         </p>
         <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
           Controle de Entrada dos Convidados
         </h1>
       </div>
+
+      {filaOffline > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-[8px] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 font-sans shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span>
+              <strong>Modo de Contingência Offline:</strong> {filaOffline}{" "}
+              {filaOffline === 1 ? "check-in gravado localmente" : "check-ins gravados localmente"} aguardando conexão com o servidor.
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={sincronizandoOffline}
+            onClick={async () => {
+              setSincronizandoOffline(true);
+              const resultado = await sincronizarFilaOffline();
+              setSincronizandoOffline(false);
+              atualizarContadorOffline();
+              onRefreshData?.();
+              if (resultado.sincronizados > 0) {
+                setMensagemSucesso(`✓ ${resultado.sincronizados} check-in(s) sincronizado(s) com sucesso com o servidor!`);
+              }
+            }}
+            className="px-3.5 py-1.5 bg-amber-900 text-white rounded-[6px] font-semibold text-[0.7rem] uppercase tracking-wider hover:bg-amber-950 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto shrink-0"
+          >
+            {sincronizandoOffline ? "Sincronizando..." : "Sincronizar Agora"}
+          </button>
+        </div>
+      )}
 
       <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">

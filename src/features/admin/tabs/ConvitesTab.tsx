@@ -25,6 +25,7 @@ interface ConvitesTabProps {
   cadSucesso: { codigo: string; link: string; familia: string } | null;
   onSalvarConvite: (e: React.FormEvent) => Promise<void>;
   onIniciarEdicao: (c: ConviteCadastrado) => void;
+  onNovoConviteClick?: () => void;
   onAbrirModalExclusao: (c: ConviteCadastrado) => void;
   feedbackGeral: { tipo: "sucesso" | "erro"; msg: string } | null;
   onDismissFeedback: () => void;
@@ -46,6 +47,7 @@ export function ConvitesTab({
   cadSucesso,
   onSalvarConvite,
   onIniciarEdicao,
+  onNovoConviteClick,
   onAbrirModalExclusao,
   feedbackGeral,
   onDismissFeedback,
@@ -179,7 +181,10 @@ export function ConvitesTab({
           </button>
           <button
             type="button"
-            onClick={() => setSubTab("novo")}
+            onClick={() => {
+              onNovoConviteClick?.();
+              setSubTab("novo");
+            }}
             className={`text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold transition-all cursor-pointer ${
               subTab === "novo"
                 ? "bg-[#261811] text-[#FAF7F2] shadow-sm"
@@ -424,7 +429,7 @@ export function ConvitesTab({
                     ...p,
                     membros: [
                       ...p.membros,
-                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, titular: false, papel: "Convidado", participaCortejo: false },
+                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false },
                     ],
                   }))
                 }
@@ -543,7 +548,10 @@ export function ConvitesTab({
           <div className="flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => setSubTab("lista")}
+              onClick={() => {
+                onNovoConviteClick?.();
+                setSubTab("lista");
+              }}
               className="px-5 py-3 border border-[#D8CDC0] text-[#6B5A4D] rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold cursor-pointer"
             >
               Cancelar
