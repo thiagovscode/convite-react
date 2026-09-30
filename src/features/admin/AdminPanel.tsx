@@ -147,16 +147,20 @@ export function AdminPanel() {
     verificarAberturaUrl();
     tentarRestaurarSessao();
 
-    window.addEventListener("popstate", verificarAberturaUrl);
-    window.addEventListener("hashchange", verificarAberturaUrl);
-    window.addEventListener("open-admin-panel", () => {
+    const handleOpenAdminPanel = () => {
       setIsOpen(true);
       document.body.style.overflow = "hidden";
-    });
+    };
+
+    window.addEventListener("popstate", verificarAberturaUrl);
+    window.addEventListener("hashchange", verificarAberturaUrl);
+    window.addEventListener("open-admin-panel", handleOpenAdminPanel);
 
     return () => {
       window.removeEventListener("popstate", verificarAberturaUrl);
       window.removeEventListener("hashchange", verificarAberturaUrl);
+      window.removeEventListener("open-admin-panel", handleOpenAdminPanel);
+      document.body.style.overflow = "";
     };
   }, []);
 
@@ -471,7 +475,7 @@ export function AdminPanel() {
 
   return (
     <div
-      className="fixed inset-0 z-[99999] bg-[#FAF7F2] text-[#261811] overflow-y-auto"
+      className="fixed inset-0 z-[99999] bg-[#FAF7F2] text-[#261811] overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-label="Painel Administrativo"

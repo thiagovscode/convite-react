@@ -488,7 +488,7 @@ export function ConvitesTab({
               </button>
             </div>
 
-            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+            <div className="space-y-3">
               {novoConvite.membros.map((m, idx) => {
                 const papelAtual = m.papel || "Convidado";
                 const ehCortejo = isPapelCortejo(papelAtual, papeis);
