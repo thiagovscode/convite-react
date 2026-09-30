@@ -434,12 +434,17 @@ export function AdminPanel() {
   const respostasConvidados = useMemo<RespostaConvidadoItem[]>(() => {
     const itens: RespostaConvidadoItem[] = [];
     const codigosProcessados = new Set<string>();
+    const nomesProcessados = new Set<string>();
+    const telefonesProcessados = new Set<string>();
 
     if (Array.isArray(listaConvites)) {
       listaConvites.forEach((c) => {
         const codigo = c.codigo || "—";
         codigosProcessados.add(codigo.toLowerCase());
         const telefone = c.telefone || "";
+        if (telefone) {
+          telefonesProcessados.add(telefone.replace(/\D/g, ""));
+        }
         const familia = c.familia || "";
         const observacao = c.observacao || "";
         const dataConfirmacao = c.dataConfirmacao;
@@ -470,6 +475,10 @@ export function AdminPanel() {
             const participaCortejo: "Sim" | "Não" = cortejoAtivo ? "Sim" : "Não";
             const faixaEtaria = m.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto";
 
+            if (m.nome) {
+              nomesProcessados.add(m.nome.trim().toLowerCase());
+            }
+
             itens.push({
               id: `${c.id || codigo}-${m.id || idx}`,
               codigoConvite: codigo,
@@ -492,12 +501,34 @@ export function AdminPanel() {
 
     const rsvpList: RsvpAdminItem[] = data?.data || data?.rsvps || [];
     rsvpList.forEach((r) => {
+      // Se o RSVP possui observação, repassa para o convidado correspondente já cadastrado
+      if (r.observacao) {
+        const telR = r.telefone ? r.telefone.replace(/\D/g, "") : "";
+        const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
+        const itemExistente = itens.find(
+          (it) =>
+            (nomeR && it.nome.trim().toLowerCase() === nomeR) ||
+            (telR && it.telefone && it.telefone.replace(/\D/g, "") === telR)
+        );
+        if (itemExistente && !itemExistente.observacao) {
+          itemExistente.observacao = r.observacao;
+        }
+      }
+
+      // Só adiciona se tiver código de convite novo que não conste na lista oficial e o convidado não tiver sido processado
       const cod = (r as any).codigoConvite;
-      if (!cod || !codigosProcessados.has(cod.toLowerCase())) {
+      const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
+      const telR = r.telefone ? r.telefone.replace(/\D/g, "") : "";
+
+      if (cod && !codigosProcessados.has(cod.toLowerCase()) && !nomesProcessados.has(nomeR) && (!telR || !telefonesProcessados.has(telR))) {
+        codigosProcessados.add(cod.toLowerCase());
+        nomesProcessados.add(nomeR);
+        if (telR) telefonesProcessados.add(telR);
+
         const status: "CONFIRMADO" | "RECUSADO" | "PENDENTE" = r.presenca ? "CONFIRMADO" : "RECUSADO";
         itens.push({
           id: `rsvp-${r.id}`,
-          codigoConvite: cod || "—",
+          codigoConvite: cod,
           nome: r.nome,
           papel: "Convidado",
           participaCortejo: "Não",
@@ -510,18 +541,22 @@ export function AdminPanel() {
 
         if (r.acompanhantes && r.acompanhantes.length > 0) {
           r.acompanhantes.forEach((a, aIdx) => {
-            itens.push({
-              id: `rsvp-${r.id}-acomp-${aIdx}`,
-              codigoConvite: cod || "—",
-              nome: a.nome,
-              papel: "Convidado",
-              participaCortejo: "Não",
-              faixaEtaria: a.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto",
-              telefone: r.telefone,
-              status,
-              criancaAte6Anos: a.criancaAte6Anos,
-              respondido: true,
-            });
+            const nomeA = a.nome ? a.nome.trim().toLowerCase() : "";
+            if (!nomesProcessados.has(nomeA)) {
+              nomesProcessados.add(nomeA);
+              itens.push({
+                id: `rsvp-${r.id}-acomp-${aIdx}`,
+                codigoConvite: cod,
+                nome: a.nome,
+                papel: "Convidado",
+                participaCortejo: "Não",
+                faixaEtaria: a.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto",
+                telefone: r.telefone,
+                status,
+                criancaAte6Anos: a.criancaAte6Anos,
+                respondido: true,
+              });
+            }
           });
         }
       }
