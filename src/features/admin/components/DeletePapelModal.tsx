@@ -1,22 +1,22 @@
 import React from "react";
-import type { ConviteCadastrado } from "../types";
+import type { PapelParticipante } from "../../../services/classificacoes";
 
-interface DeleteConviteModalProps {
-  convite: ConviteCadastrado | null;
+interface DeletePapelModalProps {
+  papel: PapelParticipante | null;
   loading: boolean;
-  error: string;
+  error?: string;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
 }
 
-export function DeleteConviteModal({
-  convite,
+export function DeletePapelModal({
+  papel,
   loading,
   error,
   onCancel,
   onConfirm,
-}: DeleteConviteModalProps) {
-  if (!convite) return null;
+}: DeletePapelModalProps) {
+  if (!papel) return null;
 
   return (
     <div
@@ -33,10 +33,10 @@ export function DeleteConviteModal({
           </div>
           <div>
             <h3 className="font-serif text-xl sm:text-2xl text-[#261811] font-light">
-              Excluir Convite
+              Excluir Papel
             </h3>
             <p className="text-xs font-sans text-[#6B5A4D] mt-1">
-              Confirma a exclusão definitiva do convite da família <strong>{convite.familia}</strong> (#{convite.codigo})?
+              Confirma a exclusão definitiva do papel <strong>"{papel.nome}"</strong>? Esta função deixará de estar disponível para seleção nos convites.
             </p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export function DeleteConviteModal({
             type="button"
             disabled={loading}
             onClick={onCancel}
-            className="px-4 py-2 border border-[#D8CDC0] text-[#6B5A4D] text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer"
+            className="px-4 py-2 border border-[#D8CDC0] text-[#6B5A4D] hover:bg-[#F0EAE0] text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer transition-colors"
           >
             Cancelar
           </button>
@@ -60,7 +60,7 @@ export function DeleteConviteModal({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className="px-5 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer disabled:opacity-50"
+            className="px-5 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer disabled:opacity-50 transition-colors"
           >
             {loading ? "Excluindo..." : "Confirmar Exclusão"}
           </button>

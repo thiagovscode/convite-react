@@ -641,7 +641,6 @@ export async function removerMembroFornecedorBackend(
   }
 }
 
-// 7. Busca pública da credencial do fornecedor (para que cada membro gere seu QR code)
 export async function buscarFornecedorPublico(id: string): Promise<FornecedorCasamento | null> {
   if (!id || !id.trim()) return null;
   const baseUrl = getApiBaseUrl();
@@ -657,6 +656,21 @@ export async function buscarFornecedorPublico(id: string): Promise<FornecedorCas
   } catch (err) {
     console.error("Erro ao buscar credencial do fornecedor:", err);
   }
+
+  // Fallback: busca na listagem geral de fornecedores caso o usuário esteja no painel ou sessão ativa
+  try {
+    const data = await buscarFornecedoresBackend();
+    if (data && Array.isArray(data.fornecedores)) {
+      const termo = id.trim().toLowerCase();
+      const match = data.fornecedores.find(
+        (f) =>
+          (f.id && f.id.toLowerCase() === termo) ||
+          (f.empresa && f.empresa.toLowerCase() === termo)
+      );
+      if (match) return match;
+    }
+  } catch {}
+
   return null;
 }
 

@@ -5,6 +5,7 @@ import {
   excluirPapelAdmin,
 } from '../../../services/classificacoes';
 import { SectionTitle } from '../components/SectionTitle';
+import { DeletePapelModal } from '../components/DeletePapelModal';
 
 interface ConfiguracoesTabProps {
   papeis: PapelParticipante[];
@@ -21,6 +22,11 @@ export function ConfiguracoesTab({
   const [novoPapelCortejo, setNovoPapelCortejo] = useState(false);
   const [papelEmEdicao, setPapelEmEdicao] = useState<PapelParticipante | null>(null);
   const [salvandoPapel, setSalvandoPapel] = useState(false);
+
+  // Exclusão Modal State
+  const [papelParaExcluir, setPapelParaExcluir] = useState<PapelParticipante | null>(null);
+  const [excluindoPapel, setExcluindoPapel] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   // Mensagens
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; msg: string } | null>(null);
@@ -66,17 +72,21 @@ export function ConfiguracoesTab({
     setNovoPapelCortejo(false);
   };
 
-  const handleExcluirPapel = async (p: PapelParticipante) => {
-    if (!p.id) return;
-    if (!window.confirm(`Tem certeza que deseja excluir o papel "${p.nome}"?`)) return;
+  const handleConfirmarExclusaoPapel = async () => {
+    if (!papelParaExcluir?.id) return;
+    setExcluindoPapel(true);
+    setErroExclusao('');
 
-    const res = await excluirPapelAdmin(p.id);
+    const res = await excluirPapelAdmin(papelParaExcluir.id);
+    setExcluindoPapel(false);
+
     if (res.success) {
-      showFeedback('sucesso', `Papel "${p.nome}" excluído com sucesso!`);
-      if (papelEmEdicao?.id === p.id) handleCancelarEdicaoPapel();
+      showFeedback('sucesso', `Papel "${papelParaExcluir.nome}" excluído com sucesso!`);
+      if (papelEmEdicao?.id === papelParaExcluir.id) handleCancelarEdicaoPapel();
+      setPapelParaExcluir(null);
       await onRefresh();
     } else {
-      showFeedback('erro', res.message || 'Erro ao excluir papel.');
+      setErroExclusao(res.message || 'Erro ao excluir papel.');
     }
   };
 
@@ -191,7 +201,7 @@ export function ConfiguracoesTab({
                 {p.id && (
                   <button
                     type="button"
-                    onClick={() => handleExcluirPapel(p)}
+                    onClick={() => setPapelParaExcluir(p)}
                     className="text-xs font-sans text-rose-700 hover:text-rose-900 underline cursor-pointer p-1"
                   >
                     Excluir
@@ -208,6 +218,18 @@ export function ConfiguracoesTab({
           )}
         </div>
       </div>
+
+      {/* Modal de Exclusão de Papel no mesmo layout oficial do Excluir Convite */}
+      <DeletePapelModal
+        papel={papelParaExcluir}
+        loading={excluindoPapel}
+        error={erroExclusao}
+        onCancel={() => {
+          setPapelParaExcluir(null);
+          setErroExclusao('');
+        }}
+        onConfirm={handleConfirmarExclusaoPapel}
+      />
     </div>
   );
 }

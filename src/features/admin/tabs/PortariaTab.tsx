@@ -153,12 +153,38 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     if (termo.startsWith("{")) {
       try {
         const parsed = JSON.parse(termo);
+        if (parsed.tipo === "CREDENCIAL_STAFF_CASAMENTO") {
+          const { checkinMembroFornecedorBackend } = await import("../../../services/convites");
+          const res = await checkinMembroFornecedorBackend(parsed.fornecedorId, parsed.membroId, true);
+          setLoadingBusca(false);
+          pararCamera();
+          if (res.success) {
+            playCheckinSuccessSound();
+            triggerHaptic();
+            setConviteAtual(null);
+            setResultadosBusca([]);
+            setMensagemSucesso(
+              `✅ Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}`
+            );
+            onRefreshData?.();
+          } else {
+            setErroCheckin(res.message || "Erro ao registrar check-in do fornecedor.");
+          }
+          return;
+        }
         codigoLimpo = parsed.codigo || parsed.id || termo;
         isQrCodeJson = true;
       } catch {}
     } else if (termo.includes("http://") || termo.includes("https://")) {
       try {
         const url = new URL(termo);
+        const fornecedorParam = url.searchParams.get("fornecedor");
+        if (fornecedorParam) {
+          setLoadingBusca(false);
+          pararCamera();
+          setMensagemSucesso(`Link de credencial de fornecedor detectado: ${fornecedorParam}.`);
+          return;
+        }
         codigoLimpo = url.searchParams.get("convite") || url.searchParams.get("codigo") || termo;
         isQrCodeJson = true;
       } catch {}
