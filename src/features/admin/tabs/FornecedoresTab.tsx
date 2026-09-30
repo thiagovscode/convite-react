@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import type { FornecedorCasamento, MembroEquipeFornecedor } from "../../../services/convites";
 import {
   cadastrarFornecedorBackend,
+  atualizarFornecedorBackend,
   excluirFornecedorBackend,
   adicionarMembroFornecedorBackend,
   removerMembroFornecedorBackend,
@@ -44,6 +45,7 @@ export function FornecedoresTab({
 
   // Estados de Criação / Edição
   const [modalNovo, setModalNovo] = useState(false);
+  const [fornecedorEmEdicao, setFornecedorEmEdicao] = useState<FornecedorCasamento | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState("");
   const [sucessoMsg, setSucessoMsg] = useState("");
@@ -51,14 +53,48 @@ export function FornecedoresTab({
   const [novoFornecedor, setNovoFornecedor] = useState({
     empresa: "",
     nome: "",
-    categoria: "Foto & Vídeo",
+    categoria: "",
     servico: "",
     telefone: "",
-    horarioPrevisto: "14:00",
+    horarioPrevisto: "",
     instrucaoChegada: "",
     chegadaAntecipada: false,
     membrosEquipe: "", // Texto com nomes separados por vírgula ou linha
   });
+
+  const handleAbrirNovo = () => {
+    setFornecedorEmEdicao(null);
+    setNovoFornecedor({
+      empresa: "",
+      nome: "",
+      categoria: "",
+      servico: "",
+      telefone: "",
+      horarioPrevisto: "",
+      instrucaoChegada: "",
+      chegadaAntecipada: false,
+      membrosEquipe: "",
+    });
+    setErroForm("");
+    setModalNovo(true);
+  };
+
+  const handleAbrirEdicao = (f: FornecedorCasamento) => {
+    setFornecedorEmEdicao(f);
+    setNovoFornecedor({
+      empresa: f.empresa || "",
+      nome: f.nome || "",
+      categoria: f.categoria || "",
+      servico: f.servico || "",
+      telefone: f.telefone || "",
+      horarioPrevisto: f.horarioPrevisto || "",
+      instrucaoChegada: f.instrucaoChegada || "",
+      chegadaAntecipada: !!f.chegadaAntecipada,
+      membrosEquipe: "",
+    });
+    setErroForm("");
+    setModalNovo(true);
+  };
 
   // Estado do Modal de Credencial & QR Code
   const [fornecedorCredencial, setFornecedorCredencial] = useState<FornecedorCasamento | null>(null);
@@ -126,13 +162,58 @@ export function FornecedoresTab({
       linhas.forEach((m) => membrosList.push({ nome: m, funcao: "Equipe" }));
     }
 
+    if (fornecedorEmEdicao && fornecedorEmEdicao.id) {
+      const payload: Partial<FornecedorCasamento> = {
+        empresa: novoFornecedor.empresa.trim(),
+        nome: novoFornecedor.nome.trim() || novoFornecedor.empresa.trim(),
+        categoria: novoFornecedor.categoria.trim(),
+        servico: novoFornecedor.servico.trim(),
+        telefone: novoFornecedor.telefone.trim(),
+        horarioPrevisto: novoFornecedor.horarioPrevisto.trim(),
+        instrucaoChegada: novoFornecedor.instrucaoChegada.trim(),
+        chegadaAntecipada: novoFornecedor.chegadaAntecipada,
+      };
+
+      const res = await atualizarFornecedorBackend(fornecedorEmEdicao.id, payload);
+      setSalvando(false);
+
+      if (res.success) {
+        // Se novos membros foram digitados no textarea na edição, cadastra cada um
+        if (membrosList.length > 0) {
+          for (const m of membrosList) {
+            await adicionarMembroFornecedorBackend(fornecedorEmEdicao.id, m);
+          }
+        }
+
+        setSucessoMsg(`Fornecedor ${novoFornecedor.empresa} atualizado com sucesso.`);
+        setTimeout(() => setSucessoMsg(""), 4000);
+        setModalNovo(false);
+        setFornecedorEmEdicao(null);
+        setNovoFornecedor({
+          empresa: "",
+          nome: "",
+          categoria: "",
+          servico: "",
+          telefone: "",
+          horarioPrevisto: "",
+          instrucaoChegada: "",
+          chegadaAntecipada: false,
+          membrosEquipe: "",
+        });
+        onRefreshFornecedores();
+      } else {
+        setErroForm(res.message || "Erro ao atualizar fornecedor.");
+      }
+      return;
+    }
+
     const payload: Partial<FornecedorCasamento> = {
       empresa: novoFornecedor.empresa.trim(),
       nome: novoFornecedor.nome.trim() || novoFornecedor.empresa.trim(),
-      categoria: novoFornecedor.categoria,
-      servico: novoFornecedor.servico.trim() || novoFornecedor.categoria,
+      categoria: novoFornecedor.categoria.trim(),
+      servico: novoFornecedor.servico.trim(),
       telefone: novoFornecedor.telefone.trim(),
-      horarioPrevisto: novoFornecedor.horarioPrevisto.trim() || "A definir",
+      horarioPrevisto: novoFornecedor.horarioPrevisto.trim(),
       instrucaoChegada: novoFornecedor.instrucaoChegada.trim(),
       chegadaAntecipada: novoFornecedor.chegadaAntecipada,
       equipe: membrosList.map((m, idx) => ({
@@ -147,16 +228,17 @@ export function FornecedoresTab({
     setSalvando(false);
 
     if (res.success) {
-      setSucessoMsg(`Fornecedor ${novoFornecedor.empresa} cadastrado com sucesso!`);
+      setSucessoMsg(`Fornecedor ${novoFornecedor.empresa} cadastrado com sucesso.`);
       setTimeout(() => setSucessoMsg(""), 4000);
       setModalNovo(false);
+      setFornecedorEmEdicao(null);
       setNovoFornecedor({
         empresa: "",
         nome: "",
-        categoria: "Foto & Vídeo",
+        categoria: "",
         servico: "",
         telefone: "",
-        horarioPrevisto: "14:00",
+        horarioPrevisto: "",
         instrucaoChegada: "",
         chegadaAntecipada: false,
         membrosEquipe: "",
@@ -230,7 +312,7 @@ export function FornecedoresTab({
 
   const handleCopiarLink = (f: FornecedorCasamento) => {
     const link = getLinkFornecedor(f);
-    const msg = `*CREDENCIAL DA EQUIPE · CASAMENTO TAINARA & THIAGO*\nOlá, equipe ${f.empresa}!\nAcessem o link abaixo para visualizar as instruções de chegada e baixar o QR Code individual de cada profissional para a portaria:\n${link}`;
+    const msg = `CREDENCIAL DA EQUIPE · CASAMENTO TAINARA & THIAGO\nOlá, equipe ${f.empresa}!\nAcessem o link abaixo para visualizar as instruções de chegada e obter a credencial individual da portaria:\n${link}`;
     navigator.clipboard.writeText(msg);
     setCopiadoId(f.id || f.empresa);
     setTimeout(() => setCopiadoId(null), 3000);
@@ -239,7 +321,7 @@ export function FornecedoresTab({
   const enviarWhatsAppCredencial = (f: FornecedorCasamento) => {
     const link = getLinkFornecedor(f);
     const tel = (f.telefone || "").replace(/\D/g, "");
-    const msg = `*CREDENCIAL DA EQUIPE · CASAMENTO TAINARA & THIAGO*\nOlá, ${f.nome}!\n\nConfirmamos a participação da equipe *${f.empresa}* (${f.categoria}) no nosso casamento.\n\n⏰ Horário Previsto: ${f.horarioPrevisto || "A combinar"}\n📍 Local: Espaço Balboa · Mairiporã - SP\n\n👉 Compartilhe o link abaixo com sua equipe. Cada membro poderá selecionar o próprio nome e baixar o QR Code individual para apresentar na portaria:\n${link}\n\nObrigado por fazer parte desse dia tão especial!`;
+    const msg = `CREDENCIAL DA EQUIPE · CASAMENTO TAINARA & THIAGO\nOlá, ${f.nome}!\n\nConfirmamos a participação da equipe ${f.empresa}${f.categoria ? ` (${f.categoria})` : ""} no nosso casamento.\n\nHorário Previsto: ${f.horarioPrevisto || "A combinar"}\nLocal: Espaço Balboa · Mairiporã - SP\n\nCompartilhe o link abaixo com sua equipe para instruções e credenciais individuais de acesso:\n${link}\n\nObrigado por fazer parte desse dia tão especial!`;
     window.open(`https://wa.me/${tel ? `55${tel}` : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
@@ -271,7 +353,7 @@ export function FornecedoresTab({
         {isNoivos && (
           <button
             type="button"
-            onClick={() => setModalNovo(true)}
+            onClick={handleAbrirNovo}
             className="inline-flex items-center justify-center gap-2 bg-[#261811] text-[#FAF7F2] text-xs font-sans tracking-wider uppercase px-4 py-2.5 rounded-[6px] font-semibold cursor-pointer hover:bg-[#3D271D] transition-colors shadow-xs"
           >
             <span>+</span> Novo Fornecedor
@@ -281,11 +363,11 @@ export function FornecedoresTab({
 
       {sucessoMsg && (
         <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-[8px] text-xs font-sans flex items-center justify-between">
-          <span>✓ {sucessoMsg}</span>
+          <span>{sucessoMsg}</span>
           <button
             type="button"
             onClick={() => setSucessoMsg("")}
-            className="text-emerald-700 hover:text-emerald-950 font-bold ml-2"
+            className="text-emerald-700 hover:text-emerald-950 font-bold ml-2 cursor-pointer"
           >
             ✕
           </button>
@@ -319,19 +401,22 @@ export function FornecedoresTab({
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-serif text-lg font-medium text-[#261811]">{f.empresa}</h2>
-                    <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-[#FAF7F2] text-[#8C7A6B] border border-[#E8DFD5]">
-                      {f.categoria || "Geral"}
-                    </span>
+                    {f.categoria && (
+                      <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-[#FAF7F2] text-[#8C7A6B] border border-[#E8DFD5]">
+                        {f.categoria}
+                      </span>
+                    )}
                     {f.chegadaAntecipada && (
                       <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-900 border border-amber-200">
-                        ⚡ Chegada Antecipada
+                        Entrada Antecipada
                       </span>
                     )}
                   </div>
                   <p className="text-xs font-sans text-[#6B5A4D]">
-                    Resp: <strong className="text-[#261811]">{f.nome}</strong> · Horário:{" "}
-                    <strong className="text-[#261811]">{f.horarioPrevisto || "A definir"}</strong>
-                    {f.telefone && ` · 📞 ${f.telefone}`}
+                    {f.nome && <>Resp: <strong className="text-[#261811]">{f.nome}</strong></>}
+                    {f.horarioPrevisto && <> · Horário: <strong className="text-[#261811]">{f.horarioPrevisto}</strong></>}
+                    {f.servico && <> · Serviço: <strong className="text-[#261811]">{f.servico}</strong></>}
+                    {f.telefone && ` · Tel: ${f.telefone}`}
                   </p>
                   {f.instrucaoChegada && (
                     <p className="text-xs italic text-[#8C7A6B] font-serif bg-[#FAF7F2] px-2.5 py-1 rounded border-l-2 border-[#8C7A6B]">
@@ -350,9 +435,9 @@ export function FornecedoresTab({
                         ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-bold"
                         : "bg-[#FAF7F2] border-[#D8CDC0] text-[#261811] hover:border-[#261811]"
                     }`}
-                    title="Copiar link para a equipe acessar e baixar seus próprios QR Codes"
+                    title="Copiar link para a equipe acessar suas credenciais"
                   >
-                    {copiadoId === (f.id || f.empresa) ? "✓ Link Copiado!" : "🔗 Copiar Link da Equipe"}
+                    {copiadoId === (f.id || f.empresa) ? "Link Copiado" : "Copiar Link"}
                   </button>
 
                   {f.telefone && (
@@ -360,9 +445,9 @@ export function FornecedoresTab({
                       type="button"
                       onClick={() => enviarWhatsAppCredencial(f)}
                       className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 font-semibold cursor-pointer"
-                      title="Enviar credencial e detalhes no WhatsApp do fornecedor"
+                      title="Enviar credencial no WhatsApp do fornecedor"
                     >
-                      💬 WhatsApp
+                      WhatsApp
                     </button>
                   )}
 
@@ -372,18 +457,28 @@ export function FornecedoresTab({
                     className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer"
                     title="Exibir QR Code e credencial de acesso"
                   >
-                    🏷️ QR Code
+                    Credencial QR
                   </button>
 
                   {isNoivos && f.id && (
-                    <button
-                      type="button"
-                      onClick={() => setFornecedorParaExcluir(f)}
-                      className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-rose-200 text-rose-700 hover:bg-rose-50 cursor-pointer"
-                      title="Excluir fornecedor"
-                    >
-                      🗑️
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleAbrirEdicao(f)}
+                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer"
+                        title="Editar fornecedor"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFornecedorParaExcluir(f)}
+                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-rose-200 text-rose-700 hover:bg-rose-50 cursor-pointer"
+                        title="Excluir fornecedor"
+                      >
+                        Excluir
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -457,12 +552,12 @@ export function FornecedoresTab({
                             : "bg-[#FAF7F2] border-[#D8CDC0] text-[#543D30]"
                         }`}
                       >
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${m.presente ? "bg-emerald-600" : "bg-[#8C7A6B]/50"}`} />
                         {isNoivos ? (
                           <span
                             className="select-none"
                             title={m.presente ? "Presente (Check-in via Recepção)" : "Aguardando entrada"}
                           >
-                            {m.presente ? "✓ " : "○ "}
                             {m.nome} {m.funcao ? `(${m.funcao})` : ""}
                           </span>
                         ) : (
@@ -474,7 +569,6 @@ export function FornecedoresTab({
                             className="cursor-pointer hover:opacity-80"
                             title="Clique para alternar presença na portaria"
                           >
-                            {m.presente ? "✓ " : "○ "}
                             {m.nome} {m.funcao ? `(${m.funcao})` : ""}
                           </button>
                         )}
@@ -516,13 +610,18 @@ export function FornecedoresTab({
             <div className="flex justify-between items-center border-b border-[#E8DFD5] pb-3">
               <div>
                 <p className="text-[0.62rem] font-sans tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold">
-                  Novo Contrato
+                  {fornecedorEmEdicao ? "Atualização de Contrato" : "Novo Contrato"}
                 </p>
-                <h3 className="font-serif text-xl text-[#261811]">Cadastrar Fornecedor</h3>
+                <h3 className="font-serif text-xl text-[#261811]">
+                  {fornecedorEmEdicao ? "Editar Fornecedor" : "Cadastrar Fornecedor"}
+                </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setModalNovo(false)}
+                onClick={() => {
+                  setModalNovo(false);
+                  setFornecedorEmEdicao(null);
+                }}
                 className="text-[#8C7A6B] hover:text-[#261811] font-bold text-lg cursor-pointer"
               >
                 ✕
@@ -555,17 +654,32 @@ export function FornecedoresTab({
                   <label className="text-[0.66rem] font-sans uppercase tracking-wider text-[#6B5A4D] font-semibold">
                     Categoria
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-categorias-fornecedor"
+                    placeholder="Ex: Foto & Vídeo, Buffet, Música, etc."
                     value={novoFornecedor.categoria}
                     onChange={(e) => setNovoFornecedor({ ...novoFornecedor, categoria: e.target.value })}
                     className="w-full bg-white border border-[#D8CDC0] p-2 text-xs rounded focus:outline-none focus:border-[#261811]"
-                  >
+                  />
+                  <datalist id="lista-categorias-fornecedor">
                     {CATEGORIAS_PADRAO.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
+                      <option key={cat} value={cat} />
                     ))}
-                  </select>
+                  </datalist>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[0.66rem] font-sans uppercase tracking-wider text-[#6B5A4D] font-semibold">
+                    Serviço Realizado
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Fotografia, Buffet, DJ, etc."
+                    value={novoFornecedor.servico}
+                    onChange={(e) => setNovoFornecedor({ ...novoFornecedor, servico: e.target.value })}
+                    className="w-full bg-white border border-[#D8CDC0] p-2 text-xs rounded focus:outline-none focus:border-[#261811]"
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -600,7 +714,7 @@ export function FornecedoresTab({
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: 13h30"
+                    placeholder="Ex: 14:00"
                     value={novoFornecedor.horarioPrevisto}
                     onChange={(e) => setNovoFornecedor({ ...novoFornecedor, horarioPrevisto: e.target.value })}
                     className="w-full bg-white border border-[#D8CDC0] p-2 text-xs rounded focus:outline-none focus:border-[#261811]"
@@ -650,7 +764,10 @@ export function FornecedoresTab({
               <div className="flex justify-end gap-2 pt-3 border-t border-[#E8DFD5]">
                 <button
                   type="button"
-                  onClick={() => setModalNovo(false)}
+                  onClick={() => {
+                    setModalNovo(false);
+                    setFornecedorEmEdicao(null);
+                  }}
                   className="px-4 py-2 text-xs text-[#6B5A4D] cursor-pointer"
                 >
                   Cancelar
@@ -660,7 +777,7 @@ export function FornecedoresTab({
                   disabled={salvando}
                   className="bg-[#261811] text-[#FAF7F2] text-xs font-sans uppercase tracking-wider font-semibold px-5 py-2 rounded-[6px] cursor-pointer hover:bg-[#3D271D]"
                 >
-                  {salvando ? "Salvando..." : "Salvar Fornecedor"}
+                  {salvando ? "Salvando..." : fornecedorEmEdicao ? "Salvar Alterações" : "Salvar Fornecedor"}
                 </button>
               </div>
             </form>
@@ -721,7 +838,7 @@ export function FornecedoresTab({
                 onClick={() => enviarWhatsAppCredencial(fornecedorCredencial)}
                 className="w-full bg-emerald-700 text-white text-xs font-sans uppercase tracking-wider font-semibold py-2.5 rounded-[6px] hover:bg-emerald-800 transition-colors cursor-pointer"
               >
-                💬 Enviar no WhatsApp do Fornecedor
+                Enviar no WhatsApp do Fornecedor
               </button>
 
               <button

@@ -5,7 +5,7 @@ import { AdminLogin } from "./components/AdminLogin";
 import { DeleteConviteModal } from "./components/DeleteConviteModal";
 import { DashboardTab } from "./tabs/DashboardTab";
 import { ConvitesTab } from "./tabs/ConvitesTab";
-import { RsvpTab } from "./tabs/RsvpTab";
+import { RsvpTab, type RespostaConvidadoItem } from "./tabs/RsvpTab";
 import { PortariaTab } from "./tabs/PortariaTab";
 import { CortejoTab } from "./tabs/CortejoTab";
 import { FornecedoresTab } from "./tabs/FornecedoresTab";
@@ -431,17 +431,90 @@ export function AdminPanel() {
     };
   }, [metricasBackend, data, listaConvites]);
 
-  const filteredRsvp = useMemo(() => {
-    const list: RsvpAdminItem[] = data?.data || data?.rsvps || [];
-    if (!searchRsvp.trim()) return list;
-    const q = searchRsvp.toLowerCase();
-    return list.filter(
-      (r: RsvpAdminItem) =>
-        r.nome.toLowerCase().includes(q) ||
-        r.telefone?.toLowerCase().includes(q) ||
-        r.acompanhantes?.some((a: AcompanhanteResponse) => a.nome.toLowerCase().includes(q))
-    );
-  }, [data, searchRsvp]);
+  const respostasConvidados = useMemo<RespostaConvidadoItem[]>(() => {
+    const itens: RespostaConvidadoItem[] = [];
+    const codigosProcessados = new Set<string>();
+
+    if (Array.isArray(listaConvites)) {
+      listaConvites.forEach((c) => {
+        const codigo = c.codigo || "—";
+        codigosProcessados.add(codigo.toLowerCase());
+        const telefone = c.telefone || "";
+        const familia = c.familia || "";
+        const observacao = c.observacao || "";
+        const dataConfirmacao = c.dataConfirmacao;
+        const conviteRespondido = c.status === "CONFIRMADO" || c.status === "RECUSADO" || !!dataConfirmacao;
+
+        if (Array.isArray(c.membros) && c.membros.length > 0) {
+          c.membros.forEach((m: any, idx: number) => {
+            let status: "Confirmado" | "Recusado" | "Pendente" = "Pendente";
+
+            if (c.status === "RECUSADO") {
+              status = "Recusado";
+            } else if (c.status === "CONFIRMADO") {
+              if (m.confirmadoRsvp === true) {
+                status = "Confirmado";
+              } else if (m.confirmadoRsvp === false) {
+                status = "Recusado";
+              } else {
+                status = "Recusado";
+              }
+            } else if (m.confirmadoRsvp === true) {
+              status = "Confirmado";
+            } else if (m.confirmadoRsvp === false) {
+              status = "Recusado";
+            }
+
+            itens.push({
+              id: `${c.id || codigo}-${m.id || idx}`,
+              codigoConvite: codigo,
+              nome: m.nome,
+              telefone,
+              status,
+              familia,
+              observacao,
+              criancaAte6Anos: m.criancaAte6Anos,
+              dataConfirmacao,
+              respondido: conviteRespondido || status !== "Pendente",
+            });
+          });
+        }
+      });
+    }
+
+    const rsvpList: RsvpAdminItem[] = data?.data || data?.rsvps || [];
+    rsvpList.forEach((r) => {
+      const cod = (r as any).codigoConvite;
+      if (!cod || !codigosProcessados.has(cod.toLowerCase())) {
+        const status = r.presenca ? "Confirmado" : "Recusado";
+        itens.push({
+          id: `rsvp-${r.id}`,
+          codigoConvite: cod || "—",
+          nome: r.nome,
+          telefone: r.telefone,
+          status,
+          observacao: r.observacao,
+          respondido: true,
+        });
+
+        if (r.acompanhantes && r.acompanhantes.length > 0) {
+          r.acompanhantes.forEach((a, aIdx) => {
+            itens.push({
+              id: `rsvp-${r.id}-acomp-${aIdx}`,
+              codigoConvite: cod || "—",
+              nome: a.nome,
+              telefone: r.telefone,
+              status,
+              criancaAte6Anos: a.criancaAte6Anos,
+              respondido: true,
+            });
+          });
+        }
+      }
+    });
+
+    return itens;
+  }, [listaConvites, data]);
 
   const filteredConvites = useMemo(() => {
     if (!buscaConvites.trim()) return listaConvites;
@@ -528,7 +601,7 @@ export function AdminPanel() {
 
             {activeTab === "rsvp" && (
               <RsvpTab
-                filteredRsvp={filteredRsvp}
+                respostas={respostasConvidados}
                 search={searchRsvp}
                 onSearchChange={setSearchRsvp}
                 loading={dataLoading}

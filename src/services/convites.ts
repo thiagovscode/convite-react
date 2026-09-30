@@ -180,7 +180,7 @@ export const RECEPCAO_JWT_STORAGE_KEY = "CASAMENTO_RECEPCAO_JWT_TOKEN";
 
 export function getRecepcaoAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined"
-    ? (sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem("CONVITE_ADMIN_TOKEN"))
+    ? (localStorage.getItem("CONVITE_ADMIN_TOKEN") || sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
     : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
@@ -438,17 +438,57 @@ export async function buscarFornecedoresBackend(): Promise<{
   fornecedores: FornecedorCasamento[];
 }> {
   const baseUrl = getApiBaseUrl();
-  const url = baseUrl ? `${baseUrl}/api/recepcao/fornecedores` : `/api/recepcao/fornecedores`;
+  const adminToken = typeof window !== "undefined" ? localStorage.getItem("CONVITE_ADMIN_TOKEN") : null;
+  const headers = getRecepcaoAuthHeaders();
+
+  // Se o usuário estiver autenticado como admin, busca preferencialmente via /api/admin/fornecedores
+  const primaryEndpoint = adminToken ? "/api/admin/fornecedores" : "/api/recepcao/fornecedores";
+  const url = baseUrl ? `${baseUrl}${primaryEndpoint}` : primaryEndpoint;
+
+  const processResponse = (data: any) => {
+    if (Array.isArray(data)) {
+      let totalMembrosEquipe = 0;
+      let totalMembrosPresentes = 0;
+      data.forEach((f: any) => {
+        if (Array.isArray(f.equipe)) {
+          totalMembrosEquipe += f.equipe.length;
+          totalMembrosPresentes += f.equipe.filter((m: any) => m.presente).length;
+        }
+      });
+      return {
+        totalEmpresas: data.length,
+        totalMembrosEquipe,
+        totalMembrosPresentes,
+        fornecedores: data,
+      };
+    }
+    if (data && Array.isArray(data.fornecedores)) {
+      return data;
+    }
+    return null;
+  };
 
   try {
-    const res = await fetch(url, {
-      headers: getRecepcaoAuthHeaders()
-    });
+    const res = await fetch(url, { headers });
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      return await res.json();
+      const parsed = processResponse(await res.json());
+      if (parsed) return parsed;
     }
   } catch (err) {
     console.error("Erro ao buscar fornecedores no servidor:", err);
+  }
+
+  // Fallback caso o endpoint principal falhe
+  try {
+    const fallbackEndpoint = adminToken ? "/api/recepcao/fornecedores" : "/api/admin/fornecedores";
+    const fallbackUrl = baseUrl ? `${baseUrl}${fallbackEndpoint}` : fallbackEndpoint;
+    const res = await fetch(fallbackUrl, { headers });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      const parsed = processResponse(await res.json());
+      if (parsed) return parsed;
+    }
+  } catch {
+    // ignora fallback
   }
 
   return { totalEmpresas: 0, totalMembrosEquipe: 0, totalMembrosPresentes: 0, fornecedores: [] };
@@ -524,6 +564,31 @@ export async function cadastrarFornecedorBackend(
     return { success: false, message: err.message || "Erro ao cadastrar fornecedor" };
   } catch (err: any) {
     return { success: false, message: err.message || "Erro de conexão ao cadastrar fornecedor" };
+  }
+}
+
+export async function atualizarFornecedorBackend(
+  fornecedorId: string,
+  dados: Partial<FornecedorCasamento>
+): Promise<{ success: boolean; message: string; fornecedor?: FornecedorCasamento }> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl
+    ? `${baseUrl}/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}`
+    : `/api/admin/fornecedores/${encodeURIComponent(fornecedorId)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: getRecepcaoAuthHeaders(),
+      body: JSON.stringify(dados)
+    });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, message: err.message || "Erro ao atualizar fornecedor" };
+  } catch (err: any) {
+    return { success: false, message: err.message || "Erro de conexão ao atualizar fornecedor" };
   }
 }
 

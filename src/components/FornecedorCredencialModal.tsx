@@ -218,11 +218,11 @@ export default function FornecedorCredencialModal() {
 
             {/* Informações do Evento e Instruções */}
             <div className="bg-white border border-[#E8DFD5] rounded-[10px] p-3.5 space-y-1.5 text-xs font-sans text-[#543D30]">
-              <p>📍 <strong>Local:</strong> Espaço Balboa · Mairiporã - SP</p>
-              <p>📅 <strong>Data:</strong> 24 de Janeiro de 2027</p>
+              <p><strong>Local:</strong> Espaço Balboa · Mairiporã - SP</p>
+              <p><strong>Data:</strong> 24 de Janeiro de 2027</p>
               {fornecedor.instrucaoChegada && (
                 <p className="italic text-[0.72rem] text-[#8C7A6B] pt-1 border-t border-[#F0EAE0]">
-                  📌 <strong>Acesso:</strong> {fornecedor.instrucaoChegada}
+                  <strong>Instrução de Acesso:</strong> {fornecedor.instrucaoChegada}
                 </p>
               )}
             </div>
@@ -290,7 +290,7 @@ export default function FornecedorCredencialModal() {
                     onClick={handleDownloadQr}
                     className="w-full bg-[#261811] text-[#FAF7F2] text-xs font-sans uppercase tracking-wider font-semibold py-2.5 rounded-[6px] hover:bg-[#3D271D] transition-colors cursor-pointer"
                   >
-                    {salvoFeedback ? "✓ Imagem Baixada!" : "📥 Salvar / Baixar Meu QR Code"}
+                    {salvoFeedback ? "Imagem Baixada com Sucesso" : "Baixar Meu QR Code"}
                   </button>
                 </div>
               </div>

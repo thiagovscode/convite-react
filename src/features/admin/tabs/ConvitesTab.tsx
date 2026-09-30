@@ -135,51 +135,7 @@ export function ConvitesTab({
 
   const listaPapeisDisponiveis = papeis.length > 0 ? papeis.map((p) => p.nome) : PAPEL_MEMBRO_OPTIONS;
 
-  const exportarCsvParticipantes = () => {
-    const colunas = [
-      "Código",
-      "Nome",
-      "Papel",
-      "Participa do Cortejo",
-      "Faixa Etária",
-      "Telefone",
-      "Status RSVP",
-    ];
 
-    const alvos = filteredConvites.length > 0 ? filteredConvites : listaConvites;
-    const linhas = alvos.flatMap((convite) => {
-      const membros = convite.membros && convite.membros.length > 0
-        ? convite.membros
-        : [{ nome: convite.familia, titular: true, criancaAte6Anos: false, papel: convite.papel || "Convidado", participaCortejo: false }];
-
-      return membros.map((m) => {
-        const papel = m.papel || "Convidado";
-        const ehCortejo = isPapelCortejo(papel, papeis);
-        const participaCortejo = ehCortejo || Boolean(m.participaCortejo);
-
-        return [
-          `"${convite.codigo || ""}"`,
-          `"${(m.nome || "").replace(/"/g, '""')}"`,
-          `"${papel.replace(/"/g, '""')}"`,
-          `"${participaCortejo ? "Sim" : "Não"}"`,
-          `"${m.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto"}"`,
-          `"${(convite.telefone || "").replace(/"/g, '""')}"`,
-          `"${convite.status || "PENDENTE"}"`,
-        ].join(";");
-      });
-    });
-
-    const csvContent = "\uFEFF" + [colunas.join(";"), ...linhas].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `participantes_convites_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   const copiarTexto = (texto: string, chave: string) => {
     navigator.clipboard.writeText(texto);
@@ -210,16 +166,6 @@ export function ConvitesTab({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {subTab === "lista" && (
-            <button
-              type="button"
-              onClick={exportarCsvParticipantes}
-              className="text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold bg-white border border-[#D8CDC0] text-[#543D30] hover:text-[#261811] hover:bg-[#FAF7F2] transition-all cursor-pointer inline-flex items-center gap-1.5"
-              title="Exportar planilha CSV dos participantes"
-            >
-              <span>📥 Exportar CSV</span>
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setSubTab("lista")}
