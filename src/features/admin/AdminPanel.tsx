@@ -447,35 +447,43 @@ export function AdminPanel() {
 
         if (Array.isArray(c.membros) && c.membros.length > 0) {
           c.membros.forEach((m: any, idx: number) => {
-            let status: "Confirmado" | "Recusado" | "Pendente" = "Pendente";
+            let status: "CONFIRMADO" | "RECUSADO" | "PENDENTE" = "PENDENTE";
 
             if (c.status === "RECUSADO") {
-              status = "Recusado";
+              status = "RECUSADO";
             } else if (c.status === "CONFIRMADO") {
               if (m.confirmadoRsvp === true) {
-                status = "Confirmado";
+                status = "CONFIRMADO";
               } else if (m.confirmadoRsvp === false) {
-                status = "Recusado";
+                status = "RECUSADO";
               } else {
-                status = "Recusado";
+                status = "RECUSADO";
               }
             } else if (m.confirmadoRsvp === true) {
-              status = "Confirmado";
+              status = "CONFIRMADO";
             } else if (m.confirmadoRsvp === false) {
-              status = "Recusado";
+              status = "RECUSADO";
             }
+
+            const papel = m.papel || "Convidado";
+            const cortejoAtivo = m.participaCortejo !== undefined ? Boolean(m.participaCortejo) : isPapelCortejo(papel, papeis);
+            const participaCortejo: "Sim" | "Não" = cortejoAtivo ? "Sim" : "Não";
+            const faixaEtaria = m.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto";
 
             itens.push({
               id: `${c.id || codigo}-${m.id || idx}`,
               codigoConvite: codigo,
               nome: m.nome,
+              papel,
+              participaCortejo,
+              faixaEtaria,
               telefone,
               status,
               familia,
               observacao,
               criancaAte6Anos: m.criancaAte6Anos,
               dataConfirmacao,
-              respondido: conviteRespondido || status !== "Pendente",
+              respondido: conviteRespondido || status !== "PENDENTE",
             });
           });
         }
@@ -486,11 +494,14 @@ export function AdminPanel() {
     rsvpList.forEach((r) => {
       const cod = (r as any).codigoConvite;
       if (!cod || !codigosProcessados.has(cod.toLowerCase())) {
-        const status = r.presenca ? "Confirmado" : "Recusado";
+        const status: "CONFIRMADO" | "RECUSADO" | "PENDENTE" = r.presenca ? "CONFIRMADO" : "RECUSADO";
         itens.push({
           id: `rsvp-${r.id}`,
           codigoConvite: cod || "—",
           nome: r.nome,
+          papel: "Convidado",
+          participaCortejo: "Não",
+          faixaEtaria: "Adulto",
           telefone: r.telefone,
           status,
           observacao: r.observacao,
@@ -503,6 +514,9 @@ export function AdminPanel() {
               id: `rsvp-${r.id}-acomp-${aIdx}`,
               codigoConvite: cod || "—",
               nome: a.nome,
+              papel: "Convidado",
+              participaCortejo: "Não",
+              faixaEtaria: a.criancaAte6Anos ? "Criança (0 a 6 anos)" : "Adulto",
               telefone: r.telefone,
               status,
               criancaAte6Anos: a.criancaAte6Anos,
@@ -514,7 +528,7 @@ export function AdminPanel() {
     });
 
     return itens;
-  }, [listaConvites, data]);
+  }, [listaConvites, data, papeis]);
 
   const filteredConvites = useMemo(() => {
     if (!buscaConvites.trim()) return listaConvites;
