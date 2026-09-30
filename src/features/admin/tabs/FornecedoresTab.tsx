@@ -552,7 +552,7 @@ export function FornecedoresTab({
                         onChange={(e) => setNovoMembroPermaneceAteFim(e.target.checked)}
                         className="accent-[#261811] rounded"
                       />
-                      <span>⭐ Fica até o fim (conta como convidado)</span>
+                      <span>Fica até o fim (conta como convidado)</span>
                     </label>
                     <button
                       type="button"
@@ -609,7 +609,7 @@ export function FornecedoresTab({
                             className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-full text-[0.6rem] font-bold"
                             title="Este profissional fica até o fim e conta como convidado (Buffet/Assento)"
                           >
-                            ⭐ Fica até o fim
+                            Fica até o fim
                           </span>
                         )}
 

@@ -273,7 +273,7 @@ export default function FornecedorCredencialModal() {
                   </span>
                   {membroSelecionado.permaneceAteFim && (
                     <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-full text-[0.62rem] font-sans font-semibold uppercase tracking-wider">
-                      <span>⭐ Permanece até o fim (Convidado)</span>
+                      <span>Permanece até o fim (Convidado)</span>
                     </div>
                   )}
                 </div>
