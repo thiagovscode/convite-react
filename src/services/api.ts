@@ -407,3 +407,101 @@ export async function definirParCortejoAdmin(
   return json;
 }
 
+export interface ConfiguracaoEventoInfo {
+  prazoRsvp?: string;
+  prazoRsvpFormatado: string;
+  prazoRsvpExtenso: string;
+  expirado: boolean;
+}
+
+/**
+ * Consulta pública da configuração de prazo de RSVP do evento
+ * GET /api/configuracao-evento
+ */
+export async function obterConfiguracaoEventoPublica(): Promise<ConfiguracaoEventoInfo> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/configuracao-evento` : '/api/configuracao-evento';
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Falha ao obter configuração');
+    return await res.json();
+  } catch {
+    return {
+      prazoRsvpFormatado: '',
+      prazoRsvpExtenso: '',
+      expirado: false,
+    };
+  }
+}
+
+/**
+ * Consulta admin da configuração de prazo de RSVP do evento
+ * GET /api/admin/configuracao-evento
+ */
+export async function obterConfiguracaoEventoAdmin(token?: string): Promise<ConfiguracaoEventoInfo> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const url = baseUrl ? `${baseUrl}/api/admin/configuracao-evento` : '/api/admin/configuracao-evento';
+
+  const res = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authToken ? `Bearer ${authToken}` : '',
+    },
+  });
+
+  tratarErroAutenticacao(res);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Erro ao obter prazo do evento.');
+  return json;
+}
+
+/**
+ * Atualiza o prazo de RSVP no painel admin
+ * PUT /api/admin/configuracao-evento
+ */
+export async function atualizarPrazoRsvpAdmin(prazoRsvpIso: string, token?: string): Promise<ConfiguracaoEventoInfo> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const url = baseUrl ? `${baseUrl}/api/admin/configuracao-evento` : '/api/admin/configuracao-evento';
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authToken ? `Bearer ${authToken}` : '',
+    },
+    body: JSON.stringify({ prazoRsvp: prazoRsvpIso }),
+  });
+
+  tratarErroAutenticacao(res);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Erro ao atualizar prazo de RSVP.');
+  return json;
+}
+
+/**
+ * Reseta o status de um convite para PENDENTE e remove o RSVP associado.
+ * POST /api/admin/convites/{codigoOuId}/resetar-rsvp
+ */
+export async function resetarRsvpConviteAdmin(codigoOuId: string, token?: string): Promise<{ success: boolean; message: string; convite?: any }> {
+  const baseUrl = getApiBaseUrl();
+  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const url = baseUrl ? `${baseUrl}/api/admin/convites/${encodeURIComponent(codigoOuId)}/resetar-rsvp` : `/api/admin/convites/${encodeURIComponent(codigoOuId)}/resetar-rsvp`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authToken ? `Bearer ${authToken}` : '',
+    },
+  });
+
+  tratarErroAutenticacao(res);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Erro ao resetar RSVP do convite.');
+  return json;
+}
+
+

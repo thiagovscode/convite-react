@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  enviarRsvpCasamento
+  enviarRsvpCasamento,
+  obterConfiguracaoEventoPublica,
+  resetarRsvpConviteAdmin,
+  type ConfiguracaoEventoInfo
 } from "../services/api";
 import type {
   AcompanhanteRequest
@@ -60,27 +63,40 @@ function WeddingCheckbox({
   );
 }
 
-export const RSVP_DEADLINE_STR = "23 de dezembro de 2026";
-export const RSVP_DEADLINE_SHORT = "23/12/2026";
-// 23 de Dezembro de 2026 às 23:59:59 no horário local
-export const RSVP_DEADLINE_DATE = new Date(2026, 11, 23, 23, 59, 59);
-
-export const isPrazoRsvpExpirado = () => {
-  return Date.now() > RSVP_DEADLINE_DATE.getTime();
-};
-
 export default function RsvpModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"guest" | "success">("guest");
 
-  const prazoEncerrado = isPrazoRsvpExpirado();
+  // Configuração dinâmica de prazo obtida do backend (sem datas fixadas no código)
+  const [configEvento, setConfigEvento] = useState<ConfiguracaoEventoInfo>({
+    prazoRsvpFormatado: "",
+    prazoRsvpExtenso: "",
+    expirado: false,
+  });
+
+  useEffect(() => {
+    obterConfiguracaoEventoPublica()
+      .then((cfg) => {
+        if (cfg) setConfigEvento(cfg);
+      })
+      .catch(() => {});
+  }, []);
+
+  const prazoEncerrado = configEvento.expirado;
+  const prazoFormatado = configEvento.prazoRsvpFormatado;
+  const prazoExtenso = configEvento.prazoRsvpExtenso;
+
+  // Estado de reset administrativo (quando os noivos estão logados)
+  const [resetandoRsvp, setResetandoRsvp] = useState(false);
+  const isAdmin = typeof window !== "undefined" && !!localStorage.getItem("CONVITE_ADMIN_TOKEN");
 
   // Estado de Presença Geral (Sim = true / Não = false)
   const [presenca, setPresenca] = useState<boolean>(true);
 
   // Convite Pré-Definido (Nominal com lista oficial de membros)
   const [convitePreDefinido, setConvitePreDefinido] = useState<ConvitePreDefinido | null>(null);
-  const [editandoResposta, setEditandoResposta] = useState(false);
+
+
 
   // Mapeamento de presença de cada membro: { [membroId]: boolean }
   const [membrosPresenca, setMembrosPresenca] = useState<Record<string, boolean>>({});
@@ -112,7 +128,7 @@ export default function RsvpModal() {
 
     setConvitePreDefinido(conviteFormatado);
     setErroConviteNaoEncontrado("");
-    setEditandoResposta(false);
+
 
     if (conviteFormatado.telefone) {
       // Aplica máscara se já vier telefone cadastrado
@@ -171,7 +187,6 @@ export default function RsvpModal() {
 
   const handleAlterarConvite = () => {
     setConvitePreDefinido(null);
-    setEditandoResposta(false);
     setErrorMsg("");
     setErroConviteNaoEncontrado("");
     // Limpa parâmetro de convite da URL mantendo #rsvp
@@ -179,6 +194,42 @@ export default function RsvpModal() {
     url.searchParams.delete("convite");
     url.searchParams.delete("c");
     window.history.replaceState({}, "", url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : ""));
+  };
+
+  const handleResetarRsvpAdmin = async () => {
+    if (!convitePreDefinido?.codigo) return;
+    if (
+      !window.confirm(
+        `Deseja realmente resetar o RSVP do convite da família "${convitePreDefinido.familia}"?\n\nO convite voltará ao status PENDENTE como novo no banco de dados e o convidado poderá responder novamente.`
+      )
+    ) {
+      return;
+    }
+
+    setResetandoRsvp(true);
+    try {
+      const res = await resetarRsvpConviteAdmin(convitePreDefinido.codigo);
+      if (res.success) {
+        setConvitePreDefinido((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "PENDENTE",
+                membros: prev.membros.map((m) => ({
+                  ...m,
+                  confirmadoRsvp: undefined,
+                  presenteCheckin: undefined,
+                })),
+              }
+            : null
+        );
+        alert("Convite resetado com sucesso! Agora o convite está como Novo (Pendente) e pode ser respondido.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Erro ao resetar convite.");
+    } finally {
+      setResetandoRsvp(false);
+    }
   };
 
   // Listener de abertura de modal e parâmetros de URL
@@ -268,7 +319,6 @@ export default function RsvpModal() {
     setTimeout(() => {
       setMode("guest");
       setErrorMsg("");
-      setEditandoResposta(false);
     }, 300);
   };
 
@@ -324,7 +374,7 @@ export default function RsvpModal() {
     setErrorMsg("");
 
     if (prazoEncerrado) {
-      setErrorMsg(`O prazo para confirmação ou alteração de presença encerrou em ${RSVP_DEADLINE_STR}. Para dúvidas ou solicitações especiais, por favor contate os noivos diretamente.`);
+      setErrorMsg(`O prazo para confirmação de presença encerrou${prazoExtenso ? ` em ${prazoExtenso}` : ""}. Para dúvidas ou solicitações especiais, por favor contate os noivos diretamente.`);
       return;
     }
 
@@ -412,7 +462,6 @@ export default function RsvpModal() {
         }))
       } : null);
 
-      setEditandoResposta(false);
       setMode("success");
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -503,16 +552,18 @@ export default function RsvpModal() {
                 <span className="font-sans text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold block">
                   R.S.V.P.
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FAF7F2] border border-[#E0D5C7] rounded-full font-sans text-[0.65rem] tracking-[0.14em] uppercase text-[#6B5A4D] font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8A6A4E]" />
-                  <span>Prazo final: {RSVP_DEADLINE_SHORT}</span>
-                </span>
+                {prazoFormatado && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FAF7F2] border border-[#E0D5C7] rounded-full font-sans text-[0.65rem] tracking-[0.14em] uppercase text-[#6B5A4D] font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8A6A4E]" />
+                    <span>Prazo final: {prazoFormatado}</span>
+                  </span>
+                )}
               </div>
               <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light tracking-[-0.01em]">
                 Confirmação de presença
               </h1>
               <p className="font-serif italic text-xs sm:text-sm text-[#6B5A4D] leading-relaxed mt-1.5 max-w-[540px]">
-                Será uma alegria celebrar este momento com vocês. Por favor, confirme ou altere a resposta da sua família até {RSVP_DEADLINE_STR}.
+                Será uma alegria celebrar este momento com vocês. Por favor, confirme a resposta da sua família{prazoExtenso ? ` até ${prazoExtenso}` : ""}.
               </p>
 
               {prazoEncerrado && (
@@ -521,7 +572,7 @@ export default function RsvpModal() {
                     <span>Prazo de resposta encerrado</span>
                   </div>
                   <p className="font-serif text-xs leading-relaxed text-[#7C3D34]">
-                    O prazo para confirmação e alteração encerrou em {RSVP_DEADLINE_STR}. Para qualquer solicitação especial, entre em contato diretamente com os noivos.
+                    O prazo para confirmação encerrou{prazoExtenso ? ` em ${prazoExtenso}` : ""}. Para qualquer solicitação especial, entre em contato diretamente com os noivos.
                   </p>
                 </div>
               )}
@@ -595,115 +646,96 @@ export default function RsvpModal() {
                         {convitePreDefinido.familia}
                       </h2>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={handleAlterarConvite}
-                      className="inline-flex items-center gap-1.5 self-start sm:self-center text-xs font-sans tracking-[0.12em] uppercase text-[#6B5A4D] hover:text-[#261811] font-medium transition-colors border border-[#D8CDC0] hover:border-[#8C7A6B] px-3 py-1.5 rounded-[6px] bg-[#FFFFFF] hover:bg-[#F5EFE6] cursor-pointer"
-                      title="Trocar para outro convite da lista"
-                    >
-                      <svg className="w-3.5 h-3.5 text-[#8C7A6B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                      </svg>
-                      <span>Alterar convite</span>
-                    </button>
                   </div>
 
-                  {/* 11. ESTADO DE PRESENÇA CONFIRMADA */}
-                  {/* Quando confirmado e não estiver editando, NÃO exibe a pergunta "Vocês irão?" para evitar conflito */}
-                  {convitePreDefinido.status === "CONFIRMADO" && !editandoResposta ? (
+                  {/* 11. ESTADO DE PRESENÇA CONFIRMADA — SOMENTE LEITURA */}
+                  {(convitePreDefinido.status === "CONFIRMADO" || convitePreDefinido.status === "RECUSADO") ? (
                     <div className="space-y-5 text-left">
                       {/* Card de Presença Confirmada */}
-                      <div className="p-5 sm:p-6 bg-[#F4F9F5] border border-[#C2DFCE] rounded-[10px] space-y-4">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-6 h-6 rounded-full bg-[#1E6B37] text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                            ✓
-                          </span>
-                          <h3 className="font-serif text-xl sm:text-2xl text-[#1E6B37] font-medium">
-                            Presença confirmada ✓
-                          </h3>
-                        </div>
-
-                        <p className="font-serif text-sm sm:text-base text-[#264A31] leading-relaxed">
-                          Este convite já está confirmado na lista oficial do casamento. Você pode visualizar o seu passe digital ou atualizar quais membros comparecerão até {RSVP_DEADLINE_STR}.
-                        </p>
-
-                        <div className="pt-1">
-                          <button
-                            type="button"
-                            onClick={abrirPasseDigitalExistente}
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E6B37] hover:bg-[#16532A] text-white rounded-[8px] text-xs sm:text-sm font-sans tracking-[0.14em] uppercase font-semibold transition-all shadow-xs cursor-pointer min-h-[48px]"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                            </svg>
-                            <span>Ver Passe Digital (QR Code)</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Ações Elegantes e Claras: Alterar Resposta vs Alterar Convite */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        <div className="p-4 bg-[#FAF7F2] border border-[#E8DFD5] rounded-[8px] space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-[#8C7A6B] font-semibold">
-                              Modificar confirmação
+                      {convitePreDefinido.status === "CONFIRMADO" ? (
+                        <div className="p-5 sm:p-6 bg-[#F4F9F5] border border-[#C2DFCE] rounded-[10px] space-y-4">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-6 h-6 rounded-full bg-[#1E6B37] text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                              ✓
                             </span>
-                            <span className="text-[0.60rem] font-sans tracking-wider uppercase text-[#8C7A6B]">
-                              Até {RSVP_DEADLINE_SHORT}
-                            </span>
+                            <h3 className="font-serif text-xl sm:text-2xl text-[#1E6B37] font-medium">
+                              Presença confirmada ✓
+                            </h3>
                           </div>
-                          <p className="font-serif italic text-xs text-[#786455]">
-                            {prazoEncerrado
-                              ? "O prazo para alterações encerrou em 23/12/2026. Para qualquer ajuste, fale com os noivos."
-                              : "Deseja atualizar quais membros da família irão ao casamento?"}
-                          </p>
-                          <button
-                            type="button"
-                            disabled={prazoEncerrado}
-                            onClick={() => setEditandoResposta(true)}
-                            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FFFFFF] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] text-xs font-sans tracking-[0.12em] uppercase font-semibold rounded-[6px] transition-colors cursor-pointer min-h-[42px] disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            <span>{prazoEncerrado ? "Prazo encerrado" : "Alterar resposta"}</span>
-                          </button>
-                        </div>
 
-                        <div className="p-4 bg-[#FAF7F2] border border-[#E8DFD5] rounded-[8px] space-y-2">
-                          <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-[#8C7A6B] font-semibold">
-                            Outro convite
-                          </span>
-                          <p className="font-serif italic text-xs text-[#786455]">
-                            Deseja acessar ou localizar o convite de outra pessoa?
+                          <p className="font-serif text-sm sm:text-base text-[#264A31] leading-relaxed">
+                            Sua resposta foi registrada. Esta resposta é definitiva e não poderá ser alterada posteriormente.
                           </p>
-                          <button
-                            type="button"
-                            onClick={handleAlterarConvite}
-                            className="w-full mt-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FFFFFF] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#6B5A4D] hover:text-[#261811] text-xs font-sans tracking-[0.12em] uppercase font-medium rounded-[6px] transition-colors cursor-pointer min-h-[42px]"
-                          >
-                            <span>Alterar convite</span>
-                          </button>
+
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={abrirPasseDigitalExistente}
+                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1E6B37] hover:bg-[#16532A] text-white rounded-[8px] text-xs sm:text-sm font-sans tracking-[0.14em] uppercase font-semibold transition-all shadow-xs cursor-pointer min-h-[48px]"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                              </svg>
+                              <span>Ver Passe Digital (QR Code)</span>
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="p-5 sm:p-6 bg-[#FBF5F2] border border-[#E3B8AF] rounded-[10px] space-y-3">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-6 h-6 rounded-full bg-[#A85848] text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                              ✗
+                            </span>
+                            <h3 className="font-serif text-xl sm:text-2xl text-[#7C3D34] font-medium">
+                              Ausência registrada
+                            </h3>
+                          </div>
+                          <p className="font-serif text-sm sm:text-base text-[#6E2A22] leading-relaxed">
+                            Sua resposta foi registrada. Esta resposta é definitiva e não poderá ser alterada posteriormente.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Modo Especial dos Noivos / Administradores */}
+                      {isAdmin && (
+                        <div className="p-4 bg-amber-50 border border-amber-300 rounded-[10px] space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                            <div>
+                              <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-amber-900 font-bold">
+                                Painel dos Noivos (Administrador)
+                              </span>
+                              <p className="font-serif text-xs text-amber-950 mt-0.5">
+                                Este convite está como {convitePreDefinido.status === "CONFIRMADO" ? "Confirmado" : "Recusado"}. Como administrador, você pode resetá-lo para Pendente.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleResetarRsvpAdmin}
+                              disabled={resetandoRsvp}
+                              className="px-4 py-2 bg-amber-900 hover:bg-amber-950 text-white rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
+                            >
+                              {resetandoRsvp ? "Resetando..." : "Resetar para Pendente"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-center pt-1">
+                        <button
+                          type="button"
+                          onClick={close}
+                          className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-[#D8CDC0] bg-[#FFFFFF] hover:bg-[#F5EFE6] text-[#6B5A4D] hover:text-[#261811] rounded-[8px] text-xs font-sans tracking-[0.14em] uppercase font-medium transition-all cursor-pointer min-h-[44px]"
+                        >
+                          Voltar ao Convite
+                        </button>
                       </div>
                     </div>
                   ) : (
                     /* FORMULÁRIO COMPLETO DE CONFIRMAÇÃO / EDIÇÃO */
                     <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-7">
 
-                      {/* Banner Informativo quando em modo de edição de resposta */}
-                      {editandoResposta && (
-                        <div className="p-3.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded-[8px] flex items-center justify-between gap-3 text-left">
-                          <span className="font-serif text-xs sm:text-sm text-[#6B5A4D]">
-                            Modificando resposta de presença deste convite.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setEditandoResposta(false)}
-                            className="text-xs font-sans tracking-wider uppercase text-[#8C7A6B] hover:text-[#261811] underline cursor-pointer shrink-0 font-medium"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      )}
+
+
 
                       {errorMsg && (
                         <div className="bg-[#FAF7F2] border-l-2 border-[#A85848] py-3 px-4 text-xs sm:text-sm text-[#543D30] font-serif flex items-start gap-2.5 rounded-[6px] text-left">
@@ -889,7 +921,7 @@ export default function RsvpModal() {
                             Ficamos com o coração apertado por não podermos celebrar este momento tão sonhado juntos. A presença da sua família com certeza fará muita falta na celebração.
                           </p>
                           <p className="font-serif italic text-xs sm:text-sm text-[#786455] leading-relaxed">
-                            Agradecemos de coração por nos avisar com antecedência. Caso algo mude e vocês consigam comparecer, saibam que poderão retornar a este mesmo link e atualizar sua resposta até {RSVP_DEADLINE_STR}!
+                            Agradecemos de coração por nos avisar com antecedência.
                           </p>
                         </div>
                       )}
@@ -965,6 +997,15 @@ export default function RsvpModal() {
                         />
                       </div>
 
+                      {/* Aviso de resposta definitiva */}
+                      {!prazoEncerrado && (
+                        <div className="px-4 py-3 bg-[#FAF7F2] border border-[#D8CDC0] rounded-[8px] text-left">
+                          <p className="font-serif italic text-xs text-[#6B5A4D] leading-relaxed">
+                            ⚠ Confira sua resposta antes de confirmar. Após o registro, sua resposta não poderá ser alterada.
+                          </p>
+                        </div>
+                      )}
+
                       {/* 9. BOTÃO PRINCIPAL (Dinâmico, refinado e confortável para toque no celular) */}
                       <div className="pt-2 pb-1">
                         <button
@@ -975,7 +1016,7 @@ export default function RsvpModal() {
                           {loading ? (
                             <span>Enviando confirmação...</span>
                           ) : prazoEncerrado ? (
-                            <span>PRAZO ENCERRADO EM {RSVP_DEADLINE_SHORT}</span>
+                            <span>PRAZO ENCERRADO{prazoFormatado ? ` EM ${prazoFormatado}` : ""}</span>
                           ) : presenca ? (
                             totalConfirmados === 0 ? (
                               <span>SELECIONE OS CONVIDADOS</span>
@@ -1035,23 +1076,11 @@ export default function RsvpModal() {
                       Sabemos que, mesmo à distância, o carinho e as boas energias de vocês estarão com a gente no altar.
                     </p>
                     <p className="text-xs text-[#8C7A6B] pt-2">
-                      Caso seus planos mudem e vocês consigam comparecer, saibam que poderão atualizar sua resposta por este mesmo link até {RSVP_DEADLINE_STR}!
+                      Sua resposta foi registrada. Esta resposta é definitiva e não poderá ser alterada posteriormente.
                     </p>
                   </div>
 
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      disabled={prazoEncerrado}
-                      onClick={() => {
-                        setMode("guest");
-                        setPresenca(true);
-                        setEditandoResposta(true);
-                      }}
-                      className="w-full sm:w-auto py-3 px-6 bg-[#FFFFFF] hover:bg-[#F5EFE6] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#261811] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] transition-colors min-h-[46px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {prazoEncerrado ? "Prazo Encerrado" : "Alterar Resposta"}
-                    </button>
                     <button
                       type="button"
                       onClick={close}

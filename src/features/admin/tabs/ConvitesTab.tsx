@@ -10,8 +10,15 @@ import {
 
 import type { PapelParticipante, VinculoParticipante } from "../../../services/classificacoes";
 import { isPapelCortejo } from "../../../services/classificacoes";
-import { definirParCortejoAdmin } from "../../../services/api";
-
+import {
+  definirParCortejoAdmin,
+  obterConfiguracaoEventoAdmin,
+  atualizarPrazoRsvpAdmin,
+  resetarRsvpConviteAdmin,
+  type ConfiguracaoEventoInfo
+} from "../../../services/api";
+import { ResetRsvpModal } from "../components/ResetRsvpModal";
+import { ConfigurarPrazoModal } from "../components/ConfigurarPrazoModal";
 interface ConvitesTabProps {
   listaConvites: ConviteCadastrado[];
   filteredConvites: ConviteCadastrado[];
@@ -57,6 +64,79 @@ export function ConvitesTab({
   const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
   const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
   const [copiadoFeedback, setCopiadoFeedback] = useState(false);
+
+  // Configuração do Prazo de RSVP (Definido pelos noivos)
+  const [configEvento, setConfigEvento] = useState<ConfiguracaoEventoInfo | null>(null);
+  const [modalPrazoAberto, setModalPrazoAberto] = useState(false);
+  const [salvandoPrazo, setSalvandoPrazo] = useState(false);
+  const [erroPrazo, setErroPrazo] = useState("");
+  const [sucessoPrazo, setSucessoPrazo] = useState("");
+
+  const carregarPrazoEvento = async () => {
+    try {
+      const cfg = await obterConfiguracaoEventoAdmin();
+      setConfigEvento(cfg);
+    } catch {
+      // Ignora erro
+    }
+  };
+
+  React.useEffect(() => {
+    carregarPrazoEvento();
+  }, []);
+
+  const handleSalvarPrazoModal = async (prazoIso: string) => {
+    setSalvandoPrazo(true);
+    setErroPrazo("");
+    setSucessoPrazo("");
+
+    try {
+      const res = await atualizarPrazoRsvpAdmin(prazoIso);
+      setConfigEvento(res);
+      setSucessoPrazo("Prazo de confirmação de RSVP atualizado com sucesso!");
+      setTimeout(() => {
+        setModalPrazoAberto(false);
+        setSucessoPrazo("");
+      }, 1200);
+    } catch (err: any) {
+      setErroPrazo(err.message || "Erro ao salvar novo prazo.");
+    } finally {
+      setSalvandoPrazo(false);
+    }
+  };
+
+  // Reset de RSVP do Convite com Modal Profissional
+  const [conviteParaResetar, setConviteParaResetar] = useState<ConviteCadastrado | null>(null);
+  const [resetandoRsvpLoading, setResetandoRsvpLoading] = useState(false);
+  const [resetRsvpErro, setResetRsvpErro] = useState("");
+
+  const handleAbrirModalReset = (c: ConviteCadastrado) => {
+    setConviteParaResetar(c);
+    setResetRsvpErro("");
+  };
+
+  const handleConfirmarResetRsvp = async () => {
+    if (!conviteParaResetar) return;
+
+    setResetandoRsvpLoading(true);
+    setResetRsvpErro("");
+
+    try {
+      const res = await resetarRsvpConviteAdmin(conviteParaResetar.codigo);
+      if (res.success) {
+        setConviteParaResetar(null);
+        if (onRecarregarDados) {
+          await onRecarregarDados();
+        }
+      } else {
+        setResetRsvpErro(res.message || "Erro ao resetar convite.");
+      }
+    } catch (err: any) {
+      setResetRsvpErro(err.message || "Erro ao resetar convite.");
+    } finally {
+      setResetandoRsvpLoading(false);
+    }
+  };
 
   // Gerenciamento de Par do Cortejo
   const [modalParAberto, setModalParAberto] = useState<{
@@ -178,6 +258,17 @@ export function ConvitesTab({
             }`}
           >
             Lista ({listaConvites.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalPrazoAberto(true)}
+            className="inline-flex items-center gap-1.5 text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold bg-[#FAF7F2] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#543D30] hover:text-[#261811] transition-all cursor-pointer shadow-xs"
+            title="Alterar prazo limite para confirmação de presença (RSVP)"
+          >
+            <span>📅 Prazo RSVP: {configEvento?.prazoRsvpFormatado || "Não definido"}</span>
+            <span className="text-[0.60rem] bg-amber-100 text-amber-900 border border-amber-300 rounded px-1.5 py-0.5 font-bold">
+              Alterar
+            </span>
           </button>
           <button
             type="button"
@@ -338,6 +429,16 @@ export function ConvitesTab({
                     >
                       <span>Editar</span>
                     </button>
+                    {(statusKey === "CONFIRMADO" || statusKey === "RECUSADO") && (
+                      <button
+                        type="button"
+                        onClick={() => handleAbrirModalReset(c)}
+                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-[6px] cursor-pointer min-h-[38px] font-semibold transition-colors"
+                        title="Resetar respostas deste convite e voltar para Pendente como novo"
+                      >
+                        <span>↺ Resetar RSVP</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onAbrirModalExclusao(c)}
@@ -650,6 +751,32 @@ export function ConvitesTab({
           </div>
         </div>
       )}
+      {/* Modal Profissional de Reset de RSVP */}
+      <ResetRsvpModal
+        convite={conviteParaResetar}
+        loading={resetandoRsvpLoading}
+        error={resetRsvpErro}
+        onCancel={() => {
+          setConviteParaResetar(null);
+          setResetRsvpErro("");
+        }}
+        onConfirm={handleConfirmarResetRsvp}
+      />
+
+      {/* Modal Profissional de Configuração de Prazo de RSVP */}
+      <ConfigurarPrazoModal
+        isOpen={modalPrazoAberto}
+        configAtual={configEvento}
+        loading={salvandoPrazo}
+        error={erroPrazo}
+        sucesso={sucessoPrazo}
+        onClose={() => {
+          setModalPrazoAberto(false);
+          setErroPrazo("");
+          setSucessoPrazo("");
+        }}
+        onSalvar={handleSalvarPrazoModal}
+      />
     </div>
   );
 }
