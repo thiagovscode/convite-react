@@ -106,9 +106,17 @@ export function FornecedoresTab({
   const [novoMembroNome, setNovoMembroNome] = useState("");
   const [novoMembroFuncao, setNovoMembroFuncao] = useState("");
 
-  // Estado de confirmação de exclusão
+  // Estado de confirmação de exclusão de fornecedor
   const [fornecedorParaExcluir, setFornecedorParaExcluir] = useState<FornecedorCasamento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  // Estado de confirmação de exclusão de membro de equipe
+  const [membroParaRemover, setMembroParaRemover] = useState<{
+    fornecedorId: string;
+    fornecedorNome: string;
+    membro: MembroEquipeFornecedor;
+  } | null>(null);
+  const [removendoMembro, setRemovendoMembro] = useState(false);
 
   // Filtro de busca de fornecedor
   const [busca, setBusca] = useState("");
@@ -304,7 +312,16 @@ export function FornecedoresTab({
       onFornecedoresChange((prev) =>
         prev.map((f) => (f.id === fornecedorId ? res.fornecedor! : f))
       );
+      onRefreshAuditoria?.();
     }
+  };
+
+  const handleConfirmarRemoverMembro = async () => {
+    if (!membroParaRemover) return;
+    setRemovendoMembro(true);
+    await handleRemoverMembro(membroParaRemover.fornecedorId, membroParaRemover.membro.id);
+    setRemovendoMembro(false);
+    setMembroParaRemover(null);
   };
 
   const handleToggleMembro = async (
@@ -412,6 +429,7 @@ export function FornecedoresTab({
         {fornecedoresFiltrados.map((f) => {
           const presentesNaEquipe = f.equipe?.filter((m) => m.presente).length || 0;
           const totalEquipe = f.equipe?.length || 0;
+          const totalFicaAteFim = f.equipe?.filter((m) => m.permaneceAteFim).length || 0;
 
           return (
             <div
@@ -419,8 +437,8 @@ export function FornecedoresTab({
               className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 shadow-[0_4px_25px_-6px_rgba(38,24,17,0.05)] space-y-4"
             >
               {/* Topo do Card */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F0EAE0] pb-3.5">
-                <div className="space-y-1">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-[#F0EAE0] pb-3.5">
+                <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-serif text-lg font-medium text-[#261811]">{f.empresa}</h2>
                     {f.categoria && (
@@ -428,17 +446,42 @@ export function FornecedoresTab({
                         {f.categoria}
                       </span>
                     )}
+                    {f.horarioPrevisto && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[0.65rem] font-sans font-semibold px-2 py-0.5 rounded-md bg-[#261811]/5 text-[#261811] border border-[#261811]/15"
+                        title="Horário previsto para chegada"
+                      >
+                        ⏰ {f.horarioPrevisto}
+                      </span>
+                    )}
                     {f.chegadaAntecipada && (
                       <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-900 border border-amber-200">
                         Entrada Antecipada
                       </span>
                     )}
+                    {/* Status consolidado da equipe */}
+                    {totalEquipe === 0 ? (
+                      <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+                        Sem membros
+                      </span>
+                    ) : presentesNaEquipe === 0 ? (
+                      <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                        🔴 Não chegou (0/{totalEquipe})
+                      </span>
+                    ) : presentesNaEquipe < totalEquipe ? (
+                      <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                        🟡 Parcial ({presentesNaEquipe}/{totalEquipe})
+                      </span>
+                    ) : (
+                      <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        🟢 Equipe completa ({presentesNaEquipe}/{totalEquipe})
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs font-sans text-[#6B5A4D]">
-                    {f.nome && <>Resp: <strong className="text-[#261811]">{f.nome}</strong></>}
-                    {f.horarioPrevisto && <> · Horário: <strong className="text-[#261811]">{f.horarioPrevisto}</strong></>}
-                    {f.servico && <> · Serviço: <strong className="text-[#261811]">{f.servico}</strong></>}
-                    {f.telefone && ` · Tel: ${f.telefone}`}
+                  <p className="text-xs font-sans text-[#6B5A4D] flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    {f.nome && <span>Resp: <strong className="text-[#261811]">{f.nome}</strong></span>}
+                    {f.servico && <span>· Serviço: <strong className="text-[#261811]">{f.servico}</strong></span>}
+                    {f.telefone && <span>· Tel: {f.telefone}</span>}
                   </p>
                   {f.instrucaoChegada && (
                     <p className="text-xs italic text-[#8C7A6B] font-serif bg-[#FAF7F2] px-2.5 py-1 rounded border-l-2 border-[#8C7A6B]">
@@ -449,45 +492,45 @@ export function FornecedoresTab({
 
                 {/* Ações do Card */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleCopiarLink(f)}
-                    className={`text-xs font-sans px-3 py-1.5 rounded-[6px] border font-semibold cursor-pointer transition-colors ${
-                      copiadoId === (f.id || f.empresa)
-                        ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-bold"
-                        : "bg-[#FAF7F2] border-[#D8CDC0] text-[#261811] hover:border-[#261811]"
-                    }`}
-                    title="Copiar link para a equipe acessar suas credenciais"
-                  >
-                    {copiadoId === (f.id || f.empresa) ? "Link Copiado" : "Copiar Link"}
-                  </button>
-
                   {f.telefone && (
                     <button
                       type="button"
                       onClick={() => enviarWhatsAppCredencial(f)}
-                      className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 font-semibold cursor-pointer"
+                      className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                       title="Enviar credencial no WhatsApp do fornecedor"
                     >
-                      WhatsApp
+                      <span>💬</span> WhatsApp
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={() => setFornecedorCredencial(f)}
-                    className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer"
+                    className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                     title="Exibir QR Code e credencial de acesso"
                   >
-                    Credencial QR
+                    <span>🪪</span> Credencial QR
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopiarLink(f)}
+                    className={`text-xs font-sans px-3 py-1.5 rounded-[6px] border font-semibold cursor-pointer transition-colors inline-flex items-center gap-1.5 ${
+                      copiadoId === (f.id || f.empresa)
+                        ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-bold"
+                        : "bg-[#FAF7F2] border-[#D8CDC0] text-[#261811] hover:border-[#261811]"
+                    }`}
+                    title="Copiar link para a equipe acessar suas credenciais"
+                  >
+                    <span>🔗</span> {copiadoId === (f.id || f.empresa) ? "Link Copiado" : "Copiar Link"}
                   </button>
 
                   {isNoivos && f.id && (
-                    <>
+                    <div className="flex items-center gap-1.5 pl-1 border-l border-[#E8DFD5]">
                       <button
                         type="button"
                         onClick={() => handleAbrirEdicao(f)}
-                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer"
+                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer transition-colors"
                         title="Editar fornecedor"
                       >
                         Editar
@@ -495,22 +538,32 @@ export function FornecedoresTab({
                       <button
                         type="button"
                         onClick={() => setFornecedorParaExcluir(f)}
-                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-rose-200 text-rose-700 hover:bg-rose-50 cursor-pointer"
+                        className="text-xs font-sans px-2.5 py-1.5 rounded-[6px] border border-rose-200 text-rose-700 hover:bg-rose-50 cursor-pointer font-medium transition-colors"
                         title="Excluir fornecedor"
                       >
                         Excluir
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Equipe / Profissionais */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold">
-                    Equipe Credenciada ({presentesNaEquipe}/{totalEquipe} presentes)
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold">
+                      Equipe Credenciada ({presentesNaEquipe}/{totalEquipe} presentes)
+                    </span>
+                    {totalFicaAteFim > 0 && (
+                      <span
+                        className="text-[0.62rem] font-sans px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-900 border border-amber-200"
+                        title="Profissionais da equipe com permanência autorizada até o final do evento"
+                      >
+                        🍽️ {totalFicaAteFim} fica{totalFicaAteFim > 1 ? "m" : ""} até o fim
+                      </span>
+                    )}
+                  </div>
                   {isNoivos && (
                     <button
                       type="button"
@@ -604,36 +657,52 @@ export function FornecedoresTab({
                           </button>
                         )}
 
-                        {m.permaneceAteFim && (
-                          <span
-                            className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-full text-[0.6rem] font-bold"
-                            title="Este profissional permanece até o fim"
-                          >
-                            Permanece até o fim
-                          </span>
+                        {/* Indicador e Controle Unificado de Permanência */}
+                        {isNoivos && f.id ? (
+                          m.permaneceAteFim ? (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, true)}
+                              className="inline-flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded text-[0.62rem] font-semibold transition-colors cursor-pointer"
+                              title="Permanece até o fim do evento (clique para desmarcar)"
+                            >
+                              <span>🍽️ Fica até o fim</span>
+                              <span className="text-[0.6rem] text-amber-700 font-bold ml-0.5">✓</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, false)}
+                              className="inline-flex items-center gap-1 text-stone-400 hover:text-[#543D30] hover:bg-stone-100 px-1.5 py-0.5 rounded text-[0.62rem] border border-dashed border-stone-300 transition-colors cursor-pointer"
+                              title="Clique para marcar que este profissional permanece até o fim da festa"
+                            >
+                              <span>+ Fica até o fim</span>
+                            </button>
+                          )
+                        ) : (
+                          m.permaneceAteFim && (
+                            <span
+                              className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded text-[0.62rem] font-semibold"
+                              title="Profissional com permanência autorizada até o fim do evento"
+                            >
+                              🍽️ Fica até o fim
+                            </span>
+                          )
                         )}
 
+                        {/* Botão Seguro de Remoção de Membro */}
                         {isNoivos && f.id && (
                           <button
                             type="button"
-                            onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, !!m.permaneceAteFim)}
-                            className={`px-1.5 py-0.5 rounded text-[0.6rem] transition-colors cursor-pointer border ${
-                              m.permaneceAteFim
-                                ? "border-amber-400 text-amber-900 bg-amber-50 font-semibold"
-                                : "border-stone-300 text-stone-500 hover:text-stone-800"
-                            }`}
-                            title={m.permaneceAteFim ? "Permanece até o fim (clique para desmarcar)" : "Clique para marcar que este profissional permanece até o fim"}
-                          >
-                            {m.permaneceAteFim ? "Permanece" : "+ Fica"}
-                          </button>
-                        )}
-
-                        {isNoivos && f.id && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoverMembro(f.id!, m.id)}
-                            className="text-[#8C7A6B] hover:text-rose-700 font-bold ml-1 cursor-pointer"
-                            title="Remover este membro"
+                            onClick={() =>
+                              setMembroParaRemover({
+                                fornecedorId: f.id!,
+                                fornecedorNome: f.empresa,
+                                membro: m,
+                              })
+                            }
+                            className="text-[#8C7A6B] hover:text-rose-700 hover:bg-rose-50 px-1 py-0.5 rounded font-bold ml-0.5 cursor-pointer transition-colors"
+                            title="Remover este membro da equipe"
                           >
                             ×
                           </button>
@@ -932,6 +1001,36 @@ export function FornecedoresTab({
                 className="bg-rose-700 text-white text-xs px-4 py-1.5 rounded font-semibold cursor-pointer hover:bg-rose-800"
               >
                 {excluindo ? "Excluindo..." : "Sim, Excluir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar Remoção de Membro da Equipe */}
+      {membroParaRemover && (
+        <div className="fixed inset-0 z-[100000] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-[#FAF7F2] border border-[#261811] rounded-[14px] p-6 max-w-sm w-full space-y-4 shadow-xl">
+            <h3 className="font-serif text-lg text-[#261811]">Remover Profissional</h3>
+            <p className="text-xs font-sans text-[#6B5A4D]">
+              Tem certeza que deseja remover <strong className="text-[#261811]">{membroParaRemover.membro.nome}</strong> da equipe de <strong className="text-[#261811]">{membroParaRemover.fornecedorNome}</strong>?
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E8DFD5]">
+              <button
+                type="button"
+                disabled={removendoMembro}
+                onClick={() => setMembroParaRemover(null)}
+                className="px-3 py-1.5 text-xs text-[#6B5A4D] hover:text-[#261811] cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={removendoMembro}
+                onClick={handleConfirmarRemoverMembro}
+                className="bg-rose-700 text-white text-xs px-4 py-1.5 rounded font-semibold cursor-pointer hover:bg-rose-800 transition-colors"
+              >
+                {removendoMembro ? "Removendo..." : "Sim, Remover"}
               </button>
             </div>
           </div>
