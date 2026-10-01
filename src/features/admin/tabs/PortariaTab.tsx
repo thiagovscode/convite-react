@@ -454,11 +454,6 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <strong className="font-serif text-lg text-[#261811]">{c.familia}</strong>
-                      {c.papel && (
-                        <span className="text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded text-[#6B5A4D] font-semibold">
-                          {c.papel}
-                        </span>
-                      )}
                       <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
                         #{c.codigo}
                       </span>
@@ -509,11 +504,6 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               <h2 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
                 {conviteAtual.familia}
               </h2>
-              {conviteAtual.papel && (
-                <span className="inline-block mt-1 text-[0.65rem] font-sans tracking-[0.16em] uppercase px-2.5 py-0.5 bg-[#261811] text-[#FAF7F2] rounded-[4px] font-semibold">
-                  {conviteAtual.papel}
-                </span>
-              )}
             </div>
             <span className="font-mono text-sm font-bold bg-[#FAF7F2] px-3 py-1 rounded-[6px] border border-[#D8CDC0]">
               #{conviteAtual.codigo}

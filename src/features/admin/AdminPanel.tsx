@@ -92,14 +92,19 @@ export function AdminPanel() {
   const [buscaConvites, setBuscaConvites] = useState("");
   const [feedbackGeral, setFeedbackGeral] = useState<{ tipo: "sucesso" | "erro"; msg: string } | null>(null);
   const [conviteEmEdicao, setConviteEmEdicao] = useState<ConviteCadastrado | null>(null);
-  const [novoConvite, setNovoConvite] = useState<NovoConviteFormState>({
+
+  const gerarIdMembro = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `m-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+  const [novoConvite, setNovoConvite] = useState<NovoConviteFormState>(() => ({
     familia: "",
     telefone: "",
     email: "",
-    papel: "Convidados",
     observacao: "",
-    membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false }],
-  });
+    membros: [{ id: (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `m-${Date.now()}`), nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false }],
+  }));
   const [cadLoading, setCadLoading] = useState(false);
   const [cadErro, setCadErro] = useState("");
   const [cadSucesso, setCadSucesso] = useState<{ codigo: string; link: string; familia: string } | null>(null);
@@ -397,21 +402,18 @@ export function AdminPanel() {
 
     setCadLoading(true);
     try {
-      const papelCortejoMembro = novoConvite.membros.find((m) => isPapelCortejo(m.papel || "Convidado", papeis))?.papel;
-      const papelDerivado = papelCortejoMembro || novoConvite.membros[0]?.papel || "Convidado";
-
       const res = await cadastrarConviteAdmin({
         codigo: conviteEmEdicao ? conviteEmEdicao.codigo : undefined,
         familia: novoConvite.familia.trim(),
         telefone: novoConvite.telefone.trim() || undefined,
         email: novoConvite.email.trim() || undefined,
-        papel: papelDerivado,
         observacao: novoConvite.observacao.trim() || undefined,
         membros: novoConvite.membros.map((m) => {
           const papelMembro = m.papel || "Convidado";
           const ehCortejo = isPapelCortejo(papelMembro, papeis);
+          const idValido = m.id && m.id !== "1" && !/^\d+$/.test(m.id) ? m.id : gerarIdMembro();
           return {
-            id: m.id,
+            id: idValido,
             nome: m.nome.trim(),
             criancaAte6Anos: m.criancaAte6Anos,
             papel: papelMembro,
@@ -428,9 +430,8 @@ export function AdminPanel() {
         familia: "",
         telefone: "",
         email: "",
-        papel: "Convidados",
         observacao: "",
-        membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
+        membros: [{ id: gerarIdMembro(), nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
       });
       await carregarDadosAdmin();
     } catch (err: any) {
@@ -448,9 +449,8 @@ export function AdminPanel() {
       familia: "",
       telefone: "",
       email: "",
-      papel: "Convidados",
       observacao: "",
-      membros: [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
+      membros: [{ id: gerarIdMembro(), nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
     });
   };
 
@@ -460,14 +460,14 @@ export function AdminPanel() {
       familia: c.familia || "",
       telefone: c.telefone || "",
       email: c.email || "",
-      papel: c.papel || "Convidados",
       observacao: c.observacao || "",
       membros: c.membros?.length
-        ? c.membros.map((m, idx) => {
+        ? c.membros.map((m) => {
             const papelNormalizado = (m.papel === "Convidado comum" || !m.papel) ? "Convidado" : m.papel;
             const ehCortejo = isPapelCortejo(papelNormalizado, papeis);
+            const idValido = m.id && m.id !== "1" && !/^\d+$/.test(m.id) ? m.id : gerarIdMembro();
             return {
-              id: m.id || String(idx + 1),
+              id: idValido,
               nome: m.nome,
               criancaAte6Anos: Boolean(m.criancaAte6Anos),
               papel: papelNormalizado,
@@ -475,7 +475,7 @@ export function AdminPanel() {
               participaCortejo: ehCortejo,
             };
           })
-        : [{ id: "1", nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
+        : [{ id: gerarIdMembro(), nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
     });
   };
 

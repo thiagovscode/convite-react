@@ -43,7 +43,7 @@ export interface NovoConviteFormState {
   familia: string;
   telefone: string;
   email: string;
-  papel: string;
+  papel?: string;
   observacao: string;
   membros: NovoMembroAdminRequest[];
 }

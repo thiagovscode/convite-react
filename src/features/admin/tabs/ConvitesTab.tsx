@@ -327,11 +327,6 @@ export function ConvitesTab({
                       <h3 className="font-serif text-lg font-medium text-[#261811] leading-tight">
                         {c.familia}
                       </h3>
-                      {c.papel && (
-                        <span className="text-[0.62rem] font-sans tracking-[0.14em] uppercase px-2 py-0.5 bg-[#FAF7F2] border border-[#D8CDC0] rounded text-[#6B5A4D] font-semibold">
-                          {c.papel}
-                        </span>
-                      )}
                       <span
                         onClick={() => copiarTexto(c.codigo, `${c.codigo}-code`)}
                         className="font-mono text-xs font-bold text-[#261811] bg-[#FAF7F2] hover:bg-[#EAE0D5] px-2 py-0.5 rounded border border-[#D8CDC0] cursor-pointer"
@@ -357,14 +352,14 @@ export function ConvitesTab({
                   <p className="text-xs font-sans text-[#6B5A4D] leading-relaxed">
                     {c.telefone && <span>{c.telefone} · </span>}
                     <span className="text-[#8C7A6B]">Membros: </span>
-                    {c.membros?.map((m, idx) => (
-                      <span key={m.id || idx}>
-                        {idx > 0 && ", "}
-                        <strong className="text-[#261811] font-normal">{m.nome}</strong>
-                        {m.papel && m.papel !== "Convidado" && m.papel !== "Convidado comum" && (
-                          <span className="text-[#8C7A6B] font-semibold"> [{m.papel}]</span>
-                        )}
-                        {(isPapelCortejo(m.papel, papeis) || m.participaCortejo) && (
+                    {c.membros?.map((m, idx) => {
+                      const papelMembro = m.papel || "Convidado";
+                      return (
+                        <span key={m.id || idx}>
+                          {idx > 0 && ", "}
+                          <strong className="text-[#261811] font-medium">{m.nome}</strong>
+                          <span className="text-[#8C7A6B] font-semibold"> [{papelMembro}]</span>
+                          {(isPapelCortejo(papelMembro, papeis) || m.participaCortejo) && (
                           <span className="inline-flex items-center gap-1 ml-1 align-baseline">
                             <span className="text-[0.60rem] font-sans uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded">Cortejo</span>
                             {m.par ? (
@@ -394,7 +389,8 @@ export function ConvitesTab({
                         {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
                         {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
                       </span>
-                    ))}
+                    );
+                  })}
                   </p>
 
                   <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-1 border-t border-[#F5EFE6]">
@@ -530,7 +526,7 @@ export function ConvitesTab({
                     ...p,
                     membros: [
                       ...p.membros,
-                      { id: String(Date.now()), nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false },
+                      { id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, nome: "", criancaAte6Anos: false, papel: "Convidado", participaCortejo: false },
                     ],
                   }))
                 }
