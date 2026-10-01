@@ -16,7 +16,7 @@ export function getLinkRsvpDireto(codigo: string): string {
 
 export function getTextoWhatsAppConvite(codigo: string): string {
   const link = getLinkConviteCompleto(codigo);
-  return `Nosso grande dia está chegando! 🤍\n\nNo dia 24/01, celebraremos o nosso amor e será uma alegria imensa ter você conosco.\n\nPreparamos nosso convite com todo carinho, e nele estão reunidas todas as informações importantes sobre a celebração. \n\nPedimos, por gentileza, que confirme sua presença através do link indicado.\n\n${link}\n\nPara quem quiser nos presentear, também disponibilizamos nossa lista de presentes, como uma forma especial de participar desse novo capítulo da nossa história. 🎁\n\nE, caso tenha qualquer dúvida, estamos à disposição para ajudar. É só chamar os noivos! 🤍\n\nCom carinho,\nTainara e Thiago`;
+  return `Olá, tudo bem?\n\nNosso grande dia está chegando! 🤍\n\nNo dia 24/01, celebraremos o nosso amor e será uma alegria imensa ter você conosco.\n\nPreparamos nosso convite com todo carinho, e nele estão reunidas todas as informações importantes sobre a celebração.\n\nPedimos, por gentileza, que realize a confirmação de presença através do link abaixo. Após a confirmação, será gerado um QR Code, cuja apresentação será indispensável para a entrada no evento.\n\n🔗 ${link}\n\nPara quem quiser nos presentear, também disponibilizamos nossa lista de presentes, como uma forma especial de participar desse novo capítulo da nossa história. 🎁\n\nCaso tenha qualquer dúvida, estamos à disposição. É só chamar os noivos! 🤍\n\nCom carinho,\nTainara e Thiago`;
 }
 
 export function abrirWhatsAppConvite(_familia: string, codigo: string, telefone?: string): void {
