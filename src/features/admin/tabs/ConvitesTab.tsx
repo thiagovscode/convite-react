@@ -425,14 +425,14 @@ export function ConvitesTab({
                     >
                       <span>Editar</span>
                     </button>
-                    {(statusKey === "CONFIRMADO" || statusKey === "RECUSADO") && (
+                    {(statusKey === "CONFIRMADO" || statusKey === "RECUSADO" || c.membros?.some(m => m.confirmadoRsvp !== undefined && m.confirmadoRsvp !== null)) && (
                       <button
                         type="button"
                         onClick={() => handleAbrirModalReset(c)}
-                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-[6px] cursor-pointer min-h-[38px] font-semibold transition-colors"
-                        title="Resetar respostas deste convite e voltar para Pendente como novo"
+                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#6B5A4D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px] transition-colors"
+                        title="Resetar respostas deste convite e voltar para Pendente"
                       >
-                        <span>↺ Resetar RSVP</span>
+                        <span>↺ Resetar</span>
                       </button>
                     )}
                     <button

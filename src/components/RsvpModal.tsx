@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   enviarRsvpCasamento,
   obterConfiguracaoEventoPublica,
-  resetarRsvpConviteAdmin,
   type ConfiguracaoEventoInfo
 } from "../services/api";
 import type {
@@ -85,10 +84,6 @@ export default function RsvpModal() {
   const prazoEncerrado = configEvento.expirado;
   const prazoFormatado = configEvento.prazoRsvpFormatado;
   const prazoExtenso = configEvento.prazoRsvpExtenso;
-
-  // Estado de reset administrativo (quando os noivos estão logados)
-  const [resetandoRsvp, setResetandoRsvp] = useState(false);
-  const isAdmin = typeof window !== "undefined" && !!localStorage.getItem("CONVITE_ADMIN_TOKEN");
 
   // Estado de Presença Geral (Sim = true / Não = false)
   const [presenca, setPresenca] = useState<boolean>(true);
@@ -196,41 +191,6 @@ export default function RsvpModal() {
     window.history.replaceState({}, "", url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : ""));
   };
 
-  const handleResetarRsvpAdmin = async () => {
-    if (!convitePreDefinido?.codigo) return;
-    if (
-      !window.confirm(
-        `Deseja realmente resetar o RSVP do convite da família "${convitePreDefinido.familia}"?\n\nO convite voltará ao status PENDENTE como novo no banco de dados e o convidado poderá responder novamente.`
-      )
-    ) {
-      return;
-    }
-
-    setResetandoRsvp(true);
-    try {
-      const res = await resetarRsvpConviteAdmin(convitePreDefinido.codigo);
-      if (res.success) {
-        setConvitePreDefinido((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "PENDENTE",
-                membros: prev.membros.map((m) => ({
-                  ...m,
-                  confirmadoRsvp: undefined,
-                  presenteCheckin: undefined,
-                })),
-              }
-            : null
-        );
-        alert("Convite resetado com sucesso! Agora o convite está como Novo (Pendente) e pode ser respondido.");
-      }
-    } catch (err: any) {
-      alert(err.message || "Erro ao resetar convite.");
-    } finally {
-      setResetandoRsvp(false);
-    }
-  };
 
   // Listener de abertura de modal e parâmetros de URL
   useEffect(() => {
@@ -696,29 +656,6 @@ export default function RsvpModal() {
                         </div>
                       )}
 
-                      {/* Modo Especial dos Noivos / Administradores */}
-                      {isAdmin && (
-                        <div className="p-4 bg-amber-50 border border-amber-300 rounded-[10px] space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                            <div>
-                              <span className="block font-sans text-[0.66rem] tracking-[0.16em] uppercase text-amber-900 font-bold">
-                                Painel dos Noivos (Administrador)
-                              </span>
-                              <p className="font-serif text-xs text-amber-950 mt-0.5">
-                                Este convite está como {convitePreDefinido.status === "CONFIRMADO" ? "Confirmado" : "Recusado"}. Como administrador, você pode resetá-lo para Pendente.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={handleResetarRsvpAdmin}
-                              disabled={resetandoRsvp}
-                              className="px-4 py-2 bg-amber-900 hover:bg-amber-950 text-white rounded-[6px] text-xs font-sans tracking-wider uppercase font-semibold transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-xs"
-                            >
-                              {resetandoRsvp ? "Resetando..." : "Resetar para Pendente"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
 
                       <div className="text-center pt-1">
                         <button
