@@ -513,31 +513,80 @@ export function AdminPanel() {
   };
 
   // ─── CÁLCULOS MEMOIZADOS ─────────────────────────────────────────────────────
+  // ─── CÁLCULOS MEMOIZADOS ─────────────────────────────────────────────────────
   const stats = useMemo(() => {
+    const totalFornecedoresFicam = (fornecedores || []).reduce(
+      (acc, f) => acc + (f.equipe?.filter((m) => m.permaneceAteFim).length || 0),
+      0
+    );
+    const totalConvitesFornecedores = (fornecedores || []).length;
+
     if (metricasBackend) {
       return {
-        totalConvites: metricasBackend.totalConvites,
-        totalPessoas: metricasBackend.totalPessoas,
-        totalConfirmados: metricasBackend.totalConfirmados,
+        totalConvites: metricasBackend.totalConvites + totalConvitesFornecedores,
+        totalPessoas: metricasBackend.totalPessoas + totalFornecedoresFicam,
+        totalConfirmados: metricasBackend.totalConfirmados + totalFornecedoresFicam,
         totalRecusaram: metricasBackend.totalRecusaram,
         totalPendentes: metricasBackend.totalPendentes,
-        totalAdultos: metricasBackend.totalAdultosConfirmados,
+        totalAdultos: metricasBackend.totalAdultosConfirmados + totalFornecedoresFicam,
         totalCriancasAte6Anos: metricasBackend.totalCriancasConfirmadas,
+        totalFornecedoresConfirmados: totalFornecedoresFicam,
       };
     }
     const rsvpList: RsvpAdminItem[] = data?.data || data?.rsvps || [];
     const conf = rsvpList.filter((r) => r.presenca);
     const rec = rsvpList.filter((r) => !r.presenca);
     return {
-      totalConvites: listaConvites.length || rsvpList.length,
-      totalPessoas: rsvpList.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
-      totalConfirmados: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
+      totalConvites: (listaConvites.length || rsvpList.length) + totalConvitesFornecedores,
+      totalPessoas: rsvpList.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0) + totalFornecedoresFicam,
+      totalConfirmados: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0) + totalFornecedoresFicam,
       totalRecusaram: rec.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),
       totalPendentes: 0,
-      totalAdultos: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.adultos || 1), 0),
+      totalAdultos: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.adultos || 1), 0) + totalFornecedoresFicam,
       totalCriancasAte6Anos: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.criancasAte6Anos || 0), 0),
+      totalFornecedoresConfirmados: totalFornecedoresFicam,
     };
-  }, [metricasBackend, data, listaConvites]);
+  }, [metricasBackend, data, listaConvites, fornecedores]);
+
+  // Convites gerados para as equipes de fornecedores para visibilidade na aba Convites
+  const convitesFornecedores = useMemo<ConviteCadastrado[]>(() => {
+    if (!Array.isArray(fornecedores)) return [];
+    return fornecedores.map((f) => {
+      const temMembrosQueFicam = f.equipe?.some((m) => m.permaneceAteFim);
+      const codigoForn = `FORN-${(f.id ? f.id.slice(-6) : f.empresa.replace(/\s+/g, "").slice(0, 6)).toUpperCase()}`;
+      return {
+        id: `forn-${f.id || f.empresa}`,
+        codigo: codigoForn,
+        familia: f.empresa,
+        telefone: f.telefone || "",
+        papel: "Fornecedor",
+        status: temMembrosQueFicam ? "CONFIRMADO" : "PENDENTE",
+        observacao: [
+          f.categoria ? `Categoria: ${f.categoria}` : "",
+          f.servico ? `Serviço: ${f.servico}` : "",
+          f.horarioPrevisto ? `Horário Previsto: ${f.horarioPrevisto}` : "",
+          f.instrucaoChegada ? `Instrução: ${f.instrucaoChegada}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        membros: (f.equipe || []).map((m, idx) => ({
+          id: m.id || `fm-${idx}`,
+          nome: m.nome,
+          criancaAte6Anos: false,
+          confirmadoRsvp: m.permaneceAteFim ? true : undefined,
+          presenteCheckin: m.presente,
+          papel: m.funcao ? `Fornecedor (${m.funcao})` : "Fornecedor",
+          participaCortejo: false,
+        })),
+        ehFornecedor: true,
+        fornecedorId: f.id,
+      };
+    });
+  }, [fornecedores]);
+
+  const todosConvites = useMemo(() => {
+    return [...listaConvites, ...convitesFornecedores];
+  }, [listaConvites, convitesFornecedores]);
 
   const respostasConvidados = useMemo<RespostaConvidadoItem[]>(() => {
     const itens: RespostaConvidadoItem[] = [];
@@ -670,20 +719,51 @@ export function AdminPanel() {
       }
     });
 
+    // Adiciona os profissionais de fornecedores que possuem permanência até o fim confirmada
+    if (Array.isArray(fornecedores)) {
+      fornecedores.forEach((f) => {
+        const cod = `FORN-${(f.id ? f.id.slice(-6) : f.empresa.replace(/\s+/g, "").slice(0, 6)).toUpperCase()}`;
+        if (Array.isArray(f.equipe)) {
+          f.equipe
+            .filter((m) => m.permaneceAteFim)
+            .forEach((m, idx) => {
+              const nomeM = m.nome ? m.nome.trim().toLowerCase() : "";
+              if (!nomesProcessados.has(nomeM)) {
+                nomesProcessados.add(nomeM);
+                itens.push({
+                  id: `forn-membro-${f.id || f.empresa}-${m.id || idx}`,
+                  codigoConvite: cod,
+                  nome: m.nome,
+                  papel: `Fornecedor (${m.funcao || f.categoria || "Staff"})`,
+                  participaCortejo: "Não",
+                  faixaEtaria: "Adulto",
+                  telefone: f.telefone || "—",
+                  status: "CONFIRMADO",
+                  familia: `${f.empresa} (Fornecedor)`,
+                  observacao: `Permanece até o fim · ${f.servico || f.categoria || "Equipe"}`,
+                  respondido: true,
+                  dataConfirmacao: "Confirmado (Staff)",
+                });
+              }
+            });
+        }
+      });
+    }
+
     return itens;
-  }, [listaConvites, data, papeis]);
+  }, [listaConvites, data, papeis, fornecedores]);
 
   const filteredConvites = useMemo(() => {
-    if (!buscaConvites.trim()) return listaConvites;
+    if (!buscaConvites.trim()) return todosConvites;
     const q = buscaConvites.toLowerCase().trim();
-    return listaConvites.filter(
+    return todosConvites.filter(
       (c) =>
         c.familia.toLowerCase().includes(q) ||
         c.codigo.toLowerCase().includes(q) ||
         c.telefone?.toLowerCase().includes(q) ||
         c.membros?.some((m) => m.nome.toLowerCase().includes(q))
     );
-  }, [listaConvites, buscaConvites]);
+  }, [todosConvites, buscaConvites]);
 
   if (!isOpen) return null;
 
@@ -735,7 +815,7 @@ export function AdminPanel() {
 
             {activeTab === "convites" && (
               <ConvitesTab
-                listaConvites={listaConvites}
+                listaConvites={todosConvites}
                 filteredConvites={filteredConvites}
                 buscaConvites={buscaConvites}
                 onBuscaChange={setBuscaConvites}
@@ -754,6 +834,7 @@ export function AdminPanel() {
                 papeis={papeis}
                 vinculos={vinculos}
                 onRecarregarDados={carregarDadosAdmin}
+                onNavegarParaFornecedores={() => setActiveTab("fornecedores")}
               />
             )}
 

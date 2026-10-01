@@ -37,6 +37,8 @@ export interface ConviteCadastrado {
   dataConfirmacao?: string;
   createdAt?: string;
   updatedAt?: string;
+  ehFornecedor?: boolean;
+  fornecedorId?: string;
 }
 
 export interface NovoConviteFormState {

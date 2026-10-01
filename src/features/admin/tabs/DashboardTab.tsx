@@ -11,6 +11,7 @@ interface DashboardStats {
   totalPendentes: number;
   totalAdultos: number;
   totalCriancasAte6Anos: number;
+  totalFornecedoresConfirmados?: number;
 }
 
 interface DashboardTabProps {
@@ -40,15 +41,19 @@ export function DashboardTab({ stats }: DashboardTabProps) {
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          label="Total Convidados"
+          label="Total Pessoas"
           value={fmtNumber(stats.totalPessoas)}
-          sub="pessoas cadastradas"
+          sub="pessoas no evento"
           color="blue"
         />
         <StatCard
           label="Total Confirmados"
           value={fmtNumber(stats.totalConfirmados)}
-          sub="presenças confirmadas"
+          sub={
+            stats.totalFornecedoresConfirmados && stats.totalFornecedoresConfirmados > 0
+              ? `presenças confirmadas (incl. ${stats.totalFornecedoresConfirmados} equipe/fornecedores)`
+              : "presenças confirmadas"
+          }
           color="green"
         />
         <StatCard
@@ -67,7 +72,7 @@ export function DashboardTab({ stats }: DashboardTabProps) {
 
       {/* Barra de Progresso Trissegmentada */}
       <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-6 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
-        <SectionTitle>Taxa de Confirmação &amp; Presença dos Convidados</SectionTitle>
+        <SectionTitle>Taxa de Confirmação &amp; Presença do Evento</SectionTitle>
 
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
@@ -76,7 +81,11 @@ export function DashboardTab({ stats }: DashboardTabProps) {
                 {pctConfirmados}%
               </span>
               <span className="font-serif text-sm text-[#8C7A6B] italic pl-2">
-                confirmados ({stats.totalConfirmados} de {totalCadastrados} convidados)
+                confirmados ({stats.totalConfirmados} de {totalCadastrados} pessoas
+                {stats.totalFornecedoresConfirmados && stats.totalFornecedoresConfirmados > 0
+                  ? ` · incl. ${stats.totalFornecedoresConfirmados} fornecedores até o fim`
+                  : ""}
+                )
               </span>
             </div>
             <span className="font-serif text-xs text-[#6B5A4D] bg-[#FAF7F2] px-3 py-1.5 rounded-full border border-[#E8DFD5]">

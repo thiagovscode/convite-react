@@ -97,8 +97,9 @@ export function FornecedoresTab({
     setModalNovo(true);
   };
 
-  // Estado do Modal de Credencial & QR Code
+  // Estado do Modal de Credencial & QR Code (Suporta equipe inteira ou membro individual)
   const [fornecedorCredencial, setFornecedorCredencial] = useState<FornecedorCasamento | null>(null);
+  const [membroCredencial, setMembroCredencial] = useState<MembroEquipeFornecedor | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
 
   // Estado para adicionar membro rápido inline
@@ -121,22 +122,50 @@ export function FornecedoresTab({
   // Filtro de busca de fornecedor
   const [busca, setBusca] = useState("");
 
-  // Gera o QR Code dinamicamente ao abrir o modal de credencial
+  // Gera o QR Code dinamicamente ao abrir o modal de credencial (equipe inteira ou individual)
   useEffect(() => {
     if (!fornecedorCredencial) {
       setQrCodeDataUrl("");
       return;
     }
 
-    const payload = JSON.stringify({
-      tipo: "CREDENCIAL_FORNECEDOR_CASAMENTO",
-      id: fornecedorCredencial.id,
-      empresa: fornecedorCredencial.empresa,
-      responsavel: fornecedorCredencial.nome,
-      categoria: fornecedorCredencial.categoria,
-      horarioPrevisto: fornecedorCredencial.horarioPrevisto,
-      evento: "Casamento Tainara & Thiago · 24.01.2027",
-    });
+    let payload: string;
+
+    if (membroCredencial) {
+      // Credencial individual do profissional (formato aceito e checado na portaria)
+      payload = JSON.stringify({
+        tipo: "CREDENCIAL_STAFF_CASAMENTO",
+        fornecedorId: fornecedorCredencial.id,
+        empresa: fornecedorCredencial.empresa,
+        membroId: membroCredencial.id,
+        nome: membroCredencial.nome,
+        funcao: membroCredencial.funcao || "Equipe",
+        permaneceAteFim: Boolean(membroCredencial.permaneceAteFim),
+        horarioPrevisto: fornecedorCredencial.horarioPrevisto || "A definir",
+        evento: "Casamento Tainara & Thiago",
+        data: "2027-01-24",
+        local: "Espaço Balboa - Mairiporã/SP",
+      });
+    } else {
+      // Credencial geral da empresa contendo a relação completa de todos os membros
+      payload = JSON.stringify({
+        tipo: "CREDENCIAL_FORNECEDOR_CASAMENTO",
+        fornecedorId: fornecedorCredencial.id,
+        id: fornecedorCredencial.id,
+        empresa: fornecedorCredencial.empresa,
+        responsavel: fornecedorCredencial.nome,
+        categoria: fornecedorCredencial.categoria,
+        horarioPrevisto: fornecedorCredencial.horarioPrevisto,
+        totalMembros: fornecedorCredencial.equipe?.length || 0,
+        membros: fornecedorCredencial.equipe?.map((m) => ({
+          id: m.id,
+          nome: m.nome,
+          funcao: m.funcao || "Equipe",
+          permaneceAteFim: Boolean(m.permaneceAteFim),
+        })),
+        evento: "Casamento Tainara & Thiago · 24.01.2027",
+      });
+    }
 
     QRCode.toDataURL(payload, {
       width: 280,
@@ -149,7 +178,7 @@ export function FornecedoresTab({
     })
       .then((url) => setQrCodeDataUrl(url))
       .catch((err) => console.error("Erro ao gerar QR Code de fornecedor:", err));
-  }, [fornecedorCredencial]);
+  }, [fornecedorCredencial, membroCredencial]);
 
   const handleCadastrar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,7 +534,10 @@ export function FornecedoresTab({
 
                   <button
                     type="button"
-                    onClick={() => setFornecedorCredencial(f)}
+                    onClick={() => {
+                      setFornecedorCredencial(f);
+                      setMembroCredencial(null);
+                    }}
                     className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                     title="Exibir QR Code e credencial de acesso"
                   >
@@ -689,6 +721,19 @@ export function FornecedoresTab({
                             </span>
                           )
                         )}
+
+                        {/* Botão de QR Code Individual do Profissional */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFornecedorCredencial(f);
+                            setMembroCredencial(m);
+                          }}
+                          className="text-[#8C7A6B] hover:text-[#261811] hover:bg-stone-200/60 px-1 py-0.5 rounded text-[0.6rem] font-medium cursor-pointer transition-colors"
+                          title={`Ver credencial e QR Code individual de ${m.nome}`}
+                        >
+                          🪪 QR
+                        </button>
 
                         {/* Botão Seguro de Remoção de Membro */}
                         {isNoivos && f.id && (
@@ -912,7 +957,7 @@ export function FornecedoresTab({
       {/* Modal: Credencial Digital & QR Code */}
       {fornecedorCredencial && (
         <div className="fixed inset-0 z-[100000] bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-[#FAF7F2] border border-[#261811] rounded-[16px] p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+          <div className="bg-[#FAF7F2] border border-[#261811] rounded-[16px] p-6 max-w-md w-full space-y-4 shadow-2xl text-center max-h-[92vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-[#E8DFD5] pb-2">
               <span className="text-[0.62rem] font-sans tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold">
                 Credencial de Acesso
@@ -931,6 +976,56 @@ export function FornecedoresTab({
               <p className="text-xs font-sans text-[#8C7A6B]">
                 {fornecedorCredencial.categoria} · {fornecedorCredencial.nome}
               </p>
+            </div>
+
+            {/* Seletor de Credencial: Equipe Inteira vs Membro Individual */}
+            {fornecedorCredencial.equipe && fornecedorCredencial.equipe.length > 0 && (
+              <div className="space-y-1.5 text-left">
+                <span className="text-[0.64rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold block">
+                  Visualizar QR Code por profissional:
+                </span>
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1.5 bg-white border border-[#E8DFD5] rounded-[8px]">
+                  <button
+                    type="button"
+                    onClick={() => setMembroCredencial(null)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer font-sans ${
+                      membroCredencial === null
+                        ? "bg-[#261811] text-[#FAF7F2] border-[#261811] font-semibold"
+                        : "bg-[#FAF7F2] text-[#543D30] border-[#D8CDC0] hover:border-[#261811]"
+                    }`}
+                  >
+                    🏢 Toda a Equipe ({fornecedorCredencial.equipe.length})
+                  </button>
+                  {fornecedorCredencial.equipe.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMembroCredencial(m)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer font-sans ${
+                        membroCredencial?.id === m.id
+                          ? "bg-[#261811] text-[#FAF7F2] border-[#261811] font-semibold shadow-xs"
+                          : "bg-[#FAF7F2] text-[#543D30] border-[#D8CDC0] hover:border-[#261811]"
+                      }`}
+                    >
+                      👤 {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                      {m.permaneceAteFim ? " 🍽️" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              {membroCredencial ? (
+                <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-950 px-3 py-1 rounded-full text-xs font-sans font-medium">
+                  Credencial Individual: <strong>{membroCredencial.nome}</strong> ({membroCredencial.funcao || "Equipe"})
+                  {membroCredencial.permaneceAteFim && " · 🍽️ Fica até o fim"}
+                </div>
+              ) : (
+                <div className="inline-block bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] px-3 py-1 rounded-full text-xs font-sans font-medium">
+                  Credencial Geral da Empresa ({fornecedorCredencial.equipe?.length || 0} membros)
+                </div>
+              )}
             </div>
 
             <div className="p-3 bg-white border border-[#E8DFD5] rounded-[12px] inline-block shadow-xs">
@@ -959,10 +1054,21 @@ export function FornecedoresTab({
             <div className="pt-2 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => enviarWhatsAppCredencial(fornecedorCredencial)}
+                onClick={() => {
+                  if (membroCredencial) {
+                    const link = getLinkFornecedor(fornecedorCredencial);
+                    const tel = (fornecedorCredencial.telefone || "").replace(/\D/g, "");
+                    const msg = `CREDENCIAL INDIVIDUAL DE STAFF · CASAMENTO TAINARA & THIAGO\nOlá, ${membroCredencial.nome}!\n\nSua credencial de acesso para a equipe ${fornecedorCredencial.empresa} (${membroCredencial.funcao || "Equipe"}) está pronta.\n\nHorário Previsto: ${fornecedorCredencial.horarioPrevisto || "A combinar"}\n${membroCredencial.permaneceAteFim ? "Permanência: Autorizada até o fim do evento 🍽️\n" : ""}Local: Espaço Balboa · Mairiporã - SP\n\nAcesse o link abaixo para apresentar seu QR Code na portaria:\n${link}`;
+                    window.open(`https://wa.me/${tel ? `55${tel}` : ""}?text=${encodeURIComponent(msg)}`, "_blank");
+                  } else {
+                    enviarWhatsAppCredencial(fornecedorCredencial);
+                  }
+                }}
                 className="w-full bg-emerald-700 text-white text-xs font-sans uppercase tracking-wider font-semibold py-2.5 rounded-[6px] hover:bg-emerald-800 transition-colors cursor-pointer"
               >
-                Enviar no WhatsApp do Fornecedor
+                {membroCredencial
+                  ? `Enviar Credencial de ${membroCredencial.nome} no WhatsApp`
+                  : "Enviar Credencial da Equipe no WhatsApp"}
               </button>
 
               <button

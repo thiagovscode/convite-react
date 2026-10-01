@@ -203,6 +203,31 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
           }
           return;
         }
+
+        if (parsed.tipo === "CREDENCIAL_FORNECEDOR_CASAMENTO") {
+          setLoadingBusca(false);
+          pararCamera();
+          const fId = parsed.fornecedorId || parsed.id;
+          const { checkinMembroFornecedorBackend } = await import("../../../services/convites");
+          if (Array.isArray(parsed.membros) && parsed.membros.length > 0 && fId) {
+            for (const m of parsed.membros) {
+              if (m.id) {
+                await checkinMembroFornecedorBackend(fId, m.id, true);
+              }
+            }
+            playCheckinSuccessSound();
+            triggerHaptic();
+            setMensagemSucesso(
+              `Entrada de Equipe Confirmada: ${parsed.empresa} (${parsed.membros.length} profissionais credenciados)`
+            );
+            onRefreshData?.();
+          } else {
+            setMensagemSucesso(
+              `Credencial da Empresa detectada: ${parsed.empresa}. Utilize a aba Fornecedores para gerenciar os membros.`
+            );
+          }
+          return;
+        }
         codigoLimpo = parsed.codigo || parsed.id || termo;
         isQrCodeJson = true;
       } catch {}

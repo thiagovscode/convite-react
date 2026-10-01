@@ -6,6 +6,8 @@ import {
   getLinkConviteCompleto,
   getLinkRsvpDireto,
   abrirWhatsAppConvite,
+  getLinkFornecedor,
+  abrirWhatsAppFornecedor,
 } from "../utils/formatters";
 
 import type { PapelParticipante, VinculoParticipante } from "../../../services/classificacoes";
@@ -39,6 +41,7 @@ interface ConvitesTabProps {
   papeis?: PapelParticipante[];
   vinculos?: VinculoParticipante[];
   onRecarregarDados?: () => Promise<void>;
+  onNavegarParaFornecedores?: (fornecedorId?: string) => void;
 }
 
 export function ConvitesTab({
@@ -60,6 +63,7 @@ export function ConvitesTab({
   onDismissFeedback,
   papeis = [],
   onRecarregarDados,
+  onNavegarParaFornecedores,
 }: ConvitesTabProps) {
   const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
   const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
@@ -327,6 +331,11 @@ export function ConvitesTab({
                       <h3 className="font-serif text-lg font-medium text-[#261811] leading-tight">
                         {c.familia}
                       </h3>
+                      {c.ehFornecedor && (
+                        <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-950 border border-amber-300 shadow-xs">
+                          🏢 Fornecedor
+                        </span>
+                      )}
                       <span
                         onClick={() => copiarTexto(c.codigo, `${c.codigo}-code`)}
                         className="font-mono text-xs font-bold text-[#261811] bg-[#FAF7F2] hover:bg-[#EAE0D5] px-2 py-0.5 rounded border border-[#D8CDC0] cursor-pointer"
@@ -348,6 +357,12 @@ export function ConvitesTab({
                       {statusKey === "CONFIRMADO" ? "Confirmado" : statusKey === "RECUSADO" ? "Não vai" : "Pendente"}
                     </span>
                   </div>
+
+                  {c.observacao && (
+                    <p className="text-xs italic text-[#8C7A6B] font-serif bg-[#FAF7F2] px-2.5 py-1 rounded border-l-2 border-[#8C7A6B]">
+                      "{c.observacao}"
+                    </p>
+                  )}
 
                   <p className="text-xs font-sans text-[#6B5A4D] leading-relaxed">
                     {c.telefone && <span>{c.telefone} · </span>}
@@ -386,63 +401,101 @@ export function ConvitesTab({
                             )}
                           </span>
                         )}
-                        {m.confirmadoRsvp === true && <span className="text-emerald-800 font-semibold"> (Vai)</span>}
+                        {m.confirmadoRsvp === true && (
+                          <span className="text-emerald-800 font-semibold">
+                            {c.ehFornecedor ? " (Fica até o fim 🍽️)" : " (Vai)"}
+                          </span>
+                        )}
                         {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
                       </span>
                     );
                   })}
                   </p>
 
-                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-1 border-t border-[#F5EFE6]">
-                    <button
-                      type="button"
-                      onClick={() => copiarTexto(linkOficial, c.codigo)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
-                    >
-                      <span>{copiadoConvite || "Copiar Link"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => abrirWhatsAppConvite(c.familia, c.codigo, c.telefone)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] cursor-pointer min-h-[38px]"
-                    >
-                      <span>WhatsApp</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copiarTexto(linkRsvp, `${c.codigo}-rsvp`)}
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#7D6B5D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#E3D8CB] rounded-[6px] cursor-pointer min-h-[38px]"
-                    >
-                      <span>{copiadoRsvp || "Link RSVP"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onIniciarEdicao(c);
-                        setSubTab("novo");
-                      }}
-                      className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
-                    >
-                      <span>Editar</span>
-                    </button>
-                    {(statusKey === "CONFIRMADO" || statusKey === "RECUSADO" || c.membros?.some(m => m.confirmadoRsvp !== undefined && m.confirmadoRsvp !== null)) && (
+                  {/* Ações do Convite */}
+                  {c.ehFornecedor ? (
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-1 border-t border-[#F5EFE6]">
                       <button
                         type="button"
-                        onClick={() => handleAbrirModalReset(c)}
-                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#6B5A4D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px] transition-colors"
-                        title="Resetar respostas deste convite e voltar para Pendente"
+                        onClick={() => copiarTexto(getLinkFornecedor(c.fornecedorId || c.id || ""), c.codigo)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
+                        title="Copiar link da credencial da equipe"
                       >
-                        <span>↺ Resetar</span>
+                        <span>{copiadoConvite || "🔗 Copiar Credencial"}</span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onAbrirModalExclusao(c)}
-                      className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-rose-700 hover:text-rose-900 bg-rose-50/70 hover:bg-rose-100 border border-rose-200 rounded-[6px] cursor-pointer min-h-[38px]"
-                    >
-                      <span>Excluir</span>
-                    </button>
-                  </div>
+                      {c.telefone && (
+                        <button
+                          type="button"
+                          onClick={() => abrirWhatsAppFornecedor(c.familia, c.fornecedorId || c.id || "", c.telefone)}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] cursor-pointer min-h-[38px]"
+                          title="Enviar credencial da equipe no WhatsApp"
+                        >
+                          <span>💬 WhatsApp</span>
+                        </button>
+                      )}
+                      {onNavegarParaFornecedores && (
+                        <button
+                          type="button"
+                          onClick={() => onNavegarParaFornecedores(c.fornecedorId)}
+                          className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#261811] font-semibold bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px] transition-colors"
+                          title="Gerenciar equipe, horários e membros na aba Fornecedores"
+                        >
+                          <span>🏢 Gerenciar na aba Fornecedores →</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-1 border-t border-[#F5EFE6]">
+                      <button
+                        type="button"
+                        onClick={() => copiarTexto(linkOficial, c.codigo)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
+                      >
+                        <span>{copiadoConvite || "Copiar Link"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => abrirWhatsAppConvite(c.familia, c.codigo, c.telefone)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] cursor-pointer min-h-[38px]"
+                      >
+                        <span>WhatsApp</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copiarTexto(linkRsvp, `${c.codigo}-rsvp`)}
+                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#7D6B5D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#E3D8CB] rounded-[6px] cursor-pointer min-h-[38px]"
+                      >
+                        <span>{copiadoRsvp || "Link RSVP"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onIniciarEdicao(c);
+                          setSubTab("novo");
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
+                      >
+                        <span>Editar</span>
+                      </button>
+                      {(statusKey === "CONFIRMADO" || statusKey === "RECUSADO" || c.membros?.some(m => m.confirmadoRsvp !== undefined && m.confirmadoRsvp !== null)) && (
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirModalReset(c)}
+                          className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-[#6B5A4D] hover:text-[#261811] bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px] transition-colors"
+                          title="Resetar respostas deste convite e voltar para Pendente"
+                        >
+                          <span>↺ Resetar</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onAbrirModalExclusao(c)}
+                        className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-sans text-rose-700 hover:text-rose-900 bg-rose-50/70 hover:bg-rose-100 border border-rose-200 rounded-[6px] cursor-pointer min-h-[38px]"
+                      >
+                        <span>Excluir</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

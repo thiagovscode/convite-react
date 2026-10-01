@@ -302,7 +302,9 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                   <div className="grid grid-cols-2 gap-1.5 text-xs text-[#6B5A4D]">
                     <div>
                       <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Papel:</span>
-                      <span className="font-medium text-[#261811]">{item.papel}</span>
+                      <span className="font-medium text-[#261811]">
+                        {item.papel.includes("Fornecedor") ? `🏢 ${item.papel}` : item.papel}
+                      </span>
                     </div>
                     <div>
                       <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Cortejo:</span>
@@ -441,7 +443,13 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-xs font-medium text-[#543D30] whitespace-nowrap">
-                        {item.papel}
+                        {item.papel.includes("Fornecedor") ? (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-950 border border-amber-300 px-2 py-0.5 rounded font-semibold text-[0.68rem]">
+                            🏢 {item.papel}
+                          </span>
+                        ) : (
+                          item.papel
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
                         <span

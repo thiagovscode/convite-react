@@ -31,3 +31,24 @@ export function abrirWhatsAppConvite(_familia: string, codigo: string, telefone?
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
 }
+
+export function getLinkFornecedor(fornecedorId: string): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const pathname = typeof window !== "undefined" ? window.location.pathname.replace(/\/$/, "") : "";
+  return `${origin}${pathname}?fornecedor=${encodeURIComponent(fornecedorId)}`;
+}
+
+export function abrirWhatsAppFornecedor(empresa: string, fornecedorId: string, telefone?: string): void {
+  const link = getLinkFornecedor(fornecedorId);
+  const msg = `CREDENCIAL DA EQUIPE · CASAMENTO TAINARA & THIAGO\nOlá, equipe ${empresa}!\nAcessem o link abaixo para visualizar as instruções de chegada e obter a credencial individual da portaria:\n${link}`;
+  const telLimpo = (telefone || "").replace(/\D/g, "");
+
+  if (telLimpo.startsWith("55") && telLimpo.length >= 12) {
+    window.open(`https://wa.me/${telLimpo}?text=${encodeURIComponent(msg)}`, "_blank");
+  } else if (telLimpo.length >= 10) {
+    window.open(`https://wa.me/55${telLimpo}?text=${encodeURIComponent(msg)}`, "_blank");
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+}
+
