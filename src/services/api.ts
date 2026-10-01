@@ -120,6 +120,9 @@ export async function enviarRsvpCasamento(data: RsvpCasamentoRequest): Promise<R
   return json;
 }
 
+export const CONVITE_ADMIN_TOKEN_KEY = 'CONVITE_ADMIN_TOKEN';
+export const CONVITE_ADMIN_REFRESH_KEY = 'CONVITE_ADMIN_REFRESH_TOKEN';
+
 /**
  * Autentica o usuário na rota /api/auth/login
  */
@@ -147,20 +150,88 @@ export async function autenticarAdmin(username: string, password: string): Promi
   }
 
   if (json.token) {
-    localStorage.setItem('CONVITE_ADMIN_TOKEN', json.token);
+    localStorage.setItem(CONVITE_ADMIN_TOKEN_KEY, json.token);
+    if (json.refreshToken) {
+      localStorage.setItem(CONVITE_ADMIN_REFRESH_KEY, json.refreshToken);
+    }
     return json.token;
   }
 
   throw new Error('Token não retornado pelo servidor.');
 }
 
+/**
+ * Tenta renovar o token de acesso de administrador utilizando o refreshToken
+ */
+export async function renovarTokenAdmin(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  const refreshToken = localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY);
+  if (!refreshToken) return null;
+
+  try {
+    const baseUrl = getApiBaseUrl();
+    const url = baseUrl ? `${baseUrl}/api/auth/refresh` : '/api/auth/refresh';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      if (json.token) {
+        localStorage.setItem(CONVITE_ADMIN_TOKEN_KEY, json.token);
+        if (json.refreshToken) {
+          localStorage.setItem(CONVITE_ADMIN_REFRESH_KEY, json.refreshToken);
+        }
+        return json.token;
+      }
+    }
+  } catch (e) {
+    console.warn('Erro ao renovar token de autenticação:', e);
+  }
+
+  localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+  localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
+  return null;
+}
+
+/**
+ * Wrapper HTTP que injeta token Bearer e realiza refresh transparente em caso de 401
+ */
+export async function fetchAutenticadoAdmin(url: string, init: RequestInit = {}): Promise<Response> {
+  let authToken = typeof window !== 'undefined' ? localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY) : null;
+  const headers = new Headers(init.headers || {});
+  if (authToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
+
+  let response = await fetch(url, { ...init, headers });
+
+  if (response.status === 401) {
+    const novoToken = await renovarTokenAdmin();
+    if (novoToken) {
+      headers.set('Authorization', `Bearer ${novoToken}`);
+      response = await fetch(url, { ...init, headers });
+    } else {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sessao-jwt-expirada'));
+      }
+      throw new Error('Sua sessão expirou. Faça login novamente.');
+    }
+  }
+
+  return response;
+}
+
 function tratarErroAutenticacao(response: Response) {
   if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('CONVITE_ADMIN_TOKEN');
+    localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+    localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sessao-jwt-expirada"));
     }
-    throw new Error('Sua sessão de 2 horas expirou. Faça login novamente.');
+    throw new Error('Sua sessão expirou. Faça login novamente.');
   }
 }
 
@@ -170,7 +241,7 @@ function tratarErroAutenticacao(response: Response) {
  */
 export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsvpResponse> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
   if (!authToken) {
     throw new Error('Autenticação necessária.');
@@ -178,15 +249,13 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
 
   const url = baseUrl ? `${baseUrl}/api/admin/rsvp/casamento` : '/api/admin/rsvp/casamento';
 
-  const response = await fetch(url, {
+  const response = await fetchAutenticadoAdmin(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
   });
-
-  tratarErroAutenticacao(response);
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -213,6 +282,7 @@ export interface NovoMembroAdminRequest {
 }
 
 export interface CadastrarConviteAdminRequest {
+  id?: string;
   codigo?: string;
   familia: string;
   telefone?: string;
@@ -230,7 +300,7 @@ export interface CadastrarConviteAdminResponse {
 }
 
 /**
- * Cadastra um novo convite no backend Java
+ * Cadastra ou edita um convite no backend Java
  * POST /api/admin/convites/cadastrar
  */
 export async function cadastrarConviteAdmin(
@@ -238,7 +308,7 @@ export async function cadastrarConviteAdmin(
   token?: string
 ): Promise<CadastrarConviteAdminResponse> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
   if (!authToken) {
     throw new Error('Autenticação de administrador necessária.');
@@ -246,7 +316,7 @@ export async function cadastrarConviteAdmin(
 
   const url = baseUrl ? `${baseUrl}/api/admin/convites/cadastrar` : '/api/admin/convites/cadastrar';
 
-  const response = await fetch(url, {
+  const response = await fetchAutenticadoAdmin(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -254,8 +324,6 @@ export async function cadastrarConviteAdmin(
     },
     body: JSON.stringify(dados),
   });
-
-  tratarErroAutenticacao(response);
 
   const json = await response.json();
   if (!response.ok) {
@@ -270,7 +338,7 @@ export async function cadastrarConviteAdmin(
  */
 export async function listarConvitesAdmin(token?: string): Promise<any[]> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
   if (!authToken) {
     throw new Error('Autenticação de administrador necessária.');
@@ -278,15 +346,13 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
 
   const url = baseUrl ? `${baseUrl}/api/admin/convites` : '/api/admin/convites';
 
-  const response = await fetch(url, {
+  const response = await fetchAutenticadoAdmin(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
   });
-
-  tratarErroAutenticacao(response);
 
   const json = await response.json();
   if (!response.ok) {
@@ -304,7 +370,7 @@ export async function excluirConviteAdmin(
   token?: string
 ): Promise<{ success: boolean; message: string; codigo?: string; familia?: string }> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
   if (!authToken) {
     throw new Error('Autenticação de administrador necessária.');
@@ -314,15 +380,13 @@ export async function excluirConviteAdmin(
     ? `${baseUrl}/api/admin/convites/${encodeURIComponent(codigoOuId.trim())}`
     : `/api/admin/convites/${encodeURIComponent(codigoOuId.trim())}`;
 
-  const response = await fetch(url, {
+  const response = await fetchAutenticadoAdmin(url, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
   });
-
-  tratarErroAutenticacao(response);
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -354,7 +418,7 @@ export interface DashboardMetricas {
  */
 export async function buscarMetricasAdmin(token?: string): Promise<DashboardMetricas> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
   if (!authToken) {
     throw new Error('Autenticação de administrador necessária.');
@@ -362,15 +426,13 @@ export async function buscarMetricasAdmin(token?: string): Promise<DashboardMetr
 
   const url = baseUrl ? `${baseUrl}/api/admin/convites/metricas` : '/api/admin/convites/metricas';
 
-  const response = await fetch(url, {
+  const response = await fetchAutenticadoAdmin(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
   });
-
-  tratarErroAutenticacao(response);
 
   const json = await response.json();
   if (!response.ok) {
@@ -388,10 +450,10 @@ export async function definirParCortejoAdmin(
   token?: string
 ): Promise<{ success: boolean; message: string; convite?: any }> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
   const url = baseUrl ? `${baseUrl}/api/admin/convites/definir-par` : '/api/admin/convites/definir-par';
 
-  const res = await fetch(url, {
+  const res = await fetchAutenticadoAdmin(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -441,17 +503,16 @@ export async function obterConfiguracaoEventoPublica(): Promise<ConfiguracaoEven
  */
 export async function obterConfiguracaoEventoAdmin(token?: string): Promise<ConfiguracaoEventoInfo> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
   const url = baseUrl ? `${baseUrl}/api/admin/configuracao-evento` : '/api/admin/configuracao-evento';
 
-  const res = await fetch(url, {
+  const res = await fetchAutenticadoAdmin(url, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': authToken ? `Bearer ${authToken}` : '',
     },
   });
 
-  tratarErroAutenticacao(res);
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || 'Erro ao obter prazo do evento.');
   return json;
@@ -463,10 +524,10 @@ export async function obterConfiguracaoEventoAdmin(token?: string): Promise<Conf
  */
 export async function atualizarPrazoRsvpAdmin(prazoRsvpIso: string, token?: string): Promise<ConfiguracaoEventoInfo> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
   const url = baseUrl ? `${baseUrl}/api/admin/configuracao-evento` : '/api/admin/configuracao-evento';
 
-  const res = await fetch(url, {
+  const res = await fetchAutenticadoAdmin(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -475,7 +536,6 @@ export async function atualizarPrazoRsvpAdmin(prazoRsvpIso: string, token?: stri
     body: JSON.stringify({ prazoRsvp: prazoRsvpIso }),
   });
 
-  tratarErroAutenticacao(res);
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || 'Erro ao atualizar prazo de RSVP.');
   return json;
@@ -487,10 +547,10 @@ export async function atualizarPrazoRsvpAdmin(prazoRsvpIso: string, token?: stri
  */
 export async function resetarRsvpConviteAdmin(codigoOuId: string, token?: string): Promise<{ success: boolean; message: string; convite?: any }> {
   const baseUrl = getApiBaseUrl();
-  const authToken = token || localStorage.getItem('CONVITE_ADMIN_TOKEN');
+  const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
   const url = baseUrl ? `${baseUrl}/api/admin/convites/${encodeURIComponent(codigoOuId)}/resetar-rsvp` : `/api/admin/convites/${encodeURIComponent(codigoOuId)}/resetar-rsvp`;
 
-  const res = await fetch(url, {
+  const res = await fetchAutenticadoAdmin(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -498,7 +558,6 @@ export async function resetarRsvpConviteAdmin(codigoOuId: string, token?: string
     },
   });
 
-  tratarErroAutenticacao(res);
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || 'Erro ao resetar RSVP do convite.');
   return json;

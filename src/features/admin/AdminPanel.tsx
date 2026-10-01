@@ -23,11 +23,14 @@ import type {
 // Services
 import {
   autenticarAdmin,
+  renovarTokenAdmin,
   buscarRelatorioRsvpAdmin,
   buscarMetricasAdmin,
   cadastrarConviteAdmin,
   excluirConviteAdmin,
   listarConvitesAdmin,
+  CONVITE_ADMIN_TOKEN_KEY,
+  CONVITE_ADMIN_REFRESH_KEY,
 } from "../../services/api";
 import type {
   AdminRsvpResponse,
@@ -37,11 +40,13 @@ import type {
 } from "../../services/api";
 import {
   loginRecepcaoBackend,
+  renovarTokenRecepcao,
   buscarRelatorioAuditoriaBackend,
   buscarParticipantesCerimoniaBackend,
   buscarFornecedoresBackend,
   validarSessaoRecepcaoBackend,
   RECEPCAO_JWT_STORAGE_KEY,
+  RECEPCAO_REFRESH_STORAGE_KEY,
 } from "../../services/convites";
 import type {
   RelatorioAuditoria,
@@ -139,45 +144,48 @@ export function AdminPanel() {
     };
 
     const tentarRestaurarSessao = async () => {
-      const adminToken = localStorage.getItem("CONVITE_ADMIN_TOKEN");
+      const adminToken = localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
       const recepcaoToken =
         sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
         localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
 
       if (adminToken) {
+        let tokenValido = adminToken;
         const exp = parseJwtExp(adminToken);
         if (exp && exp <= Date.now()) {
-          localStorage.removeItem("CONVITE_ADMIN_TOKEN");
-          setAuthError("Sua sessão de 2 horas expirou. Faça login novamente.");
-        } else {
+          const novoToken = await renovarTokenAdmin();
+          if (novoToken) {
+            tokenValido = novoToken;
+          } else {
+            tokenValido = "";
+            setAuthError("Sua sessão expirou. Faça login novamente.");
+          }
+        }
+        if (tokenValido) {
           try {
             setUserRole("admin");
             setIsLogged(true);
             setActiveTab("dashboard");
-            await carregarDadosAdmin(adminToken);
+            await carregarDadosAdmin(tokenValido);
             carregarClassificacoes();
             carregarFornecedores();
             return;
           } catch {
-            localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+            localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+            localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
           }
         }
       }
 
       if (recepcaoToken) {
-        const exp = parseJwtExp(recepcaoToken);
-        if (exp && exp <= Date.now()) {
-          sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
-          localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
-          setAuthError("Sua sessão de 2 horas expirou. Faça login novamente.");
+        const valida = await validarSessaoRecepcaoBackend();
+        if (valida) {
+          setUserRole("recepcao");
+          setIsLogged(true);
+          setActiveTab("portaria");
+          carregarDadosOperacionais();
         } else {
-          const valida = await validarSessaoRecepcaoBackend();
-          if (valida) {
-            setUserRole("recepcao");
-            setIsLogged(true);
-            setActiveTab("portaria");
-            carregarDadosOperacionais();
-          }
+          setAuthError("Sua sessão expirou. Faça login novamente.");
         }
       }
     };
@@ -202,54 +210,56 @@ export function AdminPanel() {
     };
   }, []);
 
-  // ─── DESLOGAMENTO AUTOMÁTICO APÓS 2 HORAS (EXPIRAÇÃO DO TOKEN JWT) ───────────
+  // ─── GERENCIAMENTO AUTOMÁTICO DE SESSÃO COM RENOVAÇÃO VIA REFRESH TOKEN ─────
   useEffect(() => {
     if (!isLogged) return;
 
-    const token =
-      localStorage.getItem("CONVITE_ADMIN_TOKEN") ||
-      sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
-      localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
+    const checarERenovarSessao = async () => {
+      const token =
+        localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY) ||
+        sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
+        localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
 
-    if (!token) {
-      handleLogout();
-      return;
-    }
-
-    const expMs = parseJwtExp(token);
-    if (!expMs) return;
-
-    const tempoRestante = expMs - Date.now();
-
-    if (tempoRestante <= 0) {
-      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
-      return;
-    }
-
-    // Timer pontual disparado exatamente após 2 horas
-    const timer = setTimeout(() => {
-      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
-    }, tempoRestante);
-
-    // Verificação contínua a cada 10s (cobre suspensão/retorno do navegador)
-    const interval = setInterval(() => {
-      if (Date.now() >= expMs) {
-        handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+      if (!token) {
+        handleLogout();
+        return;
       }
-    }, 10000);
+
+      const expMs = parseJwtExp(token);
+      if (!expMs) return;
+
+      const tempoRestante = expMs - Date.now();
+
+      // Se restar menos de 2 minutos ou se já expirou, renova silenciosamente
+      if (tempoRestante <= 120000) {
+        if (userRole === "admin") {
+          const novoToken = await renovarTokenAdmin();
+          if (!novoToken) {
+            handleLogout("Sua sessão expirou. Faça login novamente.");
+          }
+        } else {
+          const novoToken = await renovarTokenRecepcao();
+          if (!novoToken) {
+            handleLogout("Sua sessão expirou. Faça login novamente.");
+          }
+        }
+      }
+    };
+
+    // Checa a cada 30s se o token precisa ser renovado preventivamente
+    const interval = setInterval(checarERenovarSessao, 30000);
 
     const handleSessaoExpirada = () => {
-      handleLogout("Sua sessão de 2 horas expirou. Faça login novamente.");
+      handleLogout("Sua sessão expirou. Faça login novamente.");
     };
 
     window.addEventListener("sessao-jwt-expirada", handleSessaoExpirada);
 
     return () => {
-      clearTimeout(timer);
       clearInterval(interval);
       window.removeEventListener("sessao-jwt-expirada", handleSessaoExpirada);
     };
-  }, [isLogged]);
+  }, [isLogged, userRole]);
 
   const close = () => {
     setIsOpen(false);
@@ -317,9 +327,12 @@ export function AdminPanel() {
   };
 
   const handleLogout = (motivo?: string) => {
-    localStorage.removeItem("CONVITE_ADMIN_TOKEN");
+    localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+    localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
     sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    sessionStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
     localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    localStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
     setIsLogged(false);
     setUserRole("admin");
     setData(null);
@@ -403,6 +416,7 @@ export function AdminPanel() {
     setCadLoading(true);
     try {
       const res = await cadastrarConviteAdmin({
+        id: conviteEmEdicao ? conviteEmEdicao.id : undefined,
         codigo: conviteEmEdicao ? conviteEmEdicao.codigo : undefined,
         familia: novoConvite.familia.trim(),
         telefone: novoConvite.telefone.trim() || undefined,
