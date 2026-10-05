@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import QRCode from "qrcode";
 import type { FornecedorCasamento, MembroEquipeFornecedor } from "../../../services/convites";
 import {
@@ -9,6 +9,7 @@ import {
   atualizarMembroFornecedorBackend,
   removerMembroFornecedorBackend,
   checkinMembroFornecedorBackend,
+  emitirCredencialQrFornecedorBackend,
 } from "../../../services/convites";
 import { playCheckinSuccessSound, triggerHaptic } from "../utils/sound";
 import type { UserRole } from "../types";
@@ -16,28 +17,25 @@ import type { UserRole } from "../types";
 interface FornecedoresTabProps {
   userRole?: UserRole;
   fornecedores: FornecedorCasamento[];
+  fornecedoresError?: string;
   onFornecedoresChange: React.Dispatch<React.SetStateAction<FornecedorCasamento[]>>;
   onRefreshAuditoria?: () => void;
   onRefreshFornecedores: () => void;
 }
 
 const CATEGORIAS_PADRAO = [
-  "Música & Cerimônia",
-  "Foto & Vídeo",
-  "Buffet & Gastronomia",
-  "Decoração & Cenografia",
-  "Cerimonial & Staff",
-  "Bolo & Doces Finos",
-  "Cabelo & Maquiagem",
-  "Som, Iluminação & DJ",
-  "Transporte & Valet",
-  "Segurança & Apoio",
+  "Cobertura Visual & Mídia",
+  "Experiência & Atrações Interativas",
+  "Bebidas & Gastronomia",
+  "Música & Atmosfera",
+  "Beleza & Vestuário",
   "Outros",
 ];
 
 export function FornecedoresTab({
   userRole = "admin",
   fornecedores,
+  fornecedoresError = "",
   onFornecedoresChange,
   onRefreshAuditoria,
   onRefreshFornecedores,
@@ -49,6 +47,7 @@ export function FornecedoresTab({
   const [fornecedorEmEdicao, setFornecedorEmEdicao] = useState<FornecedorCasamento | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState("");
+  const [erroAcao, setErroAcao] = useState("");
   const [sucessoMsg, setSucessoMsg] = useState("");
 
   const [novoFornecedor, setNovoFornecedor] = useState({
@@ -101,6 +100,8 @@ export function FornecedoresTab({
   const [fornecedorCredencial, setFornecedorCredencial] = useState<FornecedorCasamento | null>(null);
   const [membroCredencial, setMembroCredencial] = useState<MembroEquipeFornecedor | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+  const [gerandoCredencialQr, setGerandoCredencialQr] = useState(false);
+  const [erroCredencialQr, setErroCredencialQr] = useState("");
 
   // Estado para adicionar membro rápido inline
   const [fornecedorAdicionandoMembro, setFornecedorAdicionandoMembro] = useState<string | null>(null);
@@ -121,63 +122,57 @@ export function FornecedoresTab({
 
   // Filtro de busca de fornecedor
   const [busca, setBusca] = useState("");
+  const [buscaDebounced, setBuscaDebounced] = useState("");
 
-  // Gera o QR Code dinamicamente ao abrir o modal de credencial (equipe inteira ou individual)
   useEffect(() => {
-    if (!fornecedorCredencial) {
+    const timeoutId = window.setTimeout(() => setBuscaDebounced(busca.trim()), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [busca]);
+
+  // O backend emite o token; o navegador gera somente a imagem do QR Code.
+  useEffect(() => {
+    if (!fornecedorCredencial || !membroCredencial || !fornecedorCredencial.id) {
       setQrCodeDataUrl("");
+      setErroCredencialQr("");
+      setGerandoCredencialQr(false);
       return;
     }
 
-    let payload: string;
+    let ativo = true;
+    setQrCodeDataUrl("");
+    setErroCredencialQr("");
+    setGerandoCredencialQr(true);
 
-    if (membroCredencial) {
-      // Credencial individual do profissional (formato aceito e checado na portaria)
-      payload = JSON.stringify({
-        tipo: "CREDENCIAL_STAFF_CASAMENTO",
-        fornecedorId: fornecedorCredencial.id,
-        empresa: fornecedorCredencial.empresa,
-        membroId: membroCredencial.id,
-        nome: membroCredencial.nome,
-        funcao: membroCredencial.funcao || "Equipe",
-        permaneceAteFim: Boolean(membroCredencial.permaneceAteFim),
-        horarioPrevisto: fornecedorCredencial.horarioPrevisto || "A definir",
-        evento: "Casamento Tainara & Thiago",
-        data: "2027-01-24",
-        local: "Espaço Balboa - Mairiporã/SP",
-      });
-    } else {
-      // Credencial geral da empresa contendo a relação completa de todos os membros
-      payload = JSON.stringify({
-        tipo: "CREDENCIAL_FORNECEDOR_CASAMENTO",
-        fornecedorId: fornecedorCredencial.id,
-        id: fornecedorCredencial.id,
-        empresa: fornecedorCredencial.empresa,
-        responsavel: fornecedorCredencial.nome,
-        categoria: fornecedorCredencial.categoria,
-        horarioPrevisto: fornecedorCredencial.horarioPrevisto,
-        totalMembros: fornecedorCredencial.equipe?.length || 0,
-        membros: fornecedorCredencial.equipe?.map((m) => ({
-          id: m.id,
-          nome: m.nome,
-          funcao: m.funcao || "Equipe",
-          permaneceAteFim: Boolean(m.permaneceAteFim),
-        })),
-        evento: "Casamento Tainara & Thiago · 24.01.2027",
-      });
-    }
+    emitirCredencialQrFornecedorBackend(fornecedorCredencial.id, membroCredencial.id)
+      .then(async (result) => {
+        if (!ativo) return;
+        if (!result.success || !result.tokenQr) {
+          setErroCredencialQr(result.message || "Não foi possível emitir a credencial.");
+          return;
+        }
 
-    QRCode.toDataURL(payload, {
-      width: 280,
-      margin: 2,
-      color: {
-        dark: "#261811",
-        light: "#FFFFFF",
-      },
-      errorCorrectionLevel: "M",
-    })
-      .then((url) => setQrCodeDataUrl(url))
-      .catch((err) => console.error("Erro ao gerar QR Code de fornecedor:", err));
+        try {
+          const url = await QRCode.toDataURL(result.tokenQr, {
+            width: 280,
+            margin: 2,
+            color: { dark: "#261811", light: "#FFFFFF" },
+            errorCorrectionLevel: "M",
+          });
+          if (ativo) setQrCodeDataUrl(url);
+        } catch {
+          if (ativo) setErroCredencialQr("Não foi possível gerar a imagem do QR Code neste dispositivo.");
+        }
+      })
+      .catch(() => {
+        if (ativo) setErroCredencialQr("Não foi possível gerar a credencial. Tente novamente.");
+      })
+      .finally(() => {
+        if (ativo) setGerandoCredencialQr(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
   }, [fornecedorCredencial, membroCredencial]);
 
   const handleCadastrar = async (e: React.FormEvent) => {
@@ -294,7 +289,10 @@ export function FornecedoresTab({
     setExcluindo(false);
     if (res.success) {
       setFornecedorParaExcluir(null);
+      setErroAcao("");
       onRefreshFornecedores();
+    } else {
+      setErroAcao(res.message);
     }
   };
 
@@ -316,6 +314,9 @@ export function FornecedoresTab({
       setNovoMembroPermaneceAteFim(false);
       setFornecedorAdicionandoMembro(null);
       onRefreshAuditoria?.();
+      setErroAcao("");
+    } else {
+      setErroAcao(res.message);
     }
   };
 
@@ -332,25 +333,32 @@ export function FornecedoresTab({
         prev.map((f) => (f.id === fornecedorId ? res.fornecedor! : f))
       );
       onRefreshAuditoria?.();
+      setErroAcao("");
+    } else {
+      setErroAcao(res.message);
     }
   };
 
-  const handleRemoverMembro = async (fornecedorId: string, membroId: string) => {
+  const handleRemoverMembro = async (fornecedorId: string, membroId: string): Promise<boolean> => {
     const res = await removerMembroFornecedorBackend(fornecedorId, membroId);
     if (res.success && res.fornecedor) {
       onFornecedoresChange((prev) =>
         prev.map((f) => (f.id === fornecedorId ? res.fornecedor! : f))
       );
       onRefreshAuditoria?.();
+      setErroAcao("");
+      return true;
     }
+    setErroAcao(res.message);
+    return false;
   };
 
   const handleConfirmarRemoverMembro = async () => {
     if (!membroParaRemover) return;
     setRemovendoMembro(true);
-    await handleRemoverMembro(membroParaRemover.fornecedorId, membroParaRemover.membro.id);
+    const removido = await handleRemoverMembro(membroParaRemover.fornecedorId, membroParaRemover.membro.id);
     setRemovendoMembro(false);
-    setMembroParaRemover(null);
+    if (removido) setMembroParaRemover(null);
   };
 
   const handleToggleMembro = async (
@@ -366,6 +374,9 @@ export function FornecedoresTab({
         prev.map((f) => (f.id === fornecedorId ? res.fornecedor! : f))
       );
       onRefreshAuditoria?.();
+      setErroAcao("");
+    } else {
+      setErroAcao(res.message);
     }
   };
 
@@ -393,17 +404,27 @@ export function FornecedoresTab({
     window.open(`https://wa.me/${tel ? `55${tel}` : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
-  const fornecedoresFiltrados = fornecedores.filter((f) => {
-    if (!busca.trim()) return true;
-    const q = busca.toLowerCase();
-    return (
-      f.empresa?.toLowerCase().includes(q) ||
-      f.nome?.toLowerCase().includes(q) ||
-      f.categoria?.toLowerCase().includes(q) ||
-      f.telefone?.toLowerCase().includes(q) ||
-      f.equipe?.some((m) => m.nome.toLowerCase().includes(q))
-    );
-  });
+  const fornecedoresFiltrados = useMemo(() => {
+    const q = buscaDebounced.toLowerCase();
+
+    if (!q) return fornecedores;
+
+    return fornecedores.filter((f) => {
+      const empresa = f.empresa?.toLowerCase() ?? "";
+      const nome = f.nome?.toLowerCase() ?? "";
+      const categoria = f.categoria?.toLowerCase() ?? "";
+      const telefone = f.telefone?.toLowerCase() ?? "";
+      const membros = (f.equipe ?? []).map((m) => m.nome.toLowerCase()).join(" ");
+
+      return (
+        empresa.includes(q) ||
+        nome.includes(q) ||
+        categoria.includes(q) ||
+        telefone.includes(q) ||
+        membros.includes(q)
+      );
+    });
+  }, [fornecedores, buscaDebounced]);
 
   return (
     <div className="space-y-6">
@@ -437,7 +458,33 @@ export function FornecedoresTab({
             onClick={() => setSucessoMsg("")}
             className="text-emerald-700 hover:text-emerald-950 font-bold ml-2 cursor-pointer"
           >
-            ✕
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {erroAcao && (
+        <div className="flex items-center justify-between gap-3 rounded-[8px] border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-900" role="alert">
+          <span>{erroAcao}</span>
+          <button
+            type="button"
+            onClick={() => setErroAcao("")}
+            className="shrink-0 font-semibold underline"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {fornecedoresError && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[8px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
+          <span>{fornecedoresError}</span>
+          <button
+            type="button"
+            onClick={onRefreshFornecedores}
+            className="shrink-0 rounded-[6px] border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-900 hover:bg-rose-100"
+          >
+            Tentar novamente
           </button>
         </div>
       )}
@@ -480,7 +527,7 @@ export function FornecedoresTab({
                         className="inline-flex items-center gap-1 text-[0.65rem] font-sans font-semibold px-2 py-0.5 rounded-md bg-[#261811]/5 text-[#261811] border border-[#261811]/15"
                         title="Horário previsto para chegada"
                       >
-                        ⏰ {f.horarioPrevisto}
+                        Horário: {f.horarioPrevisto}
                       </span>
                     )}
                     {f.chegadaAntecipada && (
@@ -495,15 +542,15 @@ export function FornecedoresTab({
                       </span>
                     ) : presentesNaEquipe === 0 ? (
                       <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-                        🔴 Não chegou (0/{totalEquipe})
+                        Não chegou (0/{totalEquipe})
                       </span>
                     ) : presentesNaEquipe < totalEquipe ? (
                       <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                        🟡 Parcial ({presentesNaEquipe}/{totalEquipe})
+                        Parcial ({presentesNaEquipe}/{totalEquipe})
                       </span>
                     ) : (
                       <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        🟢 Equipe completa ({presentesNaEquipe}/{totalEquipe})
+                        Equipe completa ({presentesNaEquipe}/{totalEquipe})
                       </span>
                     )}
                   </div>
@@ -528,7 +575,7 @@ export function FornecedoresTab({
                       className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                       title="Enviar credencial no WhatsApp do fornecedor"
                     >
-                      <span>💬</span> WhatsApp
+                      WhatsApp
                     </button>
                   )}
 
@@ -536,12 +583,12 @@ export function FornecedoresTab({
                     type="button"
                     onClick={() => {
                       setFornecedorCredencial(f);
-                      setMembroCredencial(null);
+                      setMembroCredencial(f.equipe?.[0] ?? null);
                     }}
                     className="text-xs font-sans px-3 py-1.5 rounded-[6px] border border-[#D8CDC0] bg-[#FAF7F2] text-[#261811] hover:border-[#261811] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                     title="Exibir QR Code e credencial de acesso"
                   >
-                    <span>🪪</span> Credencial QR
+                    Credencial QR
                   </button>
 
                   <button
@@ -554,7 +601,7 @@ export function FornecedoresTab({
                     }`}
                     title="Copiar link para a equipe acessar suas credenciais"
                   >
-                    <span>🔗</span> {copiadoId === (f.id || f.empresa) ? "Link Copiado" : "Copiar Link"}
+                    {copiadoId === (f.id || f.empresa) ? "Link Copiado" : "Copiar Link"}
                   </button>
 
                   {isNoivos && f.id && (
@@ -581,18 +628,23 @@ export function FornecedoresTab({
               </div>
 
               {/* Equipe / Profissionais */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold">
-                      Equipe Credenciada ({presentesNaEquipe}/{totalEquipe} presentes)
+                      EQUIPE CREDENCIADA · {totalEquipe} {totalEquipe === 1 ? "MEMBRO" : "MEMBROS"}
                     </span>
+                    {totalEquipe > 0 && (
+                      <span className="text-[0.64rem] font-sans text-[#705E51]">
+                        ({presentesNaEquipe} presente{presentesNaEquipe === 1 ? "" : "s"})
+                      </span>
+                    )}
                     {totalFicaAteFim > 0 && (
                       <span
                         className="text-[0.62rem] font-sans px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-900 border border-amber-200"
                         title="Profissionais da equipe com permanência autorizada até o final do evento"
                       >
-                        🍽️ {totalFicaAteFim} fica{totalFicaAteFim > 1 ? "m" : ""} até o fim
+                        {totalFicaAteFim} fica{totalFicaAteFim > 1 ? "m" : ""} até o fim
                       </span>
                     )}
                   </div>
@@ -657,105 +709,103 @@ export function FornecedoresTab({
                 )}
 
                 {/* Lista de Membros da Equipe */}
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
                   {f.equipe && f.equipe.length > 0 ? (
-                    f.equipe.map((m: MembroEquipeFornecedor) => (
-                      <div
-                        key={m.id}
-                        className={`inline-flex items-center gap-1.5 text-[0.68rem] font-sans px-2.5 py-1 rounded border transition-colors ${
-                          m.presente
-                            ? "bg-emerald-100 text-emerald-950 border-emerald-300 font-semibold"
-                            : "bg-[#FAF7F2] border-[#D8CDC0] text-[#543D30]"
-                        }`}
-                      >
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${m.presente ? "bg-emerald-600" : "bg-[#8C7A6B]/50"}`} />
-                        {isNoivos ? (
-                          <span
-                            className="select-none"
-                            title={m.presente ? "Presente (Check-in via Recepção)" : "Aguardando entrada"}
-                          >
-                            {m.nome} {m.funcao ? `(${m.funcao})` : ""}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (f.id) handleToggleMembro(f.id, m.id, !!m.presente);
-                            }}
-                            className="cursor-pointer hover:opacity-80"
-                            title="Clique para alternar presença na portaria"
-                          >
-                            {m.nome} {m.funcao ? `(${m.funcao})` : ""}
-                          </button>
-                        )}
-
-                        {/* Indicador e Controle Unificado de Permanência */}
-                        {isNoivos && f.id ? (
-                          m.permaneceAteFim ? (
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, true)}
-                              className="inline-flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded text-[0.62rem] font-semibold transition-colors cursor-pointer"
-                              title="Permanece até o fim do evento (clique para desmarcar)"
-                            >
-                              <span>🍽️ Fica até o fim</span>
-                              <span className="text-[0.6rem] text-amber-700 font-bold ml-0.5">✓</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, false)}
-                              className="inline-flex items-center gap-1 text-stone-400 hover:text-[#543D30] hover:bg-stone-100 px-1.5 py-0.5 rounded text-[0.62rem] border border-dashed border-stone-300 transition-colors cursor-pointer"
-                              title="Clique para marcar que este profissional permanece até o fim da festa"
-                            >
-                              <span>+ Fica até o fim</span>
-                            </button>
-                          )
-                        ) : (
-                          m.permaneceAteFim && (
-                            <span
-                              className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded text-[0.62rem] font-semibold"
-                              title="Profissional com permanência autorizada até o fim do evento"
-                            >
-                              🍽️ Fica até o fim
-                            </span>
-                          )
-                        )}
-
-                        {/* Botão de QR Code Individual do Profissional */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFornecedorCredencial(f);
-                            setMembroCredencial(m);
-                          }}
-                          className="text-[#8C7A6B] hover:text-[#261811] hover:bg-stone-200/60 px-1 py-0.5 rounded text-[0.6rem] font-medium cursor-pointer transition-colors"
-                          title={`Ver credencial e QR Code individual de ${m.nome}`}
+                    f.equipe.map((m: MembroEquipeFornecedor) => {
+                      const temFuncao = m.funcao && m.funcao.trim() && m.funcao.toLowerCase() !== "equipe" && m.funcao.toLowerCase() !== "fornecedor";
+                      return (
+                        <div
+                          key={m.id}
+                          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-[6px] border transition-colors ${
+                            m.presente
+                              ? "bg-emerald-50/70 border-emerald-200"
+                              : "bg-[#FAF7F2] border-[#E8DFD5]"
+                          }`}
                         >
-                          🪪 QR
-                        </button>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                  m.presente ? "bg-emerald-600" : "bg-[#B8A89A]"
+                                }`}
+                              />
+                              {isNoivos ? (
+                                <span className="font-serif text-xs font-semibold text-[#261811] truncate">
+                                  {m.nome}
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (f.id) handleToggleMembro(f.id, m.id, !m.presente);
+                                  }}
+                                  className="font-serif text-xs font-semibold text-[#261811] hover:text-[#543D30] text-left truncate cursor-pointer"
+                                  title="Clique para alternar presença na portaria"
+                                >
+                                  {m.nome}
+                                </button>
+                              )}
+                              {temFuncao && (
+                                <span className="text-[0.66rem] font-sans text-[#705E51] truncate">
+                                  ({m.funcao})
+                                </span>
+                              )}
+                            </div>
 
-                        {/* Botão Seguro de Remoção de Membro */}
-                        {isNoivos && f.id && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setMembroParaRemover({
-                                fornecedorId: f.id!,
-                                fornecedorNome: f.empresa,
-                                membro: m,
-                              })
-                            }
-                            className="text-[#8C7A6B] hover:text-rose-700 hover:bg-rose-50 px-1 py-0.5 rounded font-bold ml-0.5 cursor-pointer transition-colors"
-                            title="Remover este membro da equipe"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))
+                            {/* Informação secundária abaixo do nome */}
+                            <div className="flex items-center gap-2 mt-0.5 pl-3">
+                              {isNoivos && f.id ? (
+                                m.permaneceAteFim ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, true)}
+                                    className="text-[0.62rem] font-sans font-medium text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                                    title="Permanece até o fim do evento (clique para desmarcar)"
+                                  >
+                                    Fica até o fim · Marcado
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePermaneceAteFim(f.id!, m.id, false)}
+                                    className="text-[0.62rem] font-sans text-stone-400 hover:text-[#543D30] hover:bg-stone-100 px-1.5 py-0.5 rounded border border-dashed border-stone-300 cursor-pointer transition-colors"
+                                    title="Clique para marcar que este profissional permanece até o fim da festa"
+                                  >
+                                    + Fica até o fim
+                                  </button>
+                                )
+                              ) : (
+                                m.permaneceAteFim && (
+                                  <span className="text-[0.62rem] font-sans font-medium text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                    Fica até o fim
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ação de Remoção de Membro (apenas administradores/noivos) */}
+                          {isNoivos && f.id && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMembroParaRemover({
+                                  fornecedorId: f.id!,
+                                  fornecedorNome: f.empresa,
+                                  membro: m,
+                                })
+                              }
+                              className="text-[0.68rem] text-[#8C7A6B] hover:text-rose-700 hover:bg-rose-50 px-1.5 py-1 rounded cursor-pointer transition-colors flex-shrink-0"
+                              title="Remover este membro da equipe"
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
                   ) : (
-                    <span className="text-xs italic text-[#8C7A6B] font-serif">
+                    <span className="text-xs italic text-[#8C7A6B] font-serif py-1">
                       Nenhum profissional listado para esta equipe.
                     </span>
                   )}
@@ -765,7 +815,7 @@ export function FornecedoresTab({
           );
         })}
 
-        {!fornecedoresFiltrados.length && (
+        {!fornecedoresError && !fornecedoresFiltrados.length && (
           <div className="py-12 text-center text-xs font-serif italic text-[#8C7A6B] bg-white border border-[#E8DFD5] rounded-[12px]">
             Nenhum fornecedor encontrado com os termos pesquisados.
           </div>
@@ -791,9 +841,9 @@ export function FornecedoresTab({
                   setModalNovo(false);
                   setFornecedorEmEdicao(null);
                 }}
-                className="text-[#8C7A6B] hover:text-[#261811] font-bold text-lg cursor-pointer"
+                className="text-[#8C7A6B] hover:text-[#261811] font-bold text-sm cursor-pointer"
               >
-                ✕
+                Fechar
               </button>
             </div>
 
@@ -965,9 +1015,9 @@ export function FornecedoresTab({
               <button
                 type="button"
                 onClick={() => setFornecedorCredencial(null)}
-                className="text-[#8C7A6B] hover:text-[#261811] font-bold text-base cursor-pointer"
+                className="text-[#8C7A6B] hover:text-[#261811] font-bold text-sm cursor-pointer"
               >
-                ✕
+                Fechar
               </button>
             </div>
 
@@ -978,24 +1028,13 @@ export function FornecedoresTab({
               </p>
             </div>
 
-            {/* Seletor de Credencial: Equipe Inteira vs Membro Individual */}
+            {/* Cada credencial identifica um único profissional no backend. */}
             {fornecedorCredencial.equipe && fornecedorCredencial.equipe.length > 0 && (
               <div className="space-y-1.5 text-left">
                 <span className="text-[0.64rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold block">
-                  Visualizar QR Code por profissional:
+                  Credencial individual do profissional:
                 </span>
                 <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1.5 bg-white border border-[#E8DFD5] rounded-[8px]">
-                  <button
-                    type="button"
-                    onClick={() => setMembroCredencial(null)}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer font-sans ${
-                      membroCredencial === null
-                        ? "bg-[#261811] text-[#FAF7F2] border-[#261811] font-semibold"
-                        : "bg-[#FAF7F2] text-[#543D30] border-[#D8CDC0] hover:border-[#261811]"
-                    }`}
-                  >
-                    🏢 Toda a Equipe ({fornecedorCredencial.equipe.length})
-                  </button>
                   {fornecedorCredencial.equipe.map((m) => (
                     <button
                       key={m.id}
@@ -1007,8 +1046,8 @@ export function FornecedoresTab({
                           : "bg-[#FAF7F2] text-[#543D30] border-[#D8CDC0] hover:border-[#261811]"
                       }`}
                     >
-                      👤 {m.nome} {m.funcao ? `(${m.funcao})` : ""}
-                      {m.permaneceAteFim ? " 🍽️" : ""}
+                      {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                      {m.permaneceAteFim ? " · Fica até o fim" : ""}
                     </button>
                   ))}
                 </div>
@@ -1019,25 +1058,38 @@ export function FornecedoresTab({
               {membroCredencial ? (
                 <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-950 px-3 py-1 rounded-full text-xs font-sans font-medium">
                   Credencial Individual: <strong>{membroCredencial.nome}</strong> ({membroCredencial.funcao || "Equipe"})
-                  {membroCredencial.permaneceAteFim && " · 🍽️ Fica até o fim"}
+                  {membroCredencial.permaneceAteFim && " · Fica até o fim"}
                 </div>
               ) : (
-                <div className="inline-block bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] px-3 py-1 rounded-full text-xs font-sans font-medium">
-                  Credencial Geral da Empresa ({fornecedorCredencial.equipe?.length || 0} membros)
+                <div className="inline-block bg-amber-50 border border-amber-200 text-amber-950 px-3 py-1 rounded-full text-xs font-sans font-medium">
+                  Cadastre um profissional para emitir a credencial individual.
                 </div>
               )}
             </div>
 
             <div className="p-3 bg-white border border-[#E8DFD5] rounded-[12px] inline-block shadow-xs">
-              {qrCodeDataUrl ? (
+              {erroCredencialQr ? (
+                <div className="w-56 min-h-40 flex flex-col items-center justify-center gap-3 px-4 text-xs text-rose-800" role="alert">
+                  <span>{erroCredencialQr}</span>
+                  {membroCredencial && (
+                    <button
+                      type="button"
+                      onClick={() => setMembroCredencial({ ...membroCredencial })}
+                      className="font-semibold underline"
+                    >
+                      Tentar novamente
+                    </button>
+                  )}
+                </div>
+              ) : qrCodeDataUrl ? (
                 <img
                   src={qrCodeDataUrl}
-                  alt="QR Code de Acesso do Fornecedor"
+                  alt={`QR Code de ${membroCredencial?.nome ?? "profissional"}`}
                   className="w-56 h-56 mx-auto object-contain"
                 />
               ) : (
                 <div className="w-56 h-56 flex items-center justify-center text-xs font-sans text-[#8C7A6B]">
-                  Gerando QR Code...
+                  {gerandoCredencialQr ? "Preparando credencial e QR Code..." : "Selecione um profissional."}
                 </div>
               )}
             </div>
@@ -1058,7 +1110,7 @@ export function FornecedoresTab({
                   if (membroCredencial) {
                     const link = getLinkFornecedor(fornecedorCredencial);
                     const tel = (fornecedorCredencial.telefone || "").replace(/\D/g, "");
-                    const msg = `CREDENCIAL INDIVIDUAL DE STAFF · CASAMENTO TAINARA & THIAGO\nOlá, ${membroCredencial.nome}!\n\nSua credencial de acesso para a equipe ${fornecedorCredencial.empresa} (${membroCredencial.funcao || "Equipe"}) está pronta.\n\nHorário Previsto: ${fornecedorCredencial.horarioPrevisto || "A combinar"}\n${membroCredencial.permaneceAteFim ? "Permanência: Autorizada até o fim do evento 🍽️\n" : ""}Local: Espaço Balboa · Mairiporã - SP\n\nAcesse o link abaixo para apresentar seu QR Code na portaria:\n${link}`;
+                    const msg = `CREDENCIAL INDIVIDUAL DE STAFF · CASAMENTO TAINARA & THIAGO\nOlá, ${membroCredencial.nome}!\n\nSua credencial de acesso para a equipe ${fornecedorCredencial.empresa} (${membroCredencial.funcao || "Equipe"}) está pronta.\n\nHorário Previsto: ${fornecedorCredencial.horarioPrevisto || "A combinar"}\n${membroCredencial.permaneceAteFim ? "Permanência: Autorizada até o fim do evento\n" : ""}Local: Espaço Balboa · Mairiporã - SP\n\nAcesse o link abaixo para apresentar seu QR Code na portaria:\n${link}`;
                     window.open(`https://wa.me/${tel ? `55${tel}` : ""}?text=${encodeURIComponent(msg)}`, "_blank");
                   } else {
                     enviarWhatsAppCredencial(fornecedorCredencial);
@@ -1068,7 +1120,7 @@ export function FornecedoresTab({
               >
                 {membroCredencial
                   ? `Enviar Credencial de ${membroCredencial.nome} no WhatsApp`
-                  : "Enviar Credencial da Equipe no WhatsApp"}
+                  : "Enviar Credencial no WhatsApp"}
               </button>
 
               <button

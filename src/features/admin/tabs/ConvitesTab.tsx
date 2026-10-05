@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { ConviteCadastrado, NovoConviteFormState, MembroConviteCadastrado } from "../types";
 import { PAPEL_OPTIONS, PAPEL_MEMBRO_OPTIONS } from "../types";
 import { SectionTitle } from "../components/SectionTitle";
@@ -41,7 +41,6 @@ interface ConvitesTabProps {
   papeis?: PapelParticipante[];
   vinculos?: VinculoParticipante[];
   onRecarregarDados?: () => Promise<void>;
-  onNavegarParaFornecedores?: (fornecedorId?: string) => void;
 }
 
 export function ConvitesTab({
@@ -63,11 +62,23 @@ export function ConvitesTab({
   onDismissFeedback,
   papeis = [],
   onRecarregarDados,
-  onNavegarParaFornecedores,
 }: ConvitesTabProps) {
   const [subTab, setSubTab] = useState<"lista" | "novo">("lista");
   const [copiadoCode, setCopiadoCode] = useState<Record<string, string>>({});
   const [copiadoFeedback, setCopiadoFeedback] = useState(false);
+  const [buscaLocal, setBuscaLocal] = useState(buscaConvites);
+
+  useEffect(() => {
+    setBuscaLocal(buscaConvites);
+  }, [buscaConvites]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      onBuscaChange(buscaLocal.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [buscaLocal, onBuscaChange]);
 
   // Configuração do Prazo de RSVP (Definido pelos noivos)
   const [configEvento, setConfigEvento] = useState<ConfiguracaoEventoInfo | null>(null);
@@ -269,7 +280,7 @@ export function ConvitesTab({
             className="inline-flex items-center gap-1.5 text-[0.72rem] font-sans tracking-[0.14em] uppercase px-3.5 py-2 rounded-[6px] font-semibold bg-[#FAF7F2] hover:bg-[#F2ECE3] border border-[#D8CDC0] hover:border-[#8C7A6B] text-[#543D30] hover:text-[#261811] transition-all cursor-pointer shadow-xs"
             title="Alterar prazo limite para confirmação de presença (RSVP)"
           >
-            <span>📅 Prazo RSVP: {configEvento?.prazoRsvpFormatado || "Não definido"}</span>
+            <span>Prazo RSVP: {configEvento?.prazoRsvpFormatado || "Não definido"}</span>
             <span className="text-[0.60rem] bg-amber-100 text-amber-900 border border-amber-300 rounded px-1.5 py-0.5 font-bold">
               Alterar
             </span>
@@ -295,7 +306,7 @@ export function ConvitesTab({
         <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-sans rounded-[6px] flex justify-between items-center">
           <span>{feedbackGeral.msg}</span>
           <button type="button" onClick={onDismissFeedback} className="underline ml-2 cursor-pointer">
-            ✕
+            Fechar
           </button>
         </div>
       )}
@@ -305,8 +316,8 @@ export function ConvitesTab({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#EAE0D5]">
             <input
               type="text"
-              value={buscaConvites}
-              onChange={(e) => onBuscaChange(e.target.value)}
+              value={buscaLocal}
+              onChange={(e) => setBuscaLocal(e.target.value)}
               placeholder="Buscar família, membro ou código..."
               className="w-full sm:w-80 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
             />
@@ -333,7 +344,7 @@ export function ConvitesTab({
                       </h3>
                       {c.ehFornecedor && (
                         <span className="text-[0.62rem] font-sans uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-950 border border-amber-300 shadow-xs">
-                          🏢 Fornecedor
+                          Fornecedor
                         </span>
                       )}
                       <span
@@ -386,7 +397,7 @@ export function ConvitesTab({
                                   className="text-amber-800 hover:text-amber-950 font-bold ml-0.5 cursor-pointer"
                                   title="Alterar ou desvincular par deste integrante"
                                 >
-                                  ✎
+                                  Definir par
                                 </button>
                               </span>
                             ) : (
@@ -403,7 +414,7 @@ export function ConvitesTab({
                         )}
                         {m.confirmadoRsvp === true && (
                           <span className="text-emerald-800 font-semibold">
-                            {c.ehFornecedor ? " (Fica até o fim 🍽️)" : " (Vai)"}
+                            {" (Confirmado)"}
                           </span>
                         )}
                         {m.confirmadoRsvp === false && <span className="text-rose-800"> (Não vai)</span>}
@@ -421,7 +432,7 @@ export function ConvitesTab({
                         className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#543D30] hover:text-[#261811] bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px]"
                         title="Copiar link da credencial da equipe"
                       >
-                        <span>{copiadoConvite || "🔗 Copiar Credencial"}</span>
+                        <span>{copiadoConvite || "Copiar Credencial"}</span>
                       </button>
                       {c.telefone && (
                         <button
@@ -430,17 +441,7 @@ export function ConvitesTab({
                           className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-[6px] cursor-pointer min-h-[38px]"
                           title="Enviar credencial da equipe no WhatsApp"
                         >
-                          <span>💬 WhatsApp</span>
-                        </button>
-                      )}
-                      {onNavegarParaFornecedores && (
-                        <button
-                          type="button"
-                          onClick={() => onNavegarParaFornecedores(c.fornecedorId)}
-                          className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-sans text-[#261811] font-semibold bg-white hover:bg-[#FAF7F2] border border-[#D8CDC0] rounded-[6px] cursor-pointer min-h-[38px] transition-colors"
-                          title="Gerenciar equipe, horários e membros na aba Fornecedores"
-                        >
-                          <span>🏢 Gerenciar na aba Fornecedores →</span>
+                          <span>WhatsApp</span>
                         </button>
                       )}
                     </div>
@@ -685,7 +686,7 @@ export function ConvitesTab({
                         }
                         className="text-rose-600 hover:text-rose-900 text-xs font-sans uppercase p-1 cursor-pointer ml-auto"
                       >
-                        ✕ Remover
+                        Remover
                       </button>
                     )}
                   </div>

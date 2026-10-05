@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './api';
+import { getApiBaseUrl, mensagemErroApi, CONVITE_ADMIN_TOKEN_KEY } from './api';
 
 export interface MembroAutorizado {
   id: string;
@@ -99,6 +99,43 @@ export interface RelatorioAuditoria {
     ausentesNoShow: number;
     membros: MembroAutorizado[];
   }>;
+}
+
+export interface QrValidationResult {
+  success: boolean;
+  message: string;
+  valida?: boolean;
+  eventoId?: string;
+  pessoaId?: string;
+  tipo?: string;
+  fornecedorId?: string;
+  nomePessoa?: string;
+  funcao?: string;
+  statusCredencial?: string;
+  situacaoPresenca?: string;
+}
+
+export interface QrPresenceResult {
+  success: boolean;
+  message: string;
+  eventoId?: string;
+  pessoaId?: string;
+  tipo?: string;
+  fornecedorId?: string;
+  nomePessoa?: string;
+  funcao?: string;
+  statusPresenca?: string;
+}
+
+
+export function buildQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "");
+  if (entries.length === 0) return "";
+  const query = new URLSearchParams();
+  for (const [key, value] of entries) {
+    query.set(key, String(value));
+  }
+  return `?${query.toString()}`;
 }
 
 // Limpeza de caches legados no navegador para garantir 100% conexão com o banco de dados
@@ -295,7 +332,7 @@ export const RECEPCAO_REFRESH_STORAGE_KEY = "CASAMENTO_RECEPCAO_REFRESH_TOKEN";
 
 export function getRecepcaoAuthHeaders(): Record<string, string> {
   const token = typeof window !== "undefined"
-    ? (localStorage.getItem("CONVITE_ADMIN_TOKEN") || sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
+    ? (localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY) || sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) || localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY))
     : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
@@ -513,18 +550,22 @@ export async function buscarParticipantesCerimoniaBackend(): Promise<{ total: nu
   const baseUrl = getApiBaseUrl();
   const url = baseUrl ? `${baseUrl}/api/recepcao/participantes` : `/api/recepcao/participantes`;
 
+  let res: Response;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       headers: getRecepcaoAuthHeaders()
     });
-    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.error("Erro ao buscar cortejo no servidor:", err);
+  } catch {
+    throw new Error("Não foi possível conectar ao servidor para carregar o cortejo.");
   }
 
-  return { total: 0, confirmadosRsvp: 0, presentes: 0, participantes: [] };
+  if (!res.ok) {
+    throw new Error(await mensagemErroApi(res, "Não foi possível carregar o cortejo."));
+  }
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    throw new Error("O servidor retornou uma resposta inválida ao carregar o cortejo.");
+  }
+  return await res.json();
 }
 
 export async function checkinParticipanteBackend(
@@ -535,23 +576,125 @@ export async function checkinParticipanteBackend(
   const baseUrl = getApiBaseUrl();
   const url = baseUrl ? `${baseUrl}/api/recepcao/participantes/${encodeURIComponent(id)}/checkin` : `/api/recepcao/participantes/${encodeURIComponent(id)}/checkin`;
 
-  try {
-    const payload: Record<string, any> = {};
-    if (presente !== undefined) payload.presente = presente;
-    if (statusCortejo !== undefined) payload.statusCortejo = statusCortejo;
+  const payload: { presente?: boolean; statusCortejo?: string } = {};
+  if (presente !== undefined) payload.presente = presente;
+  if (statusCortejo !== undefined) payload.statusCortejo = statusCortejo;
 
-    const res = await fetch(url, {
+  let res: Response;
+  try {
+    res = await fetch(url, {
       method: "POST",
       headers: getRecepcaoAuthHeaders(),
       body: JSON.stringify(payload)
     });
-    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      return await res.json();
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para atualizar a chegada." };
+  }
+
+  if (!res.ok) {
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível atualizar a chegada."),
+    };
+  }
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    return { success: false, message: "O servidor retornou uma resposta inválida ao atualizar a chegada." };
+  }
+  return await res.json();
+}
+
+export async function validarCredencialQrBackend(tokenQr: string): Promise<QrValidationResult> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/recepcao/qr/validar` : `/api/recepcao/qr/validar`;
+
+  if (!tokenQr.trim()) {
+    return { success: false, valida: false, message: "O QR Code está vazio ou inválido." };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: getRecepcaoAuthHeaders(),
+      body: JSON.stringify({ tokenQr })
+    });
+
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    if (!isJson) {
+      return { success: false, message: "Resposta inválida do backend para QR." };
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao atualizar participante" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao atualizar participante" };
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        message: await mensagemErroApi(res, "Não foi possível validar esta credencial."),
+        valida: false,
+      };
+    }
+
+    return {
+      success: true,
+      message: data?.message || "Credencial válida.",
+      valida: Boolean(data?.valida),
+      eventoId: data?.eventoId,
+      pessoaId: data?.pessoaId,
+      tipo: data?.tipo,
+      fornecedorId: data?.fornecedorId,
+      nomePessoa: data?.nomePessoa,
+      funcao: data?.funcao,
+      statusCredencial: data?.statusCredencial,
+      situacaoPresenca: data?.situacaoPresenca,
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para validar a credencial." };
+  }
+}
+
+export async function registrarPresencaQrBackend(
+  tokenQr: string,
+  recepcionista?: string,
+  observacao?: string
+): Promise<QrPresenceResult> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/recepcao/qr/checkin` : `/api/recepcao/qr/checkin`;
+
+  if (!tokenQr.trim()) {
+    return { success: false, message: "O QR Code está vazio ou inválido." };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: getRecepcaoAuthHeaders(),
+      body: JSON.stringify({ tokenQr, recepcionista, observacao })
+    });
+
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    if (!isJson) {
+      return { success: false, message: "Resposta inválida do backend para registro de presença." };
+    }
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        message: await mensagemErroApi(res, "Não foi possível registrar a presença via QR."),
+      };
+    }
+
+    return {
+      success: true,
+      message: data?.message || "Presença registrada com sucesso.",
+      eventoId: data?.eventoId,
+      pessoaId: data?.pessoaId,
+      tipo: data?.tipo,
+      fornecedorId: data?.fornecedorId,
+      nomePessoa: data?.nomePessoa,
+      funcao: data?.funcao,
+      statusPresenca: data?.statusPresenca,
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para registrar a presença." };
   }
 }
 
@@ -595,30 +738,39 @@ export async function buscarFornecedoresBackend(): Promise<{
     return null;
   };
 
-  try {
-    const res = await fetch(url, { headers });
-    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      const parsed = processResponse(await res.json());
-      if (parsed) return parsed;
+  const parseResponse = async (response: Response) => {
+    if (!response.ok) {
+      throw new Error(await mensagemErroApi(response, "Não foi possível carregar os fornecedores."));
     }
-  } catch (err) {
-    console.error("Erro ao buscar fornecedores no servidor:", err);
-  }
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error("O servidor retornou uma resposta inválida ao carregar os fornecedores.");
+    }
+    const parsed = processResponse(await response.json());
+    if (!parsed) {
+      throw new Error("O formato da resposta de fornecedores não corresponde ao contrato esperado.");
+    }
+    return parsed;
+  };
 
-  // Fallback caso o endpoint principal falhe
+  let response: Response;
   try {
-    const fallbackEndpoint = adminToken ? "/api/recepcao/fornecedores" : "/api/admin/fornecedores";
-    const fallbackUrl = baseUrl ? `${baseUrl}${fallbackEndpoint}` : fallbackEndpoint;
-    const res = await fetch(fallbackUrl, { headers });
-    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      const parsed = processResponse(await res.json());
-      if (parsed) return parsed;
-    }
+    response = await fetch(url, { headers });
   } catch {
-    // ignora fallback
+    throw new Error("Não foi possível conectar ao servidor para carregar os fornecedores.");
   }
 
-  return { totalEmpresas: 0, totalMembrosEquipe: 0, totalMembrosPresentes: 0, fornecedores: [] };
+  if (response.status !== 404) {
+    return parseResponse(response);
+  }
+
+  const fallbackEndpoint = adminToken ? "/api/recepcao/fornecedores" : "/api/admin/fornecedores";
+  const fallbackUrl = baseUrl ? `${baseUrl}${fallbackEndpoint}` : fallbackEndpoint;
+  try {
+    return await parseResponse(await fetch(fallbackUrl, { headers }));
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("Não foi possível carregar os fornecedores.");
+  }
 }
 
 export async function checkinMembroFornecedorBackend(
@@ -640,10 +792,12 @@ export async function checkinMembroFornecedorBackend(
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao atualizar membro da equipe" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao atualizar membro da equipe" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível atualizar a presença do profissional."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para atualizar a presença." };
   }
 }
 
@@ -665,10 +819,12 @@ export async function adicionarMembroFornecedorBackend(
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao adicionar membro à equipe" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao adicionar membro à equipe" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível adicionar o profissional à equipe."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para adicionar o profissional." };
   }
 }
 
@@ -691,10 +847,12 @@ export async function atualizarMembroFornecedorBackend(
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao atualizar membro da equipe" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao atualizar membro da equipe" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível atualizar os dados do profissional."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para atualizar o profissional." };
   }
 }
 
@@ -713,10 +871,12 @@ export async function cadastrarFornecedorBackend(
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao cadastrar fornecedor" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao cadastrar fornecedor" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível cadastrar o fornecedor."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para cadastrar o fornecedor." };
   }
 }
 
@@ -738,10 +898,12 @@ export async function atualizarFornecedorBackend(
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
       return await res.json();
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao atualizar fornecedor" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao atualizar fornecedor" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível atualizar o fornecedor."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para atualizar o fornecedor." };
   }
 }
 
@@ -762,10 +924,12 @@ export async function excluirFornecedorBackend(
       const data = await res.json().catch(() => ({}));
       return { success: true, message: data.message || "Fornecedor excluído com sucesso!" };
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao excluir fornecedor" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao excluir fornecedor" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível excluir o fornecedor."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para excluir o fornecedor." };
   }
 }
 
@@ -787,10 +951,12 @@ export async function removerMembroFornecedorBackend(
       const data = await res.json().catch(() => ({}));
       return { success: true, message: data.message || "Membro removido da equipe", fornecedor: data.fornecedor };
     }
-    const err = await res.json().catch(() => ({}));
-    return { success: false, message: err.message || "Erro ao remover membro da equipe" };
-  } catch (err: any) {
-    return { success: false, message: err.message || "Erro de conexão ao remover membro da equipe" };
+    return {
+      success: false,
+      message: await mensagemErroApi(res, "Não foi possível remover o profissional da equipe."),
+    };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para remover o profissional." };
   }
 }
 
@@ -827,6 +993,70 @@ export async function buscarFornecedorPublico(id: string): Promise<FornecedorCas
   return null;
 }
 
+export async function emitirCredencialQrFornecedorBackend(
+  fornecedorId: string,
+  membroId: string
+): Promise<{ success: boolean; tokenQr?: string; message?: string }> {
+  const baseUrl = getApiBaseUrl();
+  const endpoint = `/api/convites/fornecedor/${encodeURIComponent(fornecedorId)}/membros/${encodeURIComponent(membroId)}/credencial-qr`;
+  const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      return { success: false, message: "O servidor retornou uma resposta inválida ao emitir a credencial." };
+    }
+
+    const data = await response.json();
+    if (!response.ok || !data?.success || typeof data?.tokenQr !== "string" || !data.tokenQr.trim()) {
+      return {
+        success: false,
+        message: await mensagemErroApi(response, data?.message || "Não foi possível emitir a credencial."),
+      };
+    }
+
+    return { success: true, tokenQr: data.tokenQr };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para emitir a credencial." };
+  }
+}
+
+export async function emitirCredencialQrConvidadoBackend(
+  codigoConvite: string,
+  membroId: string
+): Promise<{ success: boolean; tokenQr?: string; message?: string }> {
+  const baseUrl = getApiBaseUrl();
+  const endpoint = `/api/convites/${encodeURIComponent(codigoConvite)}/membros/${encodeURIComponent(membroId)}/credencial-qr`;
+  const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      return { success: false, message: "O servidor retornou uma resposta inválida ao emitir a credencial." };
+    }
+
+    const data = await response.json();
+    if (!response.ok || !data?.success || typeof data?.tokenQr !== "string" || !data.tokenQr.trim()) {
+      return {
+        success: false,
+        message: await mensagemErroApi(response, data?.message || "Não foi possível emitir a credencial."),
+      };
+    }
+
+    return { success: true, tokenQr: data.tokenQr };
+  } catch {
+    return { success: false, message: "Não foi possível conectar ao servidor para emitir a credencial." };
+  }
+}
+
 export async function adicionarMembroPublicoFornecedor(
   fornecedorId: string,
   novoMembro: { nome: string; funcao?: string; permaneceAteFim?: boolean }
@@ -851,5 +1081,3 @@ export async function adicionarMembroPublicoFornecedor(
     return { success: false, message: err.message || "Erro de conexão ao adicionar membro à equipe" };
   }
 }
-
-

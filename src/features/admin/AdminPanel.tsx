@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import type { Tab, UserRole, ConviteCadastrado, NovoConviteFormState } from "./types";
 import { AdminHeader } from "./components/AdminHeader";
 import { AdminLogin } from "./components/AdminLogin";
@@ -6,11 +6,14 @@ import { DeleteConviteModal } from "./components/DeleteConviteModal";
 import { DashboardTab } from "./tabs/DashboardTab";
 import { ConvitesTab } from "./tabs/ConvitesTab";
 import { RsvpTab, type RespostaConvidadoItem } from "./tabs/RsvpTab";
-import { PortariaTab } from "./tabs/PortariaTab";
-import { CortejoTab } from "./tabs/CortejoTab";
-import { FornecedoresTab } from "./tabs/FornecedoresTab";
-import { AuditoriaTab } from "./tabs/AuditoriaTab";
-import { ConfiguracoesTab } from "./tabs/ConfiguracoesTab";
+import { TableSkeleton } from "../../design-system";
+
+// Lazy loading das abas operacionais pesadas (elimina overhead de html5-qrcode e scanner na carga inicial)
+const PortariaTab = lazy(() => import("./tabs/PortariaTab").then((m) => ({ default: m.PortariaTab })));
+const CortejoTab = lazy(() => import("./tabs/CortejoTab").then((m) => ({ default: m.CortejoTab })));
+const FornecedoresTab = lazy(() => import("./tabs/FornecedoresTab").then((m) => ({ default: m.FornecedoresTab })));
+const AuditoriaTab = lazy(() => import("./tabs/AuditoriaTab").then((m) => ({ default: m.AuditoriaTab })));
+const ConfiguracoesTab = lazy(() => import("./tabs/ConfiguracoesTab").then((m) => ({ default: m.ConfiguracoesTab })));
 import {
   buscarClassificacoesBackend,
   isPapelCortejo,
@@ -29,6 +32,7 @@ import {
   cadastrarConviteAdmin,
   excluirConviteAdmin,
   listarConvitesAdmin,
+  revogarSessaoBackend,
   CONVITE_ADMIN_TOKEN_KEY,
   CONVITE_ADMIN_REFRESH_KEY,
 } from "../../services/api";
@@ -36,7 +40,6 @@ import type {
   AdminRsvpResponse,
   DashboardMetricas,
   RsvpAdminItem,
-  AcompanhanteResponse,
 } from "../../services/api";
 import {
   loginRecepcaoBackend,
@@ -48,6 +51,7 @@ import {
   RECEPCAO_JWT_STORAGE_KEY,
   RECEPCAO_REFRESH_STORAGE_KEY,
 } from "../../services/convites";
+import { readQueryCache, writeQueryCache, invalidateQueryCache } from "../../services/queryCache";
 import type {
   RelatorioAuditoria,
   ParticipanteCerimonia,
@@ -75,6 +79,52 @@ function parseJwtExp(token: string): number | null {
   }
 }
 
+const ADMIN_QUERY_KEYS = {
+  dashboard: "admin:dashboard",
+  convites: "admin:convites",
+  metrics: "admin:metrics",
+  classificacoes: "admin:classificacoes",
+  auditoria: "operational:auditoria",
+  participantes: "operational:participantes",
+  fornecedores: "operational:fornecedores",
+} as const;
+
+const invalidateAdminDataCache = () => {
+  invalidateQueryCache(
+    ADMIN_QUERY_KEYS.dashboard,
+    ADMIN_QUERY_KEYS.convites,
+    ADMIN_QUERY_KEYS.metrics,
+    ADMIN_QUERY_KEYS.classificacoes,
+    ADMIN_QUERY_KEYS.auditoria,
+    ADMIN_QUERY_KEYS.participantes,
+    ADMIN_QUERY_KEYS.fornecedores,
+  );
+};
+
+function isConviteCadastrado(value: unknown): value is ConviteCadastrado {
+  if (typeof value !== "object" || value === null) return false;
+  const convite = value as Record<string, unknown>;
+  if (
+    typeof convite.codigo !== "string" ||
+    typeof convite.familia !== "string" ||
+    !Array.isArray(convite.membros)
+  ) {
+    return false;
+  }
+
+  return convite.membros.every((membro: unknown) => {
+    if (typeof membro !== "object" || membro === null) return false;
+    return typeof (membro as Record<string, unknown>).nome === "string";
+  });
+}
+
+function validarListaConvites(items: unknown[]): ConviteCadastrado[] {
+  if (!items.every(isConviteCadastrado)) {
+    throw new Error("O servidor retornou convites em um formato incompatível.");
+  }
+  return items;
+}
+
 export function AdminPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
@@ -90,7 +140,23 @@ export function AdminPanel() {
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState("");
   const [searchRsvp, setSearchRsvp] = useState("");
+  const [rsvpStatusFilter, setRsvpStatusFilter] = useState<"todos" | "respondidos" | "confirmados" | "recusados" | "pendentes">("todos");
+  const [rsvpPage, setRsvpPage] = useState(0);
+  const [rsvpPageSize, setRsvpPageSize] = useState(30);
   const [metricasBackend, setMetricasBackend] = useState<DashboardMetricas | null>(null);
+
+  const mapRsvpStatusFilter = (filter: typeof rsvpStatusFilter) => {
+    switch (filter) {
+      case "confirmados":
+        return "CONFIRMADO";
+      case "recusados":
+        return "RECUSADO";
+      case "pendentes":
+        return "PENDENTE";
+      default:
+        return undefined;
+    }
+  };
 
   // Convites
   const [listaConvites, setListaConvites] = useState<ConviteCadastrado[]>([]);
@@ -121,7 +187,10 @@ export function AdminPanel() {
 
   // Dados Operacionais (Portaria, Cortejo, Fornecedores, Auditoria)
   const [participantes, setParticipantes] = useState<ParticipanteCerimonia[]>([]);
+  const [participantesLoading, setParticipantesLoading] = useState(false);
+  const [participantesError, setParticipantesError] = useState("");
   const [fornecedores, setFornecedores] = useState<FornecedorCasamento[]>([]);
+  const [fornecedoresError, setFornecedoresError] = useState("");
   const [relatorioAuditoria, setRelatorioAuditoria] = useState<RelatorioAuditoria | null>(null);
   const [auditoriaLoading, setAuditoriaLoading] = useState(false);
 
@@ -167,8 +236,8 @@ export function AdminPanel() {
             setIsLogged(true);
             setActiveTab("dashboard");
             await carregarDadosAdmin(tokenValido);
-            carregarClassificacoes();
-            carregarFornecedores();
+            await carregarClassificacoes();
+            await carregarFornecedores();
             return;
           } catch {
             localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
@@ -183,7 +252,7 @@ export function AdminPanel() {
           setUserRole("recepcao");
           setIsLogged(true);
           setActiveTab("portaria");
-          carregarDadosOperacionais();
+          await carregarDadosOperacionais();
         } else {
           setAuthError("Sua sessão expirou. Faça login novamente.");
         }
@@ -211,6 +280,21 @@ export function AdminPanel() {
   }, []);
 
   // ─── GERENCIAMENTO AUTOMÁTICO DE SESSÃO COM RENOVAÇÃO VIA REFRESH TOKEN ─────
+  useEffect(() => {
+    if (!isLogged || userRole !== "admin" || activeTab !== "rsvp") return;
+
+    const timeoutId = window.setTimeout(() => {
+      void carregarDadosAdmin(undefined, {
+        search: searchRsvp,
+        status: mapRsvpStatusFilter(rsvpStatusFilter),
+        page: rsvpPage,
+        pageSize: rsvpPageSize,
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchRsvp, rsvpStatusFilter, rsvpPage, rsvpPageSize, isLogged, userRole, activeTab]);
+
   useEffect(() => {
     if (!isLogged) return;
 
@@ -288,7 +372,7 @@ export function AdminPanel() {
           setUserRole("recepcao");
           setIsLogged(true);
           setActiveTab("portaria"); // TELA INICIAL DA RECEPÇÃO
-          carregarDadosOperacionais();
+          await carregarDadosOperacionais();
           return;
         }
         const adminToken = await autenticarAdmin(usr.trim(), pass);
@@ -296,8 +380,8 @@ export function AdminPanel() {
         setIsLogged(true);
         setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
         await carregarDadosAdmin(adminToken);
-        carregarClassificacoes();
-        carregarFornecedores();
+        await carregarClassificacoes();
+        await carregarFornecedores();
       } else {
         try {
           const adminToken = await autenticarAdmin(usr.trim(), pass);
@@ -305,15 +389,15 @@ export function AdminPanel() {
           setIsLogged(true);
           setActiveTab("dashboard"); // TELA INICIAL DOS NOIVOS
           await carregarDadosAdmin(adminToken);
-          carregarClassificacoes();
-          carregarFornecedores();
+          await carregarClassificacoes();
+          await carregarFornecedores();
         } catch (adminErr: any) {
           const res = await loginRecepcaoBackend(usr.trim(), pass);
           if (res.success) {
             setUserRole("recepcao");
             setIsLogged(true);
             setActiveTab("portaria"); // TELA INICIAL DA RECEPÇÃO
-            carregarDadosOperacionais();
+            await carregarDadosOperacionais();
             return;
           }
           throw adminErr;
@@ -327,6 +411,12 @@ export function AdminPanel() {
   };
 
   const handleLogout = (motivo?: string) => {
+    const refreshToken =
+      localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY) ||
+      sessionStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY) ||
+      localStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY);
+    const revogacao = refreshToken ? revogarSessaoBackend(refreshToken) : Promise.resolve(true);
+
     localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
     localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
     sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
@@ -337,21 +427,59 @@ export function AdminPanel() {
     setUserRole("admin");
     setData(null);
     setMetricasBackend(null);
+    setSearchRsvp("");
+    setRsvpStatusFilter("todos");
+    setRsvpPage(0);
+    setRsvpPageSize(30);
     setAuthError(motivo || "");
+
+    void revogacao.then((revogada) => {
+      if (!revogada) {
+        const mensagem = "A sessão foi encerrada neste dispositivo, mas não foi possível revogá-la no servidor.";
+        setAuthError(motivo ? `${motivo} ${mensagem}` : mensagem);
+      }
+    });
   };
 
   // ─── CARREGADORES DE DADOS ───────────────────────────────────────────────────
-  const carregarDadosAdmin = async (token?: string) => {
+  const carregarDadosAdmin = async (token?: string, queryParams?: { search?: string; status?: string; page?: number; pageSize?: number; sortBy?: string; sortDirection?: "asc" | "desc" }) => {
     setDataLoading(true);
     setDataError("");
+
+    const effectiveQuery = {
+      search: queryParams?.search ?? (searchRsvp || undefined),
+      status: queryParams?.status ?? mapRsvpStatusFilter(rsvpStatusFilter),
+      page: queryParams?.page ?? rsvpPage,
+      pageSize: queryParams?.pageSize ?? rsvpPageSize,
+      sortBy: queryParams?.sortBy,
+      sortDirection: queryParams?.sortDirection,
+    };
+
+    const cachedDashboard = readQueryCache<{ result: AdminRsvpResponse; convites: ConviteCadastrado[]; metricas: DashboardMetricas | null }>(ADMIN_QUERY_KEYS.dashboard);
+    if (cachedDashboard) {
+      setData(cachedDashboard.result);
+      setListaConvites(cachedDashboard.convites);
+      if (cachedDashboard.metricas) setMetricasBackend(cachedDashboard.metricas);
+    }
+
     try {
       const [result, convitesRes, metricasRes] = await Promise.all([
-        buscarRelatorioRsvpAdmin(token),
-        listarConvitesAdmin(token).catch(() => []),
+        buscarRelatorioRsvpAdmin(token, effectiveQuery),
+        listarConvitesAdmin(token),
         buscarMetricasAdmin(token).catch(() => null),
       ]);
+      const convites = validarListaConvites(convitesRes);
+
+      writeQueryCache(ADMIN_QUERY_KEYS.dashboard, {
+        result,
+        convites,
+        metricas: metricasRes ?? null,
+      });
+      writeQueryCache(ADMIN_QUERY_KEYS.convites, convites);
+      if (metricasRes) writeQueryCache(ADMIN_QUERY_KEYS.metrics, metricasRes);
+
       setData(result);
-      if (Array.isArray(convitesRes)) setListaConvites(convitesRes);
+      setListaConvites(convites);
       if (metricasRes) setMetricasBackend(metricasRes);
     } catch (err: any) {
       setDataError(err.message || "Erro ao carregar dados administrativos.");
@@ -360,41 +488,84 @@ export function AdminPanel() {
     }
   };
 
-  const carregarDadosOperacionais = () => {
-    carregarAuditoria();
-    carregarParticipantes();
-    carregarFornecedores();
-    carregarClassificacoes();
+  const carregarDadosOperacionais = async () => {
+    await Promise.all([
+      carregarAuditoria(),
+      carregarParticipantes(),
+      carregarFornecedores(),
+      carregarClassificacoes(),
+    ]);
   };
 
   const carregarClassificacoes = async () => {
+    const cached = readQueryCache<{ papeis: PapelParticipante[]; vinculos: VinculoParticipante[] }>(ADMIN_QUERY_KEYS.classificacoes);
+    if (cached) {
+      setPapeis(cached.papeis);
+      setVinculos(cached.vinculos);
+    }
+
     try {
       const classif = await buscarClassificacoesBackend();
-      if (classif && classif.papeis) setPapeis(classif.papeis);
-      if (classif && classif.vinculos) setVinculos(classif.vinculos);
+      if (classif && classif.papeis) {
+        setPapeis(classif.papeis);
+        writeQueryCache(ADMIN_QUERY_KEYS.classificacoes, { papeis: classif.papeis, vinculos: classif.vinculos || [] });
+      }
+      if (classif && classif.vinculos) {
+        setVinculos(classif.vinculos);
+        writeQueryCache(ADMIN_QUERY_KEYS.classificacoes, { papeis: classif.papeis || [], vinculos: classif.vinculos });
+      }
     } catch (err) {
       console.error("Erro ao carregar classificações:", err);
     }
   };
 
   const carregarAuditoria = async () => {
+    const cached = readQueryCache<RelatorioAuditoria | null>(ADMIN_QUERY_KEYS.auditoria);
+    if (cached) setRelatorioAuditoria(cached);
+
     setAuditoriaLoading(true);
     const aud = await buscarRelatorioAuditoriaBackend();
-    if (aud) setRelatorioAuditoria(aud);
+    if (aud) {
+      setRelatorioAuditoria(aud);
+      writeQueryCache(ADMIN_QUERY_KEYS.auditoria, aud);
+    }
     setAuditoriaLoading(false);
   };
 
   const carregarParticipantes = async () => {
-    const dataPart = await buscarParticipantesCerimoniaBackend();
-    if (dataPart && dataPart.participantes) {
+    const cached = readQueryCache<{ total: number; confirmadosRsvp: number; presentes: number; participantes: ParticipanteCerimonia[] }>(ADMIN_QUERY_KEYS.participantes);
+    if (cached) setParticipantes(cached.participantes);
+
+    setParticipantesLoading(true);
+    setParticipantesError("");
+    try {
+      const dataPart = await buscarParticipantesCerimoniaBackend();
       setParticipantes(dataPart.participantes);
+      writeQueryCache(ADMIN_QUERY_KEYS.participantes, dataPart);
+    } catch (error) {
+      setParticipantesError(
+        error instanceof Error ? error.message : "Não foi possível carregar o cortejo."
+      );
+    } finally {
+      setParticipantesLoading(false);
     }
   };
 
   const carregarFornecedores = async () => {
-    const dataForn = await buscarFornecedoresBackend();
-    if (dataForn && dataForn.fornecedores) {
+    const cached = readQueryCache<{ totalEmpresas: number; totalMembrosEquipe: number; totalMembrosPresentes: number; fornecedores: FornecedorCasamento[] }>(ADMIN_QUERY_KEYS.fornecedores);
+    if (cached) setFornecedores(cached.fornecedores);
+
+    setFornecedoresError("");
+    try {
+      const dataForn = await buscarFornecedoresBackend();
       setFornecedores(dataForn.fornecedores);
+      writeQueryCache(ADMIN_QUERY_KEYS.fornecedores, dataForn);
+    } catch (error) {
+      setFornecedoresError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar os fornecedores."
+      );
     }
   };
 
@@ -447,6 +618,7 @@ export function AdminPanel() {
         observacao: "",
         membros: [{ id: gerarIdMembro(), nome: "", criancaAte6Anos: false, papel: "Convidado", par: "", participaCortejo: false }],
       });
+      invalidateAdminDataCache();
       await carregarDadosAdmin();
     } catch (err: any) {
       setCadErro(err.message || "Erro ao salvar convite.");
@@ -504,6 +676,7 @@ export function AdminPanel() {
         msg: `Convite de "${conviteParaExcluir.familia}" excluído com sucesso.`,
       });
       setConviteParaExcluir(null);
+      invalidateAdminDataCache();
       await carregarDadosAdmin();
     } catch (err: any) {
       setExcluirErro(err.message || "Não foi possível excluir o convite.");
@@ -575,7 +748,7 @@ export function AdminPanel() {
           criancaAte6Anos: false,
           confirmadoRsvp: m.permaneceAteFim ? true : undefined,
           presenteCheckin: m.presente,
-          papel: m.funcao ? `Fornecedor (${m.funcao})` : "Fornecedor",
+          papel: "Fornecedor",
           participaCortejo: false,
         })),
         ehFornecedor: true,
@@ -730,19 +903,28 @@ export function AdminPanel() {
               const nomeM = m.nome ? m.nome.trim().toLowerCase() : "";
               if (!nomesProcessados.has(nomeM)) {
                 nomesProcessados.add(nomeM);
+                const funcaoMembro = m.funcao?.trim();
+                const papelFinal = funcaoMembro && funcaoMembro.toLowerCase() !== "fornecedor"
+                  ? `Fornecedor · ${funcaoMembro}`
+                  : "Fornecedor · Equipe";
+
+                const partesObs: string[] = ["Permanece até o fim"];
+                if (f.servico) partesObs.push(f.servico);
+                else if (f.categoria) partesObs.push(f.categoria);
+
                 itens.push({
                   id: `forn-membro-${f.id || f.empresa}-${m.id || idx}`,
                   codigoConvite: cod,
                   nome: m.nome,
-                  papel: `Fornecedor (${m.funcao || f.categoria || "Staff"})`,
+                  papel: papelFinal,
                   participaCortejo: "Não",
                   faixaEtaria: "Adulto",
                   telefone: f.telefone || "—",
                   status: "CONFIRMADO",
-                  familia: `${f.empresa} (Fornecedor)`,
-                  observacao: `Permanece até o fim · ${f.servico || f.categoria || "Equipe"}`,
+                  familia: f.empresa,
+                  observacao: partesObs.join(" · "),
                   respondido: true,
-                  dataConfirmacao: "Confirmado (Staff)",
+                  dataConfirmacao: "Confirmado",
                 });
               }
             });
@@ -834,7 +1016,6 @@ export function AdminPanel() {
                 papeis={papeis}
                 vinculos={vinculos}
                 onRecarregarDados={carregarDadosAdmin}
-                onNavegarParaFornecedores={() => setActiveTab("fornecedores")}
               />
             )}
 
@@ -842,53 +1023,76 @@ export function AdminPanel() {
               <RsvpTab
                 respostas={respostasConvidados}
                 search={searchRsvp}
-                onSearchChange={setSearchRsvp}
+                onSearchChange={(next) => {
+                  setSearchRsvp(next);
+                  setRsvpPage(0);
+                }}
+                statusFilter={rsvpStatusFilter}
+                onStatusFilterChange={(nextStatus) => {
+                  setRsvpStatusFilter(nextStatus);
+                  setRsvpPage(0);
+                }}
+                page={rsvpPage}
+                pageSize={rsvpPageSize}
+                total={data?.total ?? respostasConvidados.length}
+                totalPages={data?.totalPages ?? Math.max(1, Math.ceil(respostasConvidados.length / rsvpPageSize))}
+                onPageChange={setRsvpPage}
+                onPageSizeChange={(nextSize) => {
+                  setRsvpPageSize(nextSize);
+                  setRsvpPage(0);
+                }}
                 loading={dataLoading}
               />
             )}
 
-            {activeTab === "portaria" && (
-              <PortariaTab
-                onRefreshData={() => {
-                  carregarDadosOperacionais();
-                  if (userRole === "admin") carregarDadosAdmin();
-                }}
-              />
-            )}
+            <Suspense fallback={<TableSkeleton rows={6} columns={5} />}>
+              {activeTab === "portaria" && (
+                <PortariaTab
+                  onRefreshData={() => {
+                    carregarDadosOperacionais();
+                    if (userRole === "admin") carregarDadosAdmin();
+                  }}
+                />
+              )}
 
-            {activeTab === "cortejo" && (
-              <CortejoTab
-                participantes={participantes}
-                onParticipantesChange={setParticipantes}
-                onRefreshAuditoria={carregarAuditoria}
-              />
-            )}
+              {activeTab === "cortejo" && (
+                <CortejoTab
+                  participantes={participantes}
+                  loading={participantesLoading}
+                  error={participantesError}
+                  onParticipantesChange={setParticipantes}
+                  onRefreshAuditoria={carregarAuditoria}
+                  onRetry={carregarParticipantes}
+                />
+              )}
 
-            {activeTab === "fornecedores" && (
-              <FornecedoresTab
-                userRole={userRole}
-                fornecedores={fornecedores}
-                onFornecedoresChange={setFornecedores}
-                onRefreshAuditoria={carregarAuditoria}
-                onRefreshFornecedores={carregarFornecedores}
-              />
-            )}
+              {activeTab === "fornecedores" && (
+                <FornecedoresTab
+                  userRole={userRole}
+                  fornecedores={fornecedores}
+                  onFornecedoresChange={setFornecedores}
+                  fornecedoresError={fornecedoresError}
+                  onRefreshAuditoria={carregarAuditoria}
+                  onRefreshFornecedores={carregarFornecedores}
+                />
+              )}
 
-            {activeTab === "auditoria" && (
-              <AuditoriaTab
-                relatorio={relatorioAuditoria}
-                loading={auditoriaLoading}
-                onRefresh={carregarAuditoria}
-              />
-            )}
+              {activeTab === "auditoria" && (
+                <AuditoriaTab
+                  relatorio={relatorioAuditoria}
+                  loading={auditoriaLoading}
+                  onRefresh={carregarAuditoria}
+                />
+              )}
 
-            {activeTab === "configuracoes" && (
-              <ConfiguracoesTab
-                papeis={papeis}
-                vinculos={vinculos}
-                onRefresh={carregarClassificacoes}
-              />
-            )}
+              {activeTab === "configuracoes" && (
+                <ConfiguracoesTab
+                  papeis={papeis}
+                  vinculos={vinculos}
+                  onRefresh={carregarClassificacoes}
+                />
+              )}
+            </Suspense>
           </>
         )}
       </main>

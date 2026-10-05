@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
+import { StatusBadge } from "../../../design-system/StatusBadge";
+import { RoleBadge } from "../../../design-system/RoleBadge";
 
 export interface RespostaConvidadoItem {
   id: string;
@@ -16,109 +18,66 @@ export interface RespostaConvidadoItem {
   respondido?: boolean;
 }
 
+type FiltroStatusRsvp = "todos" | "respondidos" | "confirmados" | "recusados" | "pendentes";
+
 interface RsvpTabProps {
   respostas: RespostaConvidadoItem[];
   search: string;
   onSearchChange: (v: string) => void;
+  statusFilter?: FiltroStatusRsvp;
+  onStatusFilterChange?: (status: FiltroStatusRsvp) => void;
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   loading: boolean;
 }
 
-type ColunaOrdenacao =
-  | "codigoConvite"
-  | "nome"
-  | "papel"
-  | "participaCortejo"
-  | "faixaEtaria"
-  | "telefone"
-  | "status";
-
-export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabProps) {
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | "respondidos" | "confirmados" | "recusados" | "pendentes">("todos");
+export function RsvpTab({
+  respostas,
+  search,
+  onSearchChange,
+  statusFilter = "todos",
+  onStatusFilterChange,
+  page = 0,
+  pageSize = 30,
+  total,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
+  loading,
+}: RsvpTabProps) {
+  const filtroStatus = statusFilter;
   const [copiado, setCopiado] = useState(false);
 
-  // Ordenação e Paginação
-  const [ordemColuna, setOrdemColuna] = useState<ColunaOrdenacao>("nome");
-  const [ordemDirecao, setOrdemDirecao] = useState<"asc" | "desc">("asc");
-  const [paginaAtual, setPaginaAtual] = useState(1);
-  const [itensPorPagina, setItensPorPagina] = useState<number>(30);
+  const totalConfirmados = useMemo(
+    () => respostas.filter((r) => r.status === "CONFIRMADO").length,
+    [respostas]
+  );
+  const totalRecusados = useMemo(
+    () => respostas.filter((r) => r.status === "RECUSADO").length,
+    [respostas]
+  );
+  const totalPendentes = useMemo(
+    () => respostas.filter((r) => r.status === "PENDENTE").length,
+    [respostas]
+  );
+  const totalRespondidos = useMemo(
+    () => respostas.filter((r) => r.status === "CONFIRMADO" || r.status === "RECUSADO").length,
+    [respostas]
+  );
+  const totalGeral = total ?? respostas.length;
+  const totalRegistros = total ?? respostas.length;
+  const totalPaginas = totalPages ?? Math.max(1, Math.ceil(totalRegistros / Math.max(pageSize, 1)));
+  const paginaAtual = page + 1;
 
-  const alternarOrdenacao = (coluna: ColunaOrdenacao) => {
-    if (ordemColuna === coluna) {
-      setOrdemDirecao((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setOrdemColuna(coluna);
-      setOrdemDirecao("asc");
-    }
-  };
-
-  // Métricas rápidas
-  const totalConfirmados = useMemo(() => respostas.filter((r) => r.status === "CONFIRMADO").length, [respostas]);
-  const totalRecusados = useMemo(() => respostas.filter((r) => r.status === "RECUSADO").length, [respostas]);
-  const totalPendentes = useMemo(() => respostas.filter((r) => r.status === "PENDENTE").length, [respostas]);
-  const totalRespondidos = useMemo(() => respostas.filter((r) => r.status === "CONFIRMADO" || r.status === "RECUSADO").length, [respostas]);
-  const totalGeral = respostas.length;
-
-  // Filtragem combinada (termo de busca + status selecionado)
-  const itensExibidos = useMemo(() => {
-    return respostas.filter((item) => {
-      // 1. Filtro por status
-      if (filtroStatus === "respondidos" && item.status !== "CONFIRMADO" && item.status !== "RECUSADO") {
-        return false;
-      }
-      if (filtroStatus === "confirmados" && item.status !== "CONFIRMADO") {
-        return false;
-      }
-      if (filtroStatus === "recusados" && item.status !== "RECUSADO") {
-        return false;
-      }
-      if (filtroStatus === "pendentes" && item.status !== "PENDENTE") {
-        return false;
-      }
-
-      // 2. Filtro por termo de busca
-      if (!search.trim()) return true;
-      const q = search.toLowerCase().trim();
-      return (
-        item.nome.toLowerCase().includes(q) ||
-        item.codigoConvite.toLowerCase().includes(q) ||
-        (item.papel && item.papel.toLowerCase().includes(q)) ||
-        (item.faixaEtaria && item.faixaEtaria.toLowerCase().includes(q)) ||
-        item.status.toLowerCase().includes(q) ||
-        (item.telefone && item.telefone.toLowerCase().includes(q)) ||
-        (item.familia && item.familia.toLowerCase().includes(q))
-      );
-    });
-  }, [respostas, filtroStatus, search]);
-
-  // Resetar página quando filtros mudarem
-  useEffect(() => {
-    setPaginaAtual(1);
-  }, [search, filtroStatus, itensPorPagina]);
-
-  const itensOrdenados = useMemo(() => {
-    return [...itensExibidos].sort((a, b) => {
-      let valA = a[ordemColuna] || "";
-      let valB = b[ordemColuna] || "";
-
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
-
-      if (valA < valB) return ordemDirecao === "asc" ? -1 : 1;
-      if (valA > valB) return ordemDirecao === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [itensExibidos, ordemColuna, ordemDirecao]);
-
-  const totalPaginas = Math.max(1, Math.ceil(itensOrdenados.length / (itensPorPagina || 30)));
-  const inicioIdx = (paginaAtual - 1) * itensPorPagina;
-  const fimIdx = Math.min(inicioIdx + itensPorPagina, itensOrdenados.length);
-  const itensPaginados = useMemo(() => {
-    return itensOrdenados.slice(inicioIdx, fimIdx);
-  }, [itensOrdenados, inicioIdx, fimIdx]);
+  const itensDaPagina = respostas;
 
   const exportarCsv = () => {
     const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
-    const rows = itensExibidos.map((item) => [
+    const rows = itensDaPagina.map((item) => [
       item.codigoConvite,
       item.nome,
       item.papel,
@@ -147,7 +106,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
 
   const copiarTabela = () => {
     const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
-    const rows = itensExibidos.map((item) => [
+    const rows = itensDaPagina.map((item) => [
       item.codigoConvite,
       item.nome,
       item.papel,
@@ -211,7 +170,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
-              onClick={() => setFiltroStatus("todos")}
+              onClick={() => onStatusFilterChange?.("todos")}
               className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 filtroStatus === "todos"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
@@ -222,7 +181,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
             </button>
             <button
               type="button"
-              onClick={() => setFiltroStatus("respondidos")}
+              onClick={() => onStatusFilterChange?.("respondidos")}
               className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 filtroStatus === "respondidos"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
@@ -233,7 +192,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
             </button>
             <button
               type="button"
-              onClick={() => setFiltroStatus("confirmados")}
+              onClick={() => onStatusFilterChange?.("confirmados")}
               className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 filtroStatus === "confirmados"
                   ? "bg-emerald-900 text-white shadow-xs"
@@ -244,7 +203,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
             </button>
             <button
               type="button"
-              onClick={() => setFiltroStatus("recusados")}
+              onClick={() => onStatusFilterChange?.("recusados")}
               className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 filtroStatus === "recusados"
                   ? "bg-rose-900 text-white shadow-xs"
@@ -255,7 +214,7 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
             </button>
             <button
               type="button"
-              onClick={() => setFiltroStatus("pendentes")}
+              onClick={() => onStatusFilterChange?.("pendentes")}
               className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 filtroStatus === "pendentes"
                   ? "bg-amber-900 text-white shadow-xs"
@@ -273,9 +232,8 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
           </div>
         ) : (
           <>
-            {/* Visualização Mobile: Cards (< 640px) */}
             <div className="block sm:hidden divide-y divide-[#E8DFD5]">
-              {itensPaginados.map((item) => (
+              {itensDaPagina.map((item) => (
                 <div key={item.id} className="py-3.5 space-y-2">
                   <div className="flex justify-between items-start gap-2">
                     <div>
@@ -286,29 +244,25 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                         {item.nome}
                       </h3>
                     </div>
-                    <span
-                      className={`text-[0.66rem] font-sans tracking-wider uppercase px-2.5 py-0.5 rounded-full font-semibold border ${
-                        item.status === "CONFIRMADO"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          : item.status === "RECUSADO"
-                          ? "bg-rose-50 text-rose-800 border-rose-200"
-                          : "bg-amber-50 text-amber-800 border-amber-200"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
+                    <StatusBadge status={item.status} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-1.5 text-xs text-[#6B5A4D]">
                     <div>
-                      <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Papel:</span>
-                      <span className="font-medium text-[#261811]">
-                        {item.papel.includes("Fornecedor") ? `🏢 ${item.papel}` : item.papel}
-                      </span>
+                      <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block mb-1">Papel:</span>
+                      <RoleBadge papel={item.papel} />
                     </div>
                     <div>
-                      <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Cortejo:</span>
-                      <span className="font-medium text-[#261811]">{item.participaCortejo}</span>
+                      <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block mb-1">Cortejo:</span>
+                      <span
+                        className={`font-medium ${
+                          item.participaCortejo === "Sim"
+                            ? "text-emerald-800 font-semibold"
+                            : "text-[#8C7A6B]"
+                        }`}
+                      >
+                        {item.participaCortejo === "Sim" ? "✓" : "—"}
+                      </span>
                     </div>
                     <div>
                       <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Faixa Etária:</span>
@@ -328,106 +282,42 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                 </div>
               ))}
 
-              {!itensExibidos.length && (
+              {!itensDaPagina.length && (
                 <div className="py-8 text-center text-xs font-serif italic text-[#705E51]">
                   Nenhum convidado encontrado com os filtros selecionados.
                 </div>
               )}
             </div>
 
-            {/* Visualização Desktop: Tabela Oficial com 7 Colunas (>= 640px) */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#FAF7F2] border-b border-[#E8DFD5]">
-                    <th
-                      onClick={() => alternarOrdenacao("codigoConvite")}
-                      className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Código"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Código</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "codigoConvite" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Código
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("nome")}
-                      className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Nome"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Nome</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "nome" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Nome
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("papel")}
-                      className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Papel"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Papel</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "papel" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Papel
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("participaCortejo")}
-                      className="text-center px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Cortejo"
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <span>Participa do Cortejo</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "participaCortejo" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-center px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Cortejo
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("faixaEtaria")}
-                      className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Faixa Etária"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Faixa Etária</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "faixaEtaria" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Faixa Etária
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("telefone")}
-                      className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Telefone"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Telefone</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "telefone" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Telefone
                     </th>
-                    <th
-                      onClick={() => alternarOrdenacao("status")}
-                      className="text-center px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold cursor-pointer select-none hover:text-[#261811] transition-colors"
-                      title="Ordenar por Status"
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <span>Status RSVP</span>
-                        <span className="text-[0.62rem] text-[#705E51]">
-                          {ordemColuna === "status" ? (ordemDirecao === "asc" ? "▲" : "▼") : "↕"}
-                        </span>
-                      </div>
+                    <th className="text-center px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      Status RSVP
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0EAE0]">
-                  {itensPaginados.map((item) => (
+                  {itensDaPagina.map((item) => (
                     <tr key={item.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
                       <td className="px-4 py-3.5 font-mono text-xs font-semibold text-[#261811] whitespace-nowrap">
                         {item.codigoConvite}
@@ -438,29 +328,29 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                         </strong>
                         {item.observacao && (
                           <p className="text-xs italic text-[#705E51] font-serif mt-0.5 line-clamp-1" title={item.observacao}>
-                            "{item.observacao}"
+                            {item.observacao}
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-xs font-medium text-[#543D30] whitespace-nowrap">
-                        {item.papel.includes("Fornecedor") ? (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-950 border border-amber-300 px-2 py-0.5 rounded font-semibold text-[0.68rem]">
-                            🏢 {item.papel}
-                          </span>
-                        ) : (
-                          item.papel
-                        )}
+                      <td className="px-4 py-3.5 text-xs whitespace-nowrap">
+                        <RoleBadge papel={item.papel} />
                       </td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                        <span
-                          className={`text-[0.68rem] font-sans uppercase font-medium px-2 py-0.5 rounded ${
-                            item.participaCortejo === "Sim"
-                              ? "bg-amber-50 text-amber-900 border border-amber-200"
-                              : "text-[#705E51]"
-                          }`}
-                        >
-                          {item.participaCortejo}
-                        </span>
+                        {item.participaCortejo === "Sim" ? (
+                          <span
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-800 text-sm font-bold"
+                            title="Participa do cortejo"
+                          >
+                            ✓
+                          </span>
+                        ) : (
+                          <span
+                            className="text-stone-400 text-sm font-sans select-none"
+                            title="Não participa do cortejo"
+                          >
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-xs font-sans text-[#6B5A4D] whitespace-nowrap">
                         {item.faixaEtaria}
@@ -469,22 +359,12 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                         {item.telefone || "—"}
                       </td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                        <span
-                          className={`text-[0.66rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold border ${
-                            item.status === "CONFIRMADO"
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                              : item.status === "RECUSADO"
-                              ? "bg-rose-50 text-rose-800 border-rose-200"
-                              : "bg-amber-50 text-amber-800 border-amber-200"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
+                        <StatusBadge status={item.status} />
                       </td>
                     </tr>
                   ))}
 
-                  {!itensExibidos.length && (
+                  {!itensDaPagina.length && (
                     <tr>
                       <td colSpan={7} className="py-10 text-center text-xs font-serif italic text-[#705E51]">
                         Nenhum convidado encontrado com os termos digitados.
@@ -495,13 +375,12 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
               </table>
             </div>
 
-            {/* Barra de Paginação */}
-            {itensOrdenados.length > 0 && (
+            {itensDaPagina.length > 0 && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#F0EAE0] text-xs font-sans text-[#6B5A4D]">
                 <div className="flex items-center gap-3">
                   <span>
-                    Mostrando <strong>{inicioIdx + 1}</strong>–<strong>{fimIdx}</strong> de{" "}
-                    <strong>{itensOrdenados.length}</strong> convidados
+                    Mostrando <strong>{Math.min(page * pageSize + 1, totalRegistros)}</strong>–<strong>{Math.min((page + 1) * pageSize, totalRegistros)}</strong> de{" "}
+                    <strong>{totalRegistros}</strong> convidados
                   </span>
                   <div className="flex items-center gap-1.5 ml-2">
                     <label htmlFor="itens-por-pagina-select" className="text-[0.68rem] uppercase tracking-wider text-[#705E51]">
@@ -509,8 +388,12 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                     </label>
                     <select
                       id="itens-por-pagina-select"
-                      value={itensPorPagina}
-                      onChange={(e) => setItensPorPagina(Number(e.target.value))}
+                      value={pageSize}
+                      onChange={(e) => {
+                        const nextSize = Number(e.target.value);
+                        onPageSizeChange?.(nextSize);
+                        onPageChange?.(0);
+                      }}
                       className="bg-[#FAF7F2] border border-[#D8CDC0] rounded px-2 py-1 text-xs text-[#261811] focus:outline-none focus:border-[#261811]"
                     >
                       <option value={15}>15</option>
@@ -526,8 +409,8 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      disabled={paginaAtual === 1}
-                      onClick={() => setPaginaAtual(1)}
+                      disabled={page <= 0}
+                      onClick={() => onPageChange?.(0)}
                       className="px-2.5 py-1.5 rounded border border-[#D8CDC0] bg-white text-[#261811] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#FAF7F2] transition-colors cursor-pointer text-xs"
                       title="Primeira Página"
                     >
@@ -535,8 +418,8 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                     </button>
                     <button
                       type="button"
-                      disabled={paginaAtual === 1}
-                      onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                      disabled={page <= 0}
+                      onClick={() => onPageChange?.(Math.max(0, page - 1))}
                       className="px-3 py-1.5 rounded border border-[#D8CDC0] bg-white text-[#261811] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#FAF7F2] transition-colors cursor-pointer text-xs"
                       title="Página Anterior"
                     >
@@ -547,8 +430,8 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                     </span>
                     <button
                       type="button"
-                      disabled={paginaAtual === totalPaginas}
-                      onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                      disabled={page >= totalPaginas - 1}
+                      onClick={() => onPageChange?.(Math.min(totalPaginas - 1, page + 1))}
                       className="px-3 py-1.5 rounded border border-[#D8CDC0] bg-white text-[#261811] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#FAF7F2] transition-colors cursor-pointer text-xs"
                       title="Próxima Página"
                     >
@@ -556,8 +439,8 @@ export function RsvpTab({ respostas, search, onSearchChange, loading }: RsvpTabP
                     </button>
                     <button
                       type="button"
-                      disabled={paginaAtual === totalPaginas}
-                      onClick={() => setPaginaAtual(totalPaginas)}
+                      disabled={page >= totalPaginas - 1}
+                      onClick={() => onPageChange?.(totalPaginas - 1)}
                       className="px-2.5 py-1.5 rounded border border-[#D8CDC0] bg-white text-[#261811] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#FAF7F2] transition-colors cursor-pointer text-xs"
                       title="Última Página"
                     >

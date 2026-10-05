@@ -30,99 +30,95 @@ export function DashboardTab({ stats }: DashboardTabProps) {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
+        <p className="text-xs font-sans text-[#8C7355] font-medium mb-1">
           Visão Geral
         </p>
-        <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
-          Resumo Consolidado do Evento
+        <h1 className="font-serif text-2xl sm:text-3xl text-[#1A1816] font-normal tracking-tight">
+          Resumo do Evento
         </h1>
       </div>
 
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          label="Total Pessoas"
+          label="Total de Convidados"
           value={fmtNumber(stats.totalPessoas)}
-          sub="pessoas no evento"
-          color="blue"
+          sub="pessoas na lista geral"
+          color="neutral"
         />
         <StatCard
-          label="Total Confirmados"
+          label="Confirmados"
           value={fmtNumber(stats.totalConfirmados)}
           sub={
             stats.totalFornecedoresConfirmados && stats.totalFornecedoresConfirmados > 0
-              ? `presenças confirmadas (incl. ${stats.totalFornecedoresConfirmados} equipe/fornecedores)`
-              : "presenças confirmadas"
+              ? `presenças garantidas (${stats.totalFornecedoresConfirmados} fornecedores)`
+              : "presenças garantidas"
           }
           color="green"
         />
         <StatCard
           label="Não Comparecerão"
           value={fmtNumber(stats.totalRecusaram)}
-          sub="pessoas recusaram"
+          sub="recusas registradas"
           color="rose"
         />
         <StatCard
           label="Pendentes"
           value={fmtNumber(stats.totalPendentes)}
-          sub="aguardando resposta"
+          sub="aguardando confirmação"
           color="amber"
         />
       </div>
 
       {/* Barra de Progresso Trissegmentada */}
-      <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-6 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
-        <SectionTitle>Taxa de Confirmação &amp; Presença do Evento</SectionTitle>
+      <div className="bg-white border border-[#E8E4DC] rounded-lg p-6 shadow-xs space-y-4">
+        <SectionTitle>Taxa de Confirmação &amp; Presença</SectionTitle>
 
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
             <div>
-              <span className="font-serif text-4xl text-emerald-800 font-light">
+              <span className="font-serif text-3xl sm:text-4xl text-[#2E5A36] font-light">
                 {pctConfirmados}%
               </span>
-              <span className="font-serif text-sm text-[#8C7A6B] italic pl-2">
-                confirmados ({stats.totalConfirmados} de {totalCadastrados} pessoas
-                {stats.totalFornecedoresConfirmados && stats.totalFornecedoresConfirmados > 0
-                  ? ` · incl. ${stats.totalFornecedoresConfirmados} fornecedores até o fim`
-                  : ""}
-                )
+              <span className="font-serif text-sm text-[#6B645C] italic pl-2.5">
+                confirmados ({stats.totalConfirmados} de {totalCadastrados} pessoas)
               </span>
             </div>
-            <span className="font-serif text-xs text-[#6B5A4D] bg-[#FAF7F2] px-3 py-1.5 rounded-full border border-[#E8DFD5]">
-              Adultos: {stats.totalAdultos} · Crianças (≤ 6 anos): {stats.totalCriancasAte6Anos}
+            <span className="font-sans text-xs text-[#6B645C] bg-[#F7F5F0] px-3 py-1.5 rounded-md border border-[#E6E1D8]">
+              Adultos: {stats.totalAdultos} · Crianças: {stats.totalCriancasAte6Anos}
             </span>
           </div>
 
-          <div className="h-3.5 bg-[#EAE0D2] rounded-full overflow-hidden flex">
+          <div className="h-3 bg-[#EFECE6] rounded-full overflow-hidden flex">
             <div
-              className="h-full bg-emerald-600 transition-all duration-700"
+              className="h-full bg-[#2E5A36] transition-all duration-700"
               style={{ width: `${pctConfirmados}%` }}
               title={`Confirmados: ${stats.totalConfirmados} (${pctConfirmados}%)`}
             />
             <div
-              className="h-full bg-rose-500 transition-all duration-700"
+              className="h-full bg-[#8C382A] transition-all duration-700"
               style={{ width: `${pctRecusaram}%` }}
               title={`Não comparecerão: ${stats.totalRecusaram} (${pctRecusaram}%)`}
             />
             <div
-              className="h-full bg-amber-400/60 transition-all duration-700"
+              className="h-full bg-[#C9A96E] transition-all duration-700"
               style={{ width: `${pctPendentes}%` }}
               title={`Pendentes: ${stats.totalPendentes} (${pctPendentes}%)`}
             />
           </div>
 
-          <div className="flex flex-wrap gap-4 sm:gap-6 text-xs font-sans text-[#8C7A6B] pt-1">
-            <span>
-              <span className="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-full mr-1.5 align-middle" />
-              Confirmados: <strong className="text-[#261811]">{stats.totalConfirmados}</strong> ({pctConfirmados}%)
+          <div className="flex flex-wrap gap-4 sm:gap-6 text-xs font-sans text-[#6B645C] pt-1">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-[#2E5A36] rounded-full" />
+              Confirmados: <strong className="text-[#1A1816] font-medium">{stats.totalConfirmados}</strong> ({pctConfirmados}%)
             </span>
-            <span>
-              <span className="inline-block w-2.5 h-2.5 bg-rose-500 rounded-full mr-1.5 align-middle" />
-              Não vão: <strong className="text-[#261811]">{stats.totalRecusaram}</strong> ({pctRecusaram}%)
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-[#8C382A] rounded-full" />
+              Não vão: <strong className="text-[#1A1816] font-medium">{stats.totalRecusaram}</strong> ({pctRecusaram}%)
             </span>
-            <span>
-              <span className="inline-block w-2.5 h-2.5 bg-amber-400/60 rounded-full mr-1.5 align-middle" />
-              Pendentes: <strong className="text-[#261811]">{stats.totalPendentes}</strong> ({pctPendentes}%)
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-[#C9A96E] rounded-full" />
+              Pendentes: <strong className="text-[#1A1816] font-medium">{stats.totalPendentes}</strong> ({pctPendentes}%)
             </span>
           </div>
         </div>

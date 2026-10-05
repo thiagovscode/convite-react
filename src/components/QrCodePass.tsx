@@ -1,5 +1,11 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { emitirCredencialQrConvidadoBackend } from "../services/convites";
+
+interface MembroCredencial {
+  id: string;
+  nome: string;
+}
 
 interface QrCodePassProps {
   convidado: string;
@@ -7,8 +13,8 @@ interface QrCodePassProps {
   totalPessoas: number;
   adultos: number;
   criancasAte6Anos: number;
-  membrosConfirmados?: string[];
-  tokenOuId?: string;
+  membros: MembroCredencial[];
+  codigoConvite: string;
   onClose: () => void;
 }
 
@@ -17,69 +23,81 @@ export default function QrCodePass({
   totalPessoas,
   adultos,
   criancasAte6Anos,
-  membrosConfirmados,
-  tokenOuId,
+  membros,
+  codigoConvite,
   onClose,
 }: QrCodePassProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [qrSvg, setQrSvg] = useState<string>("");
+  const [membroSelecionadoId, setMembroSelecionadoId] = useState(membros[0]?.id ?? "");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+  const [tentativaQr, setTentativaQr] = useState(0);
   const passCardRef = useRef<HTMLDivElement>(null);
 
-  // Código de acesso limpo e estável (ex: TN-4827 ou código do convite)
-  const validationCode = useMemo(() => {
-    return tokenOuId && tokenOuId.trim()
-      ? tokenOuId.trim().toUpperCase()
-      : `TN-${Math.floor(1000 + Math.random() * 9000)}`;
-  }, [tokenOuId]);
-
-  const membrosLista = useMemo(() => {
-    if (membrosConfirmados && membrosConfirmados.length > 0) {
-      return membrosConfirmados;
-    }
-    return [convidado];
-  }, [membrosConfirmados, convidado]);
-
-  const qrPayload = useMemo(() => {
-    return JSON.stringify({
-      tipo: "INGRESSO_CASAMENTO_TAINARA_THIAGO",
-      codigo: validationCode,
-      convidado: convidado,
-      total: totalPessoas,
-      adultos: adultos,
-      criancas: criancasAte6Anos,
-      membros: membrosLista,
-      dataEvento: "2027-01-24",
-      local: "Espaço Balboa, Mairiporã - SP"
-    });
-  }, [validationCode, convidado, totalPessoas, adultos, criancasAte6Anos, membrosLista]);
+  const membroSelecionado = membros.find((membro) => membro.id === membroSelecionadoId);
 
   useEffect(() => {
-    // 1. Gera SVG nativo imediato (100% infalível, dispensa canvas e não perde nitidez)
-    QRCode.toString(qrPayload, {
-      type: "svg",
-      margin: 1.5,
-      color: {
-        dark: "#261811",
-        light: "#FFFFFF",
-      },
-      errorCorrectionLevel: "M",
-    })
-      .then((svg) => setQrSvg(svg))
-      .catch((err) => console.error("Erro ao gerar SVG do QR Code:", err));
+    setMembroSelecionadoId(membros[0]?.id ?? "");
+  }, [membros]);
 
-    // 2. Gera DataURL para compartilhamento e download na galeria de fotos
-    QRCode.toDataURL(qrPayload, {
-      width: 320,
-      margin: 1.5,
-      color: {
-        dark: "#261811",
-        light: "#FFFFFF",
-      },
-      errorCorrectionLevel: "M",
-    })
-      .then((url) => setQrDataUrl(url))
-      .catch((err) => console.error("Erro ao gerar PNG do QR Code:", err));
-  }, [qrPayload]);
+  useEffect(() => {
+    if (!membroSelecionado || !codigoConvite) {
+      setQrDataUrl("");
+      setQrSvg("");
+      setQrError("");
+      setQrLoading(false);
+      return;
+    }
+
+    let ativo = true;
+    setQrDataUrl("");
+    setQrSvg("");
+    setQrError("");
+    setQrLoading(true);
+
+    emitirCredencialQrConvidadoBackend(codigoConvite, membroSelecionado.id)
+      .then(async (result) => {
+        if (!ativo) return;
+        if (!result.success || !result.tokenQr) {
+          setQrError(result.message || "Não foi possível emitir a credencial.");
+          return;
+        }
+
+        try {
+          const [svg, dataUrl] = await Promise.all([
+            QRCode.toString(result.tokenQr, {
+              type: "svg",
+              margin: 1.5,
+              color: { dark: "#261811", light: "#FFFFFF" },
+              errorCorrectionLevel: "M",
+            }),
+            QRCode.toDataURL(result.tokenQr, {
+              width: 320,
+              margin: 1.5,
+              color: { dark: "#261811", light: "#FFFFFF" },
+              errorCorrectionLevel: "M",
+            }),
+          ]);
+          if (ativo) {
+            setQrSvg(svg);
+            setQrDataUrl(dataUrl);
+          }
+        } catch {
+          if (ativo) setQrError("Não foi possível gerar a imagem do QR Code neste dispositivo.");
+        }
+      })
+      .catch(() => {
+        if (ativo) setQrError("Não foi possível preparar a credencial. Tente novamente.");
+      })
+      .finally(() => {
+        if (ativo) setQrLoading(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [codigoConvite, membroSelecionado, tentativaQr]);
 
   const [salvando, setSalvando] = useState(false);
   const [salvoFeedback, setSalvoFeedback] = useState(false);
@@ -169,7 +187,35 @@ export default function QrCodePass({
               {totalPessoas}
             </span>
           </div>
+          <p className="text-right text-xs text-[#6B5A4D]">
+            {adultos} adultos · {criancasAte6Anos} crianças de até 6 anos
+          </p>
         </div>
+
+        {membros.length > 1 && (
+          <div className="space-y-2 text-left">
+            <p className="font-sans text-[0.62rem] tracking-[0.16em] uppercase text-[#8C7A6B]">
+              Selecione a pessoa para ver a credencial individual
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {membros.map((membro) => (
+                <button
+                  key={membro.id}
+                  type="button"
+                  onClick={() => setMembroSelecionadoId(membro.id)}
+                  aria-pressed={membroSelecionadoId === membro.id}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    membroSelecionadoId === membro.id
+                      ? "border-[#261811] bg-[#261811] text-white"
+                      : "border-[#D8CDC0] bg-white text-[#543D30] hover:border-[#261811]"
+                  }`}
+                >
+                  {membro.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* QR Code Container com Respiro Generoso */}
         <div className="pt-1 pb-1 flex flex-col items-center justify-center space-y-3">
@@ -187,14 +233,30 @@ export default function QrCodePass({
               />
             ) : (
               <div className="w-40 h-40 sm:w-44 sm:h-44 flex items-center justify-center bg-[#FAF7F2] text-xs font-serif text-[#8C7A6B]">
-                Gerando QR Code…
+                {qrLoading ? "Preparando credencial e QR Code..." : "QR Code indisponível."}
               </div>
             )}
           </div>
 
-          <span className="font-mono text-[0.68rem] tracking-[0.22em] uppercase text-[#8C7A6B] block">
-            CÓDIGO DE ACESSO: <strong className="text-[#261811] font-normal">{validationCode}</strong>
-          </span>
+          {membroSelecionado && (
+            <span className="font-sans text-[0.68rem] tracking-[0.12em] uppercase text-[#8C7A6B] block">
+              Credencial individual de <strong className="text-[#261811] font-semibold">{membroSelecionado.nome}</strong>
+            </span>
+          )}
+          {qrError && (
+            <div className="max-w-sm text-sm text-rose-800" role="alert">
+              <p>{qrError}</p>
+              {membroSelecionado && (
+                <button
+                  type="button"
+                  onClick={() => setTentativaQr((tentativa) => tentativa + 1)}
+                  className="mt-2 font-semibold underline"
+                >
+                  Tentar novamente
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Instrução Delicada e Discreta */}
@@ -209,8 +271,8 @@ export default function QrCodePass({
           <button
             type="button"
             onClick={handleDownloadQr}
-            disabled={salvando}
-            className="flex-1 min-h-[44px] py-2.5 px-5 bg-[#261811] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase hover:bg-[#1C110B] transition-all rounded-[6px] cursor-pointer flex items-center justify-center gap-2 font-semibold shadow-xs"
+            disabled={salvando || !qrDataUrl}
+            className="flex-1 min-h-[44px] py-2.5 px-5 bg-[#261811] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase hover:bg-[#1C110B] transition-all rounded-[6px] cursor-pointer flex items-center justify-center gap-2 font-semibold shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

@@ -6,9 +6,8 @@ interface SectionTitleProps {
 
 export function SectionTitle({ children }: SectionTitleProps) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <span className="w-1 h-5 bg-[#261811] rounded-full inline-block" />
-      <h2 className="font-serif text-xl sm:text-2xl text-[#261811] font-light tracking-[-0.01em]">
+    <div className="flex items-center justify-between pb-3 mb-5 border-b border-[#EAE6DF]">
+      <h2 className="font-serif text-lg sm:text-xl text-[#1A1816] font-normal tracking-tight">
         {children}
       </h2>
     </div>
