@@ -315,10 +315,8 @@ export default function RsvpModal() {
       totalPessoas: nomes.length > 0 ? nomes.length : 1,
       adultos: adCount > 0 ? adCount : 1,
       criancasAte6Anos: crCount,
-      membrosCredencial: membrosEfetivos
-        .filter((m) => Boolean(m.id))
-        .map((m) => ({ id: m.id, nome: m.nome })),
-      codigoConvite: convitePreDefinido.codigo
+      membrosConfirmados: nomes.length > 0 ? nomes : [convitePreDefinido.familia || (membrosEfetivos[0] ? membrosEfetivos[0].nome : "Convidado")],
+      tokenOuId: convitePreDefinido.codigo
     });
     setMode("success");
     setTimeout(() => {
@@ -395,6 +393,7 @@ export default function RsvpModal() {
       setSuccessData(response);
 
       if (presenca) {
+        const nomesConfirmadosPasse = membrosConfirmados.map(m => m.nome);
         const criancasTotal = membrosConfirmados.filter(m => !!membrosCrianca[m.id]).length;
         const adultosTotal = membrosConfirmados.length - criancasTotal;
 
@@ -404,10 +403,8 @@ export default function RsvpModal() {
           totalPessoas: response.resumo?.totalPessoas || membrosConfirmados.length || 1,
           adultos: response.resumo?.adultos ?? adultosTotal,
           criancasAte6Anos: response.resumo?.criancasAte6Anos ?? criancasTotal,
-          membrosCredencial: membrosConfirmados
-            .filter((m) => Boolean(m.id))
-            .map((m) => ({ id: m.id, nome: m.nome })),
-          codigoConvite: convitePreDefinido.codigo
+          membrosConfirmados: nomesConfirmadosPasse.length > 0 ? nomesConfirmadosPasse : [convitePreDefinido.familia || membroPrincipal.nome || "Convidado"],
+          tokenOuId: convitePreDefinido.codigo
         });
       } else {
         setPasseInfo(null);
@@ -989,8 +986,8 @@ export default function RsvpModal() {
                   totalPessoas={passeInfo.totalPessoas}
                   adultos={passeInfo.adultos}
                   criancasAte6Anos={passeInfo.criancasAte6Anos}
-                  membros={passeInfo.membrosCredencial}
-                  codigoConvite={passeInfo.codigoConvite}
+                  membrosConfirmados={passeInfo.membrosConfirmados}
+                  tokenOuId={passeInfo.tokenOuId}
                   onClose={close}
                 />
               ) : (
