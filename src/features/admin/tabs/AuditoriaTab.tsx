@@ -57,6 +57,8 @@ export function AuditoriaTab({ relatorio, fornecedores, loading, onRefresh }: Au
       for (const fam of relatorio.familias) {
         if (fam.membros && fam.membros.length > 0) {
           for (const m of fam.membros) {
+            // Buffet considera apenas quem confirmou presença (RSVP)
+            if (m.confirmadoRsvp !== true) continue;
             list.push({
               id: m.id || `${fam.codigo}-${m.nome}`,
               nome: m.nome,
