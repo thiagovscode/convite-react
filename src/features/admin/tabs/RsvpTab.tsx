@@ -43,8 +43,8 @@ export function RsvpTab({
   onStatusFilterChange,
   page = 0,
   pageSize = 30,
-  total,
-  totalPages,
+  total: _total,
+  totalPages: _totalPages,
   onPageChange,
   onPageSizeChange,
   loading,
@@ -68,16 +68,62 @@ export function RsvpTab({
     () => respostas.filter((r) => r.status === "CONFIRMADO" || r.status === "RECUSADO").length,
     [respostas]
   );
-  const totalGeral = total ?? respostas.length;
-  const totalRegistros = total ?? respostas.length;
-  const totalPaginas = totalPages ?? Math.max(1, Math.ceil(totalRegistros / Math.max(pageSize, 1)));
-  const paginaAtual = page + 1;
+  const totalGeral = respostas.length;
 
-  const itensDaPagina = respostas;
+  // Filtragem combinada por busca textual e por status
+  const itensFiltrados = useMemo(() => {
+    return respostas.filter((item) => {
+      // Filtro de status
+      if (filtroStatus === "respondidos") {
+        if (item.status !== "CONFIRMADO" && item.status !== "RECUSADO") return false;
+      } else if (filtroStatus === "confirmados") {
+        if (item.status !== "CONFIRMADO") return false;
+      } else if (filtroStatus === "recusados") {
+        if (item.status !== "RECUSADO") return false;
+      } else if (filtroStatus === "pendentes") {
+        if (item.status !== "PENDENTE") return false;
+      }
+
+      // Filtro de busca textual
+      if (search && search.trim() !== "") {
+        const termo = search.toLowerCase().trim();
+        const nome = (item.nome || "").toLowerCase();
+        const codigo = (item.codigoConvite || "").toLowerCase();
+        const papel = (item.papel || "").toLowerCase();
+        const telefone = (item.telefone || "").toLowerCase();
+        const faixa = (item.faixaEtaria || "").toLowerCase();
+        const familia = (item.familia || "").toLowerCase();
+        const observacao = (item.observacao || "").toLowerCase();
+
+        const match =
+          nome.includes(termo) ||
+          codigo.includes(termo) ||
+          papel.includes(termo) ||
+          telefone.includes(termo) ||
+          faixa.includes(termo) ||
+          familia.includes(termo) ||
+          observacao.includes(termo);
+
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [respostas, filtroStatus, search]);
+
+  const totalRegistros = itensFiltrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page + 1, totalPaginas);
+
+  const itensDaPagina = useMemo(() => {
+    if (pageSize >= 9999) return itensFiltrados;
+    const inicio = page * pageSize;
+    return itensFiltrados.slice(inicio, inicio + pageSize);
+  }, [itensFiltrados, page, pageSize]);
 
   const exportarCsv = () => {
     const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
-    const rows = itensDaPagina.map((item) => [
+    const rows = itensFiltrados.map((item) => [
       item.codigoConvite,
       item.nome,
       item.papel,
@@ -106,7 +152,7 @@ export function RsvpTab({
 
   const copiarTabela = () => {
     const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
-    const rows = itensDaPagina.map((item) => [
+    const rows = itensFiltrados.map((item) => [
       item.codigoConvite,
       item.nome,
       item.papel,
