@@ -4,6 +4,7 @@ import type { FornecedorCasamento, MembroEquipeFornecedor } from "../services/co
 import {
   buscarFornecedorPublico,
   adicionarMembroPublicoFornecedor,
+  emitirCredencialQrFornecedorBackend,
 } from "../services/convites";
 
 export default function FornecedorCredencialModal() {
@@ -16,6 +17,8 @@ export default function FornecedorCredencialModal() {
   // Membro selecionado para gerar o QR code individual
   const [membroSelecionado, setMembroSelecionado] = useState<MembroEquipeFornecedor | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [gerandoQr, setGerandoQr] = useState(false);
+  const [erroQr, setErroQr] = useState("");
 
   // Formulário para adicionar membro extra na hora
   const [mostrandoAddMembro, setMostrandoAddMembro] = useState(false);
@@ -84,38 +87,50 @@ export default function FornecedorCredencialModal() {
     };
   }, [fornecedorId]);
 
-  // Gera o QR Code dinâmico do membro selecionado
+  // O backend emite o token; o navegador gera a imagem do QR Code.
   useEffect(() => {
-    if (!fornecedor || !membroSelecionado) {
+    if (!fornecedor?.id || !membroSelecionado) {
       setQrDataUrl("");
+      setErroQr("");
+      setGerandoQr(false);
       return;
     }
 
-    const payload = JSON.stringify({
-      tipo: "CREDENCIAL_STAFF_CASAMENTO",
-      fornecedorId: fornecedor.id,
-      empresa: fornecedor.empresa,
-      membroId: membroSelecionado.id,
-      nome: membroSelecionado.nome,
-      funcao: membroSelecionado.funcao || "Equipe",
-      permaneceAteFim: Boolean(membroSelecionado.permaneceAteFim),
-      horarioPrevisto: fornecedor.horarioPrevisto || "A definir",
-      evento: "Casamento Tainara & Thiago",
-      data: "2027-01-24",
-      local: "Espaço Balboa - Mairiporã/SP",
-    });
+    let ativo = true;
+    setQrDataUrl("");
+    setErroQr("");
+    setGerandoQr(true);
 
-    QRCode.toDataURL(payload, {
-      width: 320,
-      margin: 1.5,
-      color: {
-        dark: "#261811",
-        light: "#FFFFFF",
-      },
-      errorCorrectionLevel: "H",
-    })
-      .then((url) => setQrDataUrl(url))
-      .catch((err) => console.error("Erro ao gerar QR Code:", err));
+    emitirCredencialQrFornecedorBackend(fornecedor.id, membroSelecionado.id)
+      .then(async (result) => {
+        if (!ativo) return;
+        if (!result.success || !result.tokenQr) {
+          setErroQr(result.message || "Não foi possível emitir a credencial.");
+          return;
+        }
+
+        try {
+          const url = await QRCode.toDataURL(result.tokenQr, {
+            width: 320,
+            margin: 1.5,
+            color: { dark: "#261811", light: "#FFFFFF" },
+            errorCorrectionLevel: "H",
+          });
+          if (ativo) setQrDataUrl(url);
+        } catch {
+          if (ativo) setErroQr("Não foi possível gerar a imagem do QR Code neste dispositivo.");
+        }
+      })
+      .catch(() => {
+        if (ativo) setErroQr("Não foi possível gerar a credencial. Tente novamente.");
+      })
+      .finally(() => {
+        if (ativo) setGerandoQr(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
   }, [fornecedor, membroSelecionado]);
 
   const handleClose = () => {
@@ -260,6 +275,28 @@ export default function FornecedorCredencialModal() {
                 )}
               </div>
             </div>
+
+            {membroSelecionado && (gerandoQr || erroQr) && (
+              <div className="rounded-[12px] border border-[#E8DFD5] bg-white px-4 py-8 text-center" role={erroQr ? "alert" : undefined}>
+                {erroQr ? (
+                  <>
+                    <p className="text-sm text-rose-800">{erroQr}</p>
+                    <button
+                      type="button"
+                      onClick={() => setMembroSelecionado({ ...membroSelecionado })}
+                      className="mt-3 text-xs font-semibold text-[#261811] underline"
+                    >
+                      Tentar novamente
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-[#261811] border-t-transparent" />
+                    <p className="text-sm text-[#6B5A4D]">Preparando credencial e QR Code...</p>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Passe / QR Code Individual */}
             {membroSelecionado && qrDataUrl && (

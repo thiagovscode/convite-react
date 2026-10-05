@@ -5,6 +5,9 @@ import {
   registrarCheckinBackend,
   getFilaOfflineCheckins,
   sincronizarFilaOffline,
+  checkinMembroFornecedorBackend,
+  validarCredencialQrBackend,
+  registrarPresencaQrBackend,
 } from "../../../services/convites";
 import { playCheckinSuccessSound, triggerHaptic } from "../utils/sound";
 
@@ -14,6 +17,7 @@ interface PortariaTabProps {
 
 export function PortariaTab({ onRefreshData }: PortariaTabProps) {
   const [codigoInput, setCodigoInput] = useState("");
+  const [codigoInputDebounced, setCodigoInputDebounced] = useState("");
   const [loadingBusca, setLoadingBusca] = useState(false);
   const [conviteAtual, setConviteAtual] = useState<ConvitePreDefinido | null>(null);
   const [resultadosBusca, setResultadosBusca] = useState<ConvitePreDefinido[]>([]);
@@ -23,6 +27,9 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
   const [erroCheckin, setErroCheckin] = useState("");
   const [filaOffline, setFilaOffline] = useState(0);
   const [sincronizandoOffline, setSincronizandoOffline] = useState(false);
+  const [cameraAberta, setCameraAberta] = useState(false);
+  const ultimoCodigoProcessadoRef = useRef("");
+  const processarCodigoRef = useRef<(termo: string) => Promise<void>>(async () => {});
 
   const atualizarContadorOffline = () => {
     setFilaOffline(getFilaOfflineCheckins().length);
@@ -43,8 +50,28 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     return () => window.removeEventListener("online", handleOnline);
   }, []);
 
+  useEffect(() => {
+    if (!codigoInput.trim()) {
+      ultimoCodigoProcessadoRef.current = "";
+      setCodigoInputDebounced("");
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setCodigoInputDebounced(codigoInput.trim()), 450);
+    return () => window.clearTimeout(timeoutId);
+  }, [codigoInput]);
+
+  useEffect(() => {
+    if (!codigoInputDebounced || codigoInputDebounced.length < 2 || loadingBusca || cameraAberta) {
+      return;
+    }
+
+    if (ultimoCodigoProcessadoRef.current === codigoInputDebounced) return;
+    ultimoCodigoProcessadoRef.current = codigoInputDebounced;
+    void processarCodigoRef.current(codigoInputDebounced);
+  }, [codigoInputDebounced, loadingBusca, cameraAberta]);
+
   // Câmera & Leitor
-  const [cameraAberta, setCameraAberta] = useState(false);
   const [cameraIniciando, setCameraIniciando] = useState(false);
   const [cameraErro, setCameraErro] = useState("");
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -178,8 +205,44 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     if (termo.startsWith("{")) {
       try {
         const parsed = JSON.parse(termo);
+        if (parsed?.tokenQr) {
+          const validacao = await validarCredencialQrBackend(String(parsed.tokenQr));
+          setLoadingBusca(false);
+          pararCamera();
+
+          if (!validacao.success || !validacao.valida) {
+            setErroCheckin(validacao.message || "Credencial QR inválida para o evento atual.");
+            return;
+          }
+
+          const presenca = await registrarPresencaQrBackend(
+            String(parsed.tokenQr),
+            "Portaria",
+            "Registro via leitura de QR"
+          );
+
+          if (presenca.success) {
+            playCheckinSuccessSound();
+            triggerHaptic();
+            setConviteAtual(null);
+            setMensagemSucesso(
+              `Credencial validada com sucesso: ${presenca.nomePessoa || validacao.nomePessoa || "Participante"} (${presenca.tipo || validacao.tipo || "Participante"})`
+            );
+            onRefreshData?.();
+          } else {
+            setErroCheckin(presenca.message || "Não foi possível registrar a presença via QR.");
+          }
+          return;
+        }
+
         if (parsed.tipo === "CREDENCIAL_STAFF_CASAMENTO") {
-          const { checkinMembroFornecedorBackend } = await import("../../../services/convites");
+          if (typeof parsed.fornecedorId !== "string" || typeof parsed.membroId !== "string") {
+            setLoadingBusca(false);
+            pararCamera();
+            setErroCheckin("A credencial não contém os identificadores necessários. Solicite uma nova credencial.");
+            return;
+          }
+
           const res = await checkinMembroFornecedorBackend(parsed.fornecedorId, parsed.membroId, true);
           setLoadingBusca(false);
           pararCamera();
@@ -187,15 +250,15 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
             playCheckinSuccessSound();
             triggerHaptic();
             setConviteAtual(null);
-            const ficaAteFim = Boolean(
-              parsed.permaneceAteFim ||
-              res.fornecedor?.equipe?.find((m: any) => m.id === parsed.membroId)?.permaneceAteFim
-            );
-            const tagFim = ficaAteFim
-              ? " [Permanece até o fim]"
-              : "";
+            const fornecedor = res.fornecedor;
+            const membro = fornecedor?.equipe?.find((item) => item.id === parsed.membroId);
+            const ficaAteFim = Boolean(membro?.permaneceAteFim);
+            const tagFim = ficaAteFim ? " [Permanece até o fim]" : "";
+            const nomePessoa = membro?.nome || "Profissional credenciado";
+            const funcao = membro?.funcao || "Equipe";
+            const empresa = fornecedor?.empresa ? ` · ${fornecedor.empresa}` : "";
             setMensagemSucesso(
-              `Entrada de Staff Confirmada: ${parsed.nome} (${parsed.funcao || "Equipe"}) · ${parsed.empresa}${tagFim}`
+              `Entrada de Staff Confirmada: ${nomePessoa} (${funcao})${empresa}${tagFim}`
             );
             onRefreshData?.();
           } else {
@@ -208,22 +271,45 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
           setLoadingBusca(false);
           pararCamera();
           const fId = parsed.fornecedorId || parsed.id;
-          const { checkinMembroFornecedorBackend } = await import("../../../services/convites");
-          if (Array.isArray(parsed.membros) && parsed.membros.length > 0 && fId) {
-            for (const m of parsed.membros) {
-              if (m.id) {
-                await checkinMembroFornecedorBackend(fId, m.id, true);
+          if (Array.isArray(parsed.membros) && parsed.membros.length > 0 && typeof fId === "string") {
+            const membrosConfirmados: string[] = [];
+            let empresa = "";
+
+            for (const membroCredencial of parsed.membros) {
+              if (typeof membroCredencial?.id !== "string") continue;
+
+              const res = await checkinMembroFornecedorBackend(fId, membroCredencial.id, true);
+              if (!res.success) {
+                setErroCheckin(
+                  `Não foi possível concluir o check-in da equipe. ${res.message}`
+                );
+                return;
               }
+
+              const fornecedor = res.fornecedor;
+              const membroConfirmado = fornecedor?.equipe?.find(
+                (item) => item.id === membroCredencial.id
+              );
+              if (membroConfirmado) {
+                membrosConfirmados.push(membroConfirmado.nome);
+              }
+              if (fornecedor?.empresa) empresa = fornecedor.empresa;
             }
+
+            if (membrosConfirmados.length === 0) {
+              setErroCheckin("O servidor não retornou os membros confirmados desta equipe.");
+              return;
+            }
+
             playCheckinSuccessSound();
             triggerHaptic();
             setMensagemSucesso(
-              `Entrada de Equipe Confirmada: ${parsed.empresa} (${parsed.membros.length} profissionais credenciados)`
+              `Entrada de Equipe Confirmada: ${empresa || "empresa credenciada"} (${membrosConfirmados.length} profissionais)`
             );
             onRefreshData?.();
           } else {
             setMensagemSucesso(
-              `Credencial da Empresa detectada: ${parsed.empresa}. Utilize a aba Fornecedores para gerenciar os membros.`
+              "Credencial da empresa detectada. Utilize a aba Fornecedores para gerenciar os membros."
             );
           }
           return;
@@ -246,12 +332,32 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
       } catch {}
     }
 
+    if (termo.length > 8 && !termo.includes(" ")) {
+      const validacaoQr = await validarCredencialQrBackend(termo);
+      if (validacaoQr.success && validacaoQr.valida) {
+        const presenca = await registrarPresencaQrBackend(termo, "Portaria", "Registro via leitura de QR");
+        setLoadingBusca(false);
+        pararCamera();
+        if (presenca.success) {
+          playCheckinSuccessSound();
+          triggerHaptic();
+          setConviteAtual(null);
+          setMensagemSucesso(
+            `Credencial validada pelo backend: ${presenca.nomePessoa || validacaoQr.nomePessoa || "Participante"} (${presenca.tipo || validacaoQr.tipo || "Participante"})`
+          );
+          onRefreshData?.();
+          return;
+        }
+        setErroCheckin(presenca.message || "Não foi possível confirmar a presença pela credencial.");
+        return;
+      }
+    }
+
     try {
       const { buscarConvitePorCodigo, buscarConvitesPorTermoBackend } = await import(
         "../../../services/convites"
       );
 
-      // 1. Se for QR Code ou código limpo sem espaços, tenta busca direta por código
       if (isQrCodeJson || (!codigoLimpo.includes(" ") && codigoLimpo.length <= 30)) {
         const c = await buscarConvitePorCodigo(codigoLimpo);
         if (c) {
@@ -261,7 +367,6 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
         }
       }
 
-      // 2. Busca abrangente por termo (nome de membro, família, telefone ou código)
       const lista = await buscarConvitesPorTermoBackend(termo);
       setLoadingBusca(false);
 
@@ -284,6 +389,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
       setErroCheckin("Erro de conexão ao buscar convite no servidor.");
     }
   };
+  processarCodigoRef.current = processarCodigo;
 
   const salvarPresenca = async (forcarTodos = false) => {
     if (!conviteAtual) return;
@@ -309,8 +415,8 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
       setMensagemSucesso(
         presentesQtd === totalQtd
-          ? `✓ ENTRADA CONFIRMADA · Todos os ${presentesQtd} membros presentes!`
-          : `✓ ENTRADA REGISTRADA · ${presentesQtd} de ${totalQtd} presentes`
+          ? `ENTRADA CONFIRMADA · Todos os ${presentesQtd} membros presentes!`
+          : `ENTRADA REGISTRADA · ${presentesQtd} de ${totalQtd} presentes`
       );
 
       if (res.convite) setConviteAtual(res.convite);
@@ -350,7 +456,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               atualizarContadorOffline();
               onRefreshData?.();
               if (resultado.sincronizados > 0) {
-                setMensagemSucesso(`✓ ${resultado.sincronizados} check-in(s) sincronizado(s) com sucesso com o servidor!`);
+                setMensagemSucesso(`${resultado.sincronizados} check-in(s) sincronizado(s) com sucesso com o servidor!`);
               }
             }}
             className="px-3.5 py-1.5 bg-amber-900 text-white rounded-[6px] font-semibold text-[0.7rem] uppercase tracking-wider hover:bg-amber-950 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto shrink-0"
@@ -385,6 +491,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              ultimoCodigoProcessadoRef.current = codigoInput.trim();
               processarCodigo(codigoInput);
             }}
             className="flex-1 flex gap-2"
@@ -552,7 +659,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               onClick={() => salvarPresenca(true)}
               className="w-full sm:w-auto px-6 py-3.5 bg-[#1E6B37] hover:bg-[#16532A] text-white font-sans text-xs tracking-[0.16em] uppercase font-semibold rounded-[8px] shadow-sm cursor-pointer disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2"
             >
-              <span>✓</span>
+              <span>Sincronizado</span>
               <span>{salvandoCheckin ? "Confirmando..." : "Confirmar Entrada de Todos"}</span>
             </button>
           </div>
@@ -618,7 +725,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                           )}
                           {m.criancaAte6Anos && <span className="text-amber-800 font-medium">Criança (≤ 6 anos)</span>}
                           {m.confirmadoRsvp === true && (
-                            <span className="text-emerald-800 font-semibold">✓ Confirmou</span>
+                            <span className="text-emerald-800 font-semibold">Confirmou</span>
                           )}
                           {m.confirmadoRsvp === false && <span className="text-rose-800 font-bold">Recusou</span>}
                         </div>

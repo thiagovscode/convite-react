@@ -58,9 +58,55 @@ export interface AdminRsvpResponse {
   resumoGeral: ResumoGeralCasamento;
   data: RsvpAdminItem[];
   rsvps?: RsvpAdminItem[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+}
+
+export interface AdminListQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
 }
 
 export type AdminRsvpItem = RsvpAdminItem;
+
+export async function mensagemErroApi(response: Response, fallback: string): Promise<string> {
+  switch (response.status) {
+    case 400:
+    case 422:
+      return "Os dados enviados são inválidos. Revise as informações e tente novamente.";
+    case 401:
+      return "Sua sessão expirou. Entre novamente para continuar.";
+    case 403:
+      return "Você não tem permissão para realizar esta ação.";
+    case 404:
+      return "O registro solicitado não foi encontrado.";
+    case 409:
+      return "Esta ação não pode ser concluída porque os dados foram alterados. Atualize e tente novamente.";
+    case 500:
+    case 502:
+    case 503:
+      return "O serviço está indisponível no momento. Tente novamente em instantes.";
+    default:
+      return fallback;
+  }
+}
+
+function buildQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "");
+  if (entries.length === 0) return "";
+
+  const query = new URLSearchParams();
+  for (const [key, value] of entries) {
+    query.set(key, String(value));
+  }
+  return `?${query.toString()}`;
+}
 
 export const getApiBaseUrl = (): string => {
   const viteApiUrl = import.meta.env.VITE_API_URL;
@@ -196,6 +242,22 @@ export async function renovarTokenAdmin(): Promise<string | null> {
   return null;
 }
 
+export async function revogarSessaoBackend(refreshToken: string): Promise<boolean> {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}/api/auth/logout` : "/api/auth/logout";
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Wrapper HTTP que injeta token Bearer e realiza refresh transparente em caso de 401
  */
@@ -239,7 +301,7 @@ function tratarErroAutenticacao(response: Response) {
  * Busca a listagem e resumo geral de confirmações
  * GET /api/admin/rsvp/casamento
  */
-export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsvpResponse> {
+export async function buscarRelatorioRsvpAdmin(token?: string, params: AdminListQueryParams = {}): Promise<AdminRsvpResponse> {
   const baseUrl = getApiBaseUrl();
   const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
@@ -247,7 +309,16 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
     throw new Error('Autenticação necessária.');
   }
 
-  const url = baseUrl ? `${baseUrl}/api/admin/rsvp/casamento` : '/api/admin/rsvp/casamento';
+  const queryString = buildQueryString({
+    page: params.page,
+    pageSize: params.pageSize,
+    search: params.search,
+    status: params.status,
+    sortBy: params.sortBy,
+    sortDirection: params.sortDirection,
+  });
+
+  const url = baseUrl ? `${baseUrl}/api/admin/rsvp/casamento${queryString}` : `/api/admin/rsvp/casamento${queryString}`;
 
   const response = await fetchAutenticadoAdmin(url, {
     method: 'GET',
@@ -262,12 +333,11 @@ export async function buscarRelatorioRsvpAdmin(token?: string): Promise<AdminRsv
     throw new Error('Não foi possível carregar o relatório de presenças.');
   }
 
-  const json = await response.json();
-
   if (!response.ok) {
-    throw new Error(json.message || 'Não foi possível carregar o relatório de presenças.');
+    throw new Error(await mensagemErroApi(response, 'Não foi possível carregar o relatório de presenças.'));
   }
 
+  const json = await response.json();
   return json;
 }
 
@@ -336,7 +406,7 @@ export async function cadastrarConviteAdmin(
  * Lista convites cadastrados no backend Java
  * GET /api/admin/convites
  */
-export async function listarConvitesAdmin(token?: string): Promise<any[]> {
+export async function listarConvitesAdmin(token?: string, params: AdminListQueryParams = {}): Promise<unknown[]> {
   const baseUrl = getApiBaseUrl();
   const authToken = token || localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
 
@@ -344,7 +414,12 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
     throw new Error('Autenticação de administrador necessária.');
   }
 
-  const url = baseUrl ? `${baseUrl}/api/admin/convites` : '/api/admin/convites';
+  const queryString = buildQueryString({
+    page: params.page,
+    size: params.pageSize,
+  });
+
+  const url = baseUrl ? `${baseUrl}/api/admin/convites${queryString}` : `/api/admin/convites${queryString}`;
 
   const response = await fetchAutenticadoAdmin(url, {
     method: 'GET',
@@ -354,10 +429,20 @@ export async function listarConvitesAdmin(token?: string): Promise<any[]> {
     },
   });
 
-  const json = await response.json();
   if (!response.ok) {
-    throw new Error(json.message || 'Erro ao listar convites no servidor.');
+    throw new Error(await mensagemErroApi(response, 'Não foi possível carregar os convites.'));
   }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('O servidor retornou uma resposta inválida ao carregar os convites.');
+  }
+
+  const json: unknown = await response.json();
+  if (!Array.isArray(json)) {
+    throw new Error('O formato da resposta de convites não corresponde ao contrato esperado pela tela.');
+  }
+
   return json;
 }
 
@@ -562,5 +647,3 @@ export async function resetarRsvpConviteAdmin(codigoOuId: string, token?: string
   if (!res.ok) throw new Error(json.message || 'Erro ao resetar RSVP do convite.');
   return json;
 }
-
-

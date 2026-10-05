@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { RelatorioAuditoria } from "../../../services/convites";
 
 interface AuditoriaTabProps {
@@ -24,8 +24,14 @@ interface ConvidadoBuffet {
 export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProps) {
   const [copiado, setCopiado] = useState(false);
   const [busca, setBusca] = useState("");
+  const [buscaDebounced, setBuscaDebounced] = useState("");
   const [filtroPresenca, setFiltroPresenca] = useState<"TODOS" | "PRESENTES" | "AUSENTES">("TODOS");
   const [filtroIdade, setFiltroIdade] = useState<"TODOS" | "ADULTOS" | "CRIANCAS">("TODOS");
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setBuscaDebounced(busca.trim()), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [busca]);
 
   const handleExportarWhatsApp = () => {
     const msg = `*RELATÓRIO OFICIAL DE AUDITORIA - BUFFET*\nCasamento Tainara & Thiago · 24.01.2027\n\n- Adultos Presentes: ${
@@ -79,8 +85,8 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
       if (filtroIdade === "CRIANCAS" && !c.criancaAte6Anos) return false;
 
       // Busca textual
-      if (busca.trim()) {
-        const termo = busca.toLowerCase();
+      if (buscaDebounced) {
+        const termo = buscaDebounced.toLowerCase();
         return (
           c.nome.toLowerCase().includes(termo) ||
           c.familia.toLowerCase().includes(termo) ||
@@ -90,7 +96,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
 
       return true;
     });
-  }, [listaConvidados, filtroPresenca, filtroIdade, busca]);
+  }, [listaConvidados, filtroPresenca, filtroIdade, buscaDebounced]);
 
   const formatarHora = (dataIso?: string) => {
     if (!dataIso) return "";
@@ -175,7 +181,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
             onClick={handleExportarWhatsApp}
             className="self-start sm:self-auto px-4 py-2.5 bg-[#1E6B37] hover:bg-[#16532A] text-white text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] transition-colors cursor-pointer shrink-0"
           >
-            {copiado ? "✓ Relatório Copiado" : "Enviar via WhatsApp"}
+            {copiado ? "Relatório Copiado" : "Enviar via WhatsApp"}
           </button>
         </div>
       </div>
@@ -216,7 +222,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
                   onClick={() => setBusca("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#8C7A6B] hover:text-[#261811] font-bold cursor-pointer"
                 >
-                  ✕
+                  Limpar
                 </button>
               )}
             </div>
@@ -338,7 +344,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
                       <td className="py-3 px-3 text-right">
                         {isPresente ? (
                           <span className="inline-flex items-center gap-1 text-[0.66rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-[4px] bg-[#EBF5EE] text-[#1E6B37] border border-[#C2DFCE] font-semibold">
-                            <span>✓ No Salão</span>
+                            <span>No Salão</span>
                             {horaCheckin && (
                               <span className="font-normal text-[#1E6B37]/80">({horaCheckin})</span>
                             )}

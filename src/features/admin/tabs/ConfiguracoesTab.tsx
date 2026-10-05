@@ -118,7 +118,7 @@ export function ConfiguracoesTab({
             onClick={() => setFeedback(null)}
             className="underline ml-2 cursor-pointer font-bold"
           >
-            ✕
+            Fechar
           </button>
         </div>
       )}
