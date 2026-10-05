@@ -160,6 +160,24 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     }
   };
 
+  const formatarHoraPortaria = (dataIso?: string) => {
+    if (!dataIso) return "";
+    try {
+      const match = dataIso.match(/[T ](\d{2}):(\d{2})/);
+      if (match && !dataIso.endsWith("Z")) {
+        return `${match[1]}:${match[2]}`;
+      }
+      const d = new Date(dataIso);
+      return d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
+    } catch {
+      return "";
+    }
+  };
+
   const selecionarConvite = (c: ConvitePreDefinido) => {
     setConviteAtual(c);
     setResultadosBusca([]);
@@ -171,22 +189,26 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
     const sel: Record<string, boolean> = {};
     membros.forEach((m) => {
+      // Se já está marcado como presente, mantém marcado.
+      // Se não, sugere marcado apenas se confirmou RSVP
       sel[m.id] = m.presenteCheckin !== undefined ? Boolean(m.presenteCheckin) : m.confirmadoRsvp === true;
     });
     setSelecaoPresenca(sel);
 
     if (todosJaEntraram) {
       const primeiroCheckin = membrosPresentes.find((m) => m.dataHoraCheckin)?.dataHoraCheckin;
-      const horarioFormatado = primeiroCheckin
-        ? new Date(primeiroCheckin).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-        : "";
+      const horarioFormatado = formatarHoraPortaria(primeiroCheckin);
       setErroCheckin(
-        `ALERTA: Entrada já registrada anteriormente para todos os membros deste convite${
+        `Atenção: Todos os ${membros.length} membros deste convite já registraram entrada${
           horarioFormatado ? ` às ${horarioFormatado}` : ""
-        }!`
+        }. Você ainda pode ajustar a presença caso necessário.`
+      );
+    } else if (membrosPresentes.length > 0) {
+      setMensagemSucesso(
+        `Convite localizado. ${membrosPresentes.length} de ${membros.length} membros já entraram. Marque os demais que estão chegando agora e confirme!`
       );
     } else {
-      setMensagemSucesso("Convite localizado com sucesso.");
+      setMensagemSucesso("Convite localizado com sucesso. Selecione os membros presentes e confirme.");
     }
   };
 
@@ -416,10 +438,23 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
       setMensagemSucesso(
         presentesQtd === totalQtd
           ? `ENTRADA CONFIRMADA · Todos os ${presentesQtd} membros presentes!`
-          : `ENTRADA REGISTRADA · ${presentesQtd} de ${totalQtd} presentes`
+          : `ENTRADA ATUALIZADA · ${presentesQtd} de ${totalQtd} membros confirmados no local.`
       );
 
-      if (res.convite) setConviteAtual(res.convite);
+      if (res.convite) {
+        setConviteAtual(res.convite);
+        const novaSel: Record<string, boolean> = {};
+        res.convite.membros?.forEach((m: any) => {
+          novaSel[m.id] = Boolean(m.presenteCheckin);
+        });
+        setSelecaoPresenca(novaSel);
+      } else {
+        const novaSel: Record<string, boolean> = {};
+        presencas.forEach((p) => {
+          novaSel[p.membroId] = p.presente;
+        });
+        setSelecaoPresenca(novaSel);
+      }
       onRefreshData?.();
     } else {
       setErroCheckin(res.message || "Erro ao registrar check-in.");
@@ -732,28 +767,38 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                       </div>
                     </div>
 
-                    <span
-                      className={`text-[0.65rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold border ${
-                        m.presenteCheckin
-                          ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                          : "bg-gray-100 text-gray-700 border-gray-300"
-                      }`}
-                    >
-                      {m.presenteCheckin ? "Já no Local" : "Aguardando"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[0.65rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold border ${
+                          m.presenteCheckin
+                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            : "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
+                      >
+                        {m.presenteCheckin ? "Já no Local" : "Aguardando"}
+                      </span>
+                      {m.presenteCheckin && m.dataHoraCheckin && (
+                        <span className="text-[0.65rem] font-sans text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          {formatarHoraPortaria(m.dataHoraCheckin)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+              <span className="text-xs font-serif italic text-[#8C7A6B]">
+                Marque ou desmarque individualmente quem está entrando agora e confirme abaixo.
+              </span>
               <button
                 type="button"
                 disabled={salvandoCheckin}
                 onClick={() => salvarPresenca(false)}
-                className="px-6 py-3 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] cursor-pointer disabled:opacity-50 min-h-[44px]"
+                className="w-full sm:w-auto px-6 py-3 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] cursor-pointer disabled:opacity-50 min-h-[44px]"
               >
-                Salvar Seleção Individual
+                {salvandoCheckin ? "Gravando Entrada..." : "Confirmar Membros Selecionados"}
               </button>
             </div>
           </div>

@@ -269,42 +269,103 @@ export default function FornecedorCredencialModal() {
               </div>
             )}
 
-            {/* Passe / QR Code Individual */}
+            {/* Passe / Ficha Individual do Membro com QR Code */}
             {membroSelecionado && qrDataUrl && (
-              <div className="bg-white border-2 border-[#261811] rounded-[14px] p-4 text-center space-y-3 shadow-md animate-fade-in">
-                <div>
-                  <h3 className="font-serif text-lg font-medium text-[#261811]">
+              <div className="bg-white border-2 border-[#261811] rounded-[14px] p-5 text-center space-y-4 shadow-md animate-fade-in">
+                {/* Header da Ficha Individual */}
+                <div className="border-b border-[#F0EAE0] pb-3 text-left space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.62rem] font-sans tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold block">
+                      Ficha Individual do Profissional
+                    </span>
+                    <span className="text-[0.65rem] font-sans px-2 py-0.5 rounded bg-[#FAF7F2] border border-[#E8DFD5] text-[#543D30]">
+                      Equipe: {fornecedor.equipe?.length || 1} membro{fornecedor.equipe?.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <h3 className="font-serif text-xl font-medium text-[#261811] leading-tight">
                     {membroSelecionado.nome}
                   </h3>
-                  <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] block">
-                    {membroSelecionado.funcao || "Equipe"} · {fornecedor.empresa}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-[#543D30]">
+                    <span className="font-medium bg-[#261811] text-[#FAF7F2] px-2 py-0.5 rounded text-[0.65rem] uppercase tracking-wider">
+                      {membroSelecionado.funcao || "Profissional"}
+                    </span>
+                    <span className="text-[#8C7A6B]">·</span>
+                    <span>{fornecedor.empresa}</span>
+                  </div>
+                </div>
+
+                {/* Dados da Empresa & Equipe */}
+                <div className="bg-[#FAF7F2] border border-[#E8DFD5] rounded-[8px] p-3 text-left space-y-1.5 text-xs text-[#543D30]">
+                  <div className="flex justify-between">
+                    <span className="text-[#8C7A6B]">Fornecedor:</span>
+                    <strong className="text-[#261811] font-medium">{fornecedor.empresa}</strong>
+                  </div>
+                  {fornecedor.responsavel && (
+                    <div className="flex justify-between">
+                      <span className="text-[#8C7A6B]">Responsável:</span>
+                      <span>{fornecedor.responsavel}</span>
+                    </div>
+                  )}
+                  {fornecedor.servico && (
+                    <div className="flex justify-between">
+                      <span className="text-[#8C7A6B]">Serviço / Categoria:</span>
+                      <span>{fornecedor.servico} ({fornecedor.categoria || "Staff"})</span>
+                    </div>
+                  )}
                   {membroSelecionado.permaneceAteFim && (
-                    <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-full text-[0.62rem] font-sans font-semibold uppercase tracking-wider">
-                      <span>Permanece até o fim</span>
+                    <div className="pt-1 border-t border-[#E8DFD5] flex items-center justify-between text-amber-900 font-semibold text-[0.7rem]">
+                      <span>Permanência:</span>
+                      <span className="bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300">Permanece até o fim do evento</span>
                     </div>
                   )}
                 </div>
 
-                <div className="p-2 bg-white rounded-[10px] inline-block shadow-xs border border-[#E8DFD5]">
-                  <img
-                    src={qrDataUrl}
-                    alt={`QR Code de ${membroSelecionado.nome}`}
-                    className="w-48 h-48 mx-auto object-contain"
-                  />
+                {/* QR Code Individual */}
+                <div className="pt-1 flex flex-col items-center justify-center space-y-2">
+                  <div className="p-3 bg-white rounded-[10px] inline-block shadow-xs border border-[#E8DFD5]">
+                    <img
+                      src={qrDataUrl}
+                      alt={`QR Code de ${membroSelecionado.nome}`}
+                      className="w-48 h-48 mx-auto object-contain"
+                    />
+                  </div>
+                  <span className="font-mono text-[0.65rem] tracking-[0.2em] uppercase text-[#8C7A6B] block">
+                    ID DA CREDENCIAL: <strong className="text-[#261811] font-normal">{membroSelecionado.id.slice(-8).toUpperCase()}</strong>
+                  </span>
                 </div>
 
-                <p className="text-[0.68rem] font-sans text-[#8C7A6B]">
+                <p className="text-[0.7rem] font-sans text-[#8C7A6B] italic leading-tight px-2">
                   Apresente este QR Code na portaria de serviços do salão para liberar sua entrada.
                 </p>
 
-                <div className="pt-1 flex flex-col gap-2">
+                {/* Membros Credenciados da Equipe */}
+                {fornecedor.equipe && fornecedor.equipe.length > 1 && (
+                  <div className="text-left pt-2 border-t border-[#F0EAE0] space-y-1">
+                    <span className="text-[0.6rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold block">
+                      Demais membros credenciados desta equipe:
+                    </span>
+                    <div className="flex flex-wrap gap-1 text-[0.68rem] text-[#6B5A4D]">
+                      {fornecedor.equipe
+                        .filter((m) => m.id !== membroSelecionado.id)
+                        .map((m) => (
+                          <span
+                            key={m.id}
+                            className="bg-[#FAF7F2] border border-[#E8DFD5] px-2 py-0.5 rounded text-[#543D30]"
+                          >
+                            {m.nome} {m.funcao ? `(${m.funcao})` : ""}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={handleDownloadQr}
-                    className="w-full bg-[#261811] text-[#FAF7F2] text-xs font-sans uppercase tracking-wider font-semibold py-2.5 rounded-[6px] hover:bg-[#3D271D] transition-colors cursor-pointer"
+                    className="w-full bg-[#261811] text-[#FAF7F2] text-xs font-sans uppercase tracking-[0.14em] font-semibold py-3 rounded-[6px] hover:bg-[#3D271D] transition-colors cursor-pointer shadow-xs"
                   >
-                    {salvoFeedback ? "Imagem Baixada com Sucesso" : "Baixar Meu QR Code"}
+                    {salvoFeedback ? "Imagem Baixada com Sucesso!" : "Baixar Meu QR Code"}
                   </button>
                 </div>
               </div>

@@ -1080,6 +1080,7 @@ export function AdminPanel() {
               {activeTab === "auditoria" && (
                 <AuditoriaTab
                   relatorio={relatorioAuditoria}
+                  fornecedores={fornecedores}
                   loading={auditoriaLoading}
                   onRefresh={carregarAuditoria}
                 />

@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import type { RelatorioAuditoria } from "../../../services/convites";
+import type { RelatorioAuditoria, FornecedorCasamento } from "../../../services/convites";
 
 interface AuditoriaTabProps {
   relatorio: RelatorioAuditoria | null;
+  fornecedores?: FornecedorCasamento[];
   loading: boolean;
   onRefresh?: () => void;
 }
@@ -19,9 +20,10 @@ interface ConvidadoBuffet {
   presenteCheckin?: boolean;
   dataHoraCheckin?: string;
   recepcionista?: string;
+  isFornecedor?: boolean;
 }
 
-export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProps) {
+export function AuditoriaTab({ relatorio, fornecedores, loading, onRefresh }: AuditoriaTabProps) {
   const [copiado, setCopiado] = useState(false);
   const [busca, setBusca] = useState("");
   const [buscaDebounced, setBuscaDebounced] = useState("");
@@ -38,7 +40,7 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
       relatorio?.totalAdultosPresentes ?? 0
     }\n- Crianças (0-6 anos): ${relatorio?.totalCriancasPresentes ?? 0}\n- Total no Salão: ${
       relatorio?.totalPresentesReais ?? 0
-    } pessoas\n\nEmitido em: ${new Date().toLocaleTimeString("pt-BR")}`;
+    } pessoas\n\nEmitido em: ${new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}`;
 
     navigator.clipboard.writeText(msg);
     setCopiado(true);
@@ -47,31 +49,61 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
   };
 
   // Mapeia todas as pessoas das famílias retornadas pela API da portaria/auditoria
+  // E também inclui membros de fornecedores com permaneceAteFim = true (que almoçam/jantam no buffet)
   const listaConvidados = useMemo<ConvidadoBuffet[]>(() => {
-    if (!relatorio?.familias) return [];
     const list: ConvidadoBuffet[] = [];
 
-    for (const fam of relatorio.familias) {
-      if (fam.membros && fam.membros.length > 0) {
-        for (const m of fam.membros) {
-          list.push({
-            id: m.id || `${fam.codigo}-${m.nome}`,
-            nome: m.nome,
-            familia: fam.familia,
-            codigoConvite: fam.codigo,
-            criancaAte6Anos: Boolean(m.criancaAte6Anos),
-            papel: m.papel || fam.papel,
-            vinculo: m.vinculo || fam.vinculo,
-            confirmadoRsvp: m.confirmadoRsvp,
-            presenteCheckin: m.presenteCheckin,
-            dataHoraCheckin: m.dataHoraCheckin,
-            recepcionista: m.recepcionista,
-          });
+    if (relatorio?.familias) {
+      for (const fam of relatorio.familias) {
+        if (fam.membros && fam.membros.length > 0) {
+          for (const m of fam.membros) {
+            list.push({
+              id: m.id || `${fam.codigo}-${m.nome}`,
+              nome: m.nome,
+              familia: fam.familia,
+              codigoConvite: fam.codigo,
+              criancaAte6Anos: Boolean(m.criancaAte6Anos),
+              papel: m.papel || fam.papel,
+              vinculo: m.vinculo || fam.vinculo,
+              confirmadoRsvp: m.confirmadoRsvp,
+              presenteCheckin: m.presenteCheckin,
+              dataHoraCheckin: m.dataHoraCheckin,
+              recepcionista: m.recepcionista,
+              isFornecedor: false,
+            });
+          }
         }
       }
     }
+
+    if (Array.isArray(fornecedores)) {
+      for (const f of fornecedores) {
+        if (f.equipe && Array.isArray(f.equipe)) {
+          for (const m of f.equipe) {
+            // Apenas membros de fornecedores que permanecem até o fim contam no buffet
+            if (m.permaneceAteFim) {
+              list.push({
+                id: `forn-${f.id || f.empresa}-${m.id}`,
+                nome: m.nome,
+                familia: f.empresa || "Fornecedor",
+                codigoConvite: `FORN-${(f.id ? f.id.slice(-6) : (f.empresa || "STAFF").slice(0, 6)).toUpperCase()}`,
+                criancaAte6Anos: false,
+                papel: m.funcao ? `Staff (${m.funcao})` : "Staff / Fornecedor",
+                vinculo: "Fornecedor (Buffet)",
+                confirmadoRsvp: true,
+                presenteCheckin: Boolean(m.presente),
+                dataHoraCheckin: m.dataHoraEntrada,
+                recepcionista: "Portaria",
+                isFornecedor: true,
+              });
+            }
+          }
+        }
+      }
+    }
+
     return list;
-  }, [relatorio]);
+  }, [relatorio, fornecedores]);
 
   // Aplica filtros operacionais de presença, idade e busca por termo
   const convidadosFiltrados = useMemo(() => {
@@ -101,8 +133,18 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
   const formatarHora = (dataIso?: string) => {
     if (!dataIso) return "";
     try {
+      // Se vier formato ISO local sem fuso (ex: "2026-10-05T19:30:00" ou com millis)
+      // Extrair diretamente as horas e minutos gravados pelo servidor brasileiro
+      const match = dataIso.match(/[T ](\d{2}):(\d{2})/);
+      if (match && !dataIso.endsWith("Z")) {
+        return `${match[1]}:${match[2]}`;
+      }
       const d = new Date(dataIso);
-      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      return d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
     } catch {
       return "";
     }
@@ -338,7 +380,13 @@ export function AuditoriaTab({ relatorio, loading, onRefresh }: AuditoriaTabProp
                       </td>
 
                       <td className="py-3 px-3 text-[#786455] text-xs">
-                        {c.papel || "Convidado"}
+                        {c.isFornecedor ? (
+                          <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-violet-50 text-violet-800 border border-violet-200 font-semibold">
+                            {c.papel}
+                          </span>
+                        ) : (
+                          c.papel || "Convidado"
+                        )}
                       </td>
 
                       <td className="py-3 px-3 text-right">
