@@ -864,7 +864,7 @@ export function AdminPanel() {
               telefone,
               status,
               familia,
-              observacao,
+              observacao: idx === 0 ? observacao : "",
               criancaAte6Anos: m.criancaAte6Anos,
               dataConfirmacao: respondidoMembro ? dataConfirmacaoMembro : undefined,
               respondido: respondidoMembro,
@@ -881,19 +881,36 @@ export function AdminPanel() {
       const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
       const dataRsvp = r.updatedAt || r.createdAt;
 
-      // Se o RSVP possui observação ou data de confirmação, repassa para os convidados correspondentes
-      if (r.observacao || dataRsvp) {
+      // A observação vai apenas para 1 membro do convite (evita duplicar o comentário em todos da família)
+      if (r.observacao) {
+        const itemTitular =
+          itens.find((it) => nomeR && it.nome.trim().toLowerCase() === nomeR) ||
+          itens.find(
+            (it) =>
+              (cod && it.codigoConvite && it.codigoConvite.toLowerCase() === String(cod).toLowerCase()) ||
+              (telR && it.telefone && it.telefone.replace(/\D/g, "") === telR)
+          );
+        if (itemTitular) {
+          const familiaJaTemObs = itens.some(
+            (it) =>
+              it.codigoConvite === itemTitular.codigoConvite &&
+              it.observacao &&
+              it.observacao.trim() !== ""
+          );
+          if (!familiaJaTemObs) {
+            itemTitular.observacao = r.observacao;
+          }
+        }
+      }
+
+      // A data de confirmação vale para os membros respondidos do convite
+      if (dataRsvp) {
         itens.forEach((it) => {
           const matchCod = cod && it.codigoConvite && it.codigoConvite.toLowerCase() === String(cod).toLowerCase();
           const matchNome = nomeR && it.nome.trim().toLowerCase() === nomeR;
           const matchTel = telR && it.telefone && it.telefone.replace(/\D/g, "") === telR;
-          if (matchCod || matchNome || matchTel) {
-            if (r.observacao && !it.observacao) {
-              it.observacao = r.observacao;
-            }
-            if (dataRsvp && !it.dataConfirmacao && it.status !== "PENDENTE") {
-              it.dataConfirmacao = dataRsvp;
-            }
+          if ((matchCod || matchNome || matchTel) && !it.dataConfirmacao && it.status !== "PENDENTE") {
+            it.dataConfirmacao = dataRsvp;
           }
         });
       }
