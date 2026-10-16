@@ -343,39 +343,53 @@ export function getRecepcaoAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+let promessaRenovacaoRecepcao: Promise<string | null> | null = null;
+
 /**
- * Tenta renovar o token da recepção usando o refreshToken persistido
+ * Tenta renovar o token da recepção usando o refreshToken persistido (com deduplicação de chamadas concorrentes)
  */
 export async function renovarTokenRecepcao(): Promise<string | null> {
   if (typeof window === "undefined") return null;
-  const refreshToken = sessionStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY) || localStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY);
-  if (!refreshToken) return null;
+  if (promessaRenovacaoRecepcao) return promessaRenovacaoRecepcao;
 
-  try {
-    const baseUrl = getApiBaseUrl();
-    const url = baseUrl ? `${baseUrl}/api/auth/refresh` : `/api/auth/refresh`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.token) {
-        sessionStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
-        if (data.refreshToken) {
-          sessionStorage.setItem(RECEPCAO_REFRESH_STORAGE_KEY, data.refreshToken);
-        }
-        return data.token;
-      }
+  promessaRenovacaoRecepcao = (async () => {
+    const refreshToken = sessionStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY) || localStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY);
+    if (!refreshToken) {
+      sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+      localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+      return null;
     }
-  } catch {}
 
-  sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
-  localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
-  sessionStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
-  localStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
-  return null;
+    try {
+      const baseUrl = getApiBaseUrl();
+      const url = baseUrl ? `${baseUrl}/api/auth/refresh` : `/api/auth/refresh`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          sessionStorage.setItem(RECEPCAO_JWT_STORAGE_KEY, data.token);
+          if (data.refreshToken) {
+            sessionStorage.setItem(RECEPCAO_REFRESH_STORAGE_KEY, data.refreshToken);
+          }
+          return data.token;
+        }
+      }
+    } catch {}
+
+    sessionStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    localStorage.removeItem(RECEPCAO_JWT_STORAGE_KEY);
+    sessionStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
+    localStorage.removeItem(RECEPCAO_REFRESH_STORAGE_KEY);
+    return null;
+  })().finally(() => {
+    promessaRenovacaoRecepcao = null;
+  });
+
+  return promessaRenovacaoRecepcao;
 }
 
 // Valida a sessão de recepção no backend (sem confiar em flags estáticas do localStorage)
@@ -398,7 +412,7 @@ export async function validarSessaoRecepcaoBackend(): Promise<boolean> {
     if (res.ok) {
       return true;
     }
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 403) {
       const novoToken = await renovarTokenRecepcao();
       if (novoToken) {
         res = await fetch(url, {

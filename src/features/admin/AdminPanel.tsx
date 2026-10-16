@@ -214,20 +214,25 @@ export function AdminPanel() {
 
     const tentarRestaurarSessao = async () => {
       const adminToken = localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
+      const adminRefresh = localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY);
       const recepcaoToken =
         sessionStorage.getItem(RECEPCAO_JWT_STORAGE_KEY) ||
         localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
+      const recepcaoRefresh =
+        sessionStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY) ||
+        localStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY);
 
-      if (adminToken) {
-        let tokenValido = adminToken;
-        const exp = parseJwtExp(adminToken);
-        if (exp && exp <= Date.now()) {
+      if (adminToken || adminRefresh) {
+        let tokenValido = adminToken || "";
+        const exp = tokenValido ? parseJwtExp(tokenValido) : null;
+        if (!tokenValido || !exp || exp <= Date.now() + 60_000) {
           const novoToken = await renovarTokenAdmin();
           if (novoToken) {
             tokenValido = novoToken;
           } else {
             tokenValido = "";
-            setAuthError("Sua sessão expirou. Faça login novamente.");
+            handleLogout("Sua sessão expirou. Faça login novamente.");
+            return;
           }
         }
         if (tokenValido) {
@@ -236,17 +241,22 @@ export function AdminPanel() {
             setIsLogged(true);
             setActiveTab("dashboard");
             await carregarDadosAdmin(tokenValido);
+            // Se o token foi invalidado pelo backend durante o carregamento, garante estado deslogado
+            if (!localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY)) {
+              handleLogout("Sua sessão expirou. Faça login novamente.");
+              return;
+            }
             await carregarClassificacoes();
             await carregarFornecedores();
             return;
           } catch {
-            localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
-            localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
+            handleLogout("Sua sessão expirou. Faça login novamente.");
+            return;
           }
         }
       }
 
-      if (recepcaoToken) {
+      if (recepcaoToken || recepcaoRefresh) {
         const valida = await validarSessaoRecepcaoBackend();
         if (valida) {
           setUserRole("recepcao");
@@ -254,8 +264,10 @@ export function AdminPanel() {
           setActiveTab("portaria");
           await carregarDadosOperacionais();
         } else {
-          setAuthError("Sua sessão expirou. Faça login novamente.");
+          handleLogout("Sua sessão expirou. Faça login novamente.");
         }
+      } else {
+        setIsLogged(false);
       }
     };
 
@@ -296,7 +308,17 @@ export function AdminPanel() {
   }, [searchRsvp, rsvpStatusFilter, rsvpPage, rsvpPageSize, isLogged, userRole, activeTab]);
 
   useEffect(() => {
-    if (!isLogged) return;
+    const handleSessaoExpirada = () => {
+      handleLogout("Sua sessão expirou. Faça login novamente.");
+    };
+
+    window.addEventListener("sessao-jwt-expirada", handleSessaoExpirada);
+
+    if (!isLogged) {
+      return () => {
+        window.removeEventListener("sessao-jwt-expirada", handleSessaoExpirada);
+      };
+    }
 
     const checarERenovarSessao = async () => {
       const token =
@@ -305,12 +327,19 @@ export function AdminPanel() {
         localStorage.getItem(RECEPCAO_JWT_STORAGE_KEY);
 
       if (!token) {
-        handleLogout();
+        const novoToken =
+          userRole === "admin" ? await renovarTokenAdmin() : await renovarTokenRecepcao();
+        if (!novoToken) {
+          handleLogout("Sua sessão expirou. Faça login novamente.");
+        }
         return;
       }
 
       const expMs = parseJwtExp(token);
-      if (!expMs) return;
+      if (!expMs) {
+        handleLogout("Sua sessão expirou. Faça login novamente.");
+        return;
+      }
 
       const tempoRestante = expMs - Date.now();
 
@@ -330,17 +359,22 @@ export function AdminPanel() {
       }
     };
 
-    // Checa a cada 30s se o token precisa ser renovado preventivamente
-    const interval = setInterval(checarERenovarSessao, 30000);
-
-    const handleSessaoExpirada = () => {
-      handleLogout("Sua sessão expirou. Faça login novamente.");
+    const aoRetomarAba = () => {
+      if (document.visibilityState === "visible") {
+        void checarERenovarSessao();
+      }
     };
 
-    window.addEventListener("sessao-jwt-expirada", handleSessaoExpirada);
+    // Checa imediatamente, ao voltar para a aba/janela e a cada 30s
+    void checarERenovarSessao();
+    const interval = setInterval(checarERenovarSessao, 30000);
+    window.addEventListener("focus", aoRetomarAba);
+    document.addEventListener("visibilitychange", aoRetomarAba);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener("focus", aoRetomarAba);
+      document.removeEventListener("visibilitychange", aoRetomarAba);
       window.removeEventListener("sessao-jwt-expirada", handleSessaoExpirada);
     };
   }, [isLogged, userRole]);
@@ -415,7 +449,9 @@ export function AdminPanel() {
       localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY) ||
       sessionStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY) ||
       localStorage.getItem(RECEPCAO_REFRESH_STORAGE_KEY);
-    const revogacao = refreshToken ? revogarSessaoBackend(refreshToken) : Promise.resolve(true);
+    if (refreshToken) {
+      void revogarSessaoBackend(refreshToken);
+    }
 
     localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
     localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
@@ -427,18 +463,12 @@ export function AdminPanel() {
     setUserRole("admin");
     setData(null);
     setMetricasBackend(null);
+    setDataError("");
     setSearchRsvp("");
     setRsvpStatusFilter("todos");
     setRsvpPage(0);
     setRsvpPageSize(30);
     setAuthError(motivo || "");
-
-    void revogacao.then((revogada) => {
-      if (!revogada) {
-        const mensagem = "A sessão foi encerrada neste dispositivo, mas não foi possível revogá-la no servidor.";
-        setAuthError(motivo ? `${motivo} ${mensagem}` : mensagem);
-      }
-    });
   };
 
   // ─── CARREGADORES DE DADOS ───────────────────────────────────────────────────
@@ -482,7 +512,18 @@ export function AdminPanel() {
       setListaConvites(convites);
       if (metricasRes) setMetricasBackend(metricasRes);
     } catch (err: any) {
-      setDataError(err.message || "Erro ao carregar dados administrativos.");
+      const msg = String(err?.message || "");
+      const semTokenValido = !localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY);
+      if (
+        semTokenValido ||
+        msg.includes("sessão expirou") ||
+        msg.includes("permissão") ||
+        msg.includes("Autenticação")
+      ) {
+        handleLogout("Sua sessão expirou. Faça login novamente.");
+        return;
+      }
+      setDataError(msg || "Erro ao carregar dados administrativos.");
     } finally {
       setDataLoading(false);
     }

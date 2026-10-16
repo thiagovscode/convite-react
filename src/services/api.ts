@@ -206,40 +206,53 @@ export async function autenticarAdmin(username: string, password: string): Promi
   throw new Error('Token não retornado pelo servidor.');
 }
 
+let promessaRenovacaoAdmin: Promise<string | null> | null = null;
+
 /**
- * Tenta renovar o token de acesso de administrador utilizando o refreshToken
+ * Tenta renovar o token de acesso de administrador utilizando o refreshToken (com deduplicação de chamadas concorrentes)
  */
 export async function renovarTokenAdmin(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
-  const refreshToken = localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY);
-  if (!refreshToken) return null;
+  if (promessaRenovacaoAdmin) return promessaRenovacaoAdmin;
 
-  try {
-    const baseUrl = getApiBaseUrl();
-    const url = baseUrl ? `${baseUrl}/api/auth/refresh` : '/api/auth/refresh';
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      if (json.token) {
-        localStorage.setItem(CONVITE_ADMIN_TOKEN_KEY, json.token);
-        if (json.refreshToken) {
-          localStorage.setItem(CONVITE_ADMIN_REFRESH_KEY, json.refreshToken);
-        }
-        return json.token;
-      }
+  promessaRenovacaoAdmin = (async () => {
+    const refreshToken = localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY);
+    if (!refreshToken) {
+      localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+      return null;
     }
-  } catch (e) {
-    console.warn('Erro ao renovar token de autenticação:', e);
-  }
 
-  localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
-  localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
-  return null;
+    try {
+      const baseUrl = getApiBaseUrl();
+      const url = baseUrl ? `${baseUrl}/api/auth/refresh` : '/api/auth/refresh';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (response.ok) {
+        const json = await response.json();
+        if (json.token) {
+          localStorage.setItem(CONVITE_ADMIN_TOKEN_KEY, json.token);
+          if (json.refreshToken) {
+            localStorage.setItem(CONVITE_ADMIN_REFRESH_KEY, json.refreshToken);
+          }
+          return json.token;
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao renovar token de autenticação:', e);
+    }
+
+    localStorage.removeItem(CONVITE_ADMIN_TOKEN_KEY);
+    localStorage.removeItem(CONVITE_ADMIN_REFRESH_KEY);
+    return null;
+  })().finally(() => {
+    promessaRenovacaoAdmin = null;
+  });
+
+  return promessaRenovacaoAdmin;
 }
 
 export async function revogarSessaoBackend(refreshToken: string): Promise<boolean> {
@@ -259,27 +272,29 @@ export async function revogarSessaoBackend(refreshToken: string): Promise<boolea
 }
 
 /**
- * Wrapper HTTP que injeta token Bearer e realiza refresh transparente em caso de 401
+ * Wrapper HTTP que injeta token Bearer e realiza refresh transparente em caso de 401/403
  */
 export async function fetchAutenticadoAdmin(url: string, init: RequestInit = {}): Promise<Response> {
   let authToken = typeof window !== 'undefined' ? localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY) : null;
+  if (!authToken && typeof window !== 'undefined' && localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY)) {
+    authToken = await renovarTokenAdmin();
+  }
+
   const headers = new Headers(init.headers || {});
-  if (authToken && !headers.has('Authorization')) {
+  if (authToken) {
     headers.set('Authorization', `Bearer ${authToken}`);
   }
 
   let response = await fetch(url, { ...init, headers });
 
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     const novoToken = await renovarTokenAdmin();
-    if (novoToken) {
+    if (novoToken && novoToken !== authToken) {
       headers.set('Authorization', `Bearer ${novoToken}`);
       response = await fetch(url, { ...init, headers });
-    } else {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('sessao-jwt-expirada'));
-      }
-      throw new Error('Sua sessão expirou. Faça login novamente.');
+    }
+    if (response.status === 401 || response.status === 403) {
+      tratarErroAutenticacao(response);
     }
   }
 
