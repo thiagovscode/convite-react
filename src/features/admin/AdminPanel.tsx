@@ -692,16 +692,15 @@ export function AdminPanel() {
       (acc, f) => acc + (f.equipe?.filter((m) => m.permaneceAteFim).length || 0),
       0
     );
-    const totalConvitesFornecedores = (fornecedores || []).length;
-
+    // O backend já soma os fornecedores que ficam até o fim nas métricas; não somar de novo aqui.
     if (metricasBackend) {
       return {
-        totalConvites: metricasBackend.totalConvites + totalConvitesFornecedores,
-        totalPessoas: metricasBackend.totalPessoas + totalFornecedoresFicam,
-        totalConfirmados: metricasBackend.totalConfirmados + totalFornecedoresFicam,
+        totalConvites: metricasBackend.totalConvites,
+        totalPessoas: metricasBackend.totalPessoas,
+        totalConfirmados: metricasBackend.totalConfirmados,
         totalRecusaram: metricasBackend.totalRecusaram,
         totalPendentes: metricasBackend.totalPendentes,
-        totalAdultos: metricasBackend.totalAdultosConfirmados + totalFornecedoresFicam,
+        totalAdultos: metricasBackend.totalAdultosConfirmados,
         totalCriancasAte6Anos: metricasBackend.totalCriancasConfirmadas,
         totalFornecedoresConfirmados: totalFornecedoresFicam,
       };
@@ -710,7 +709,7 @@ export function AdminPanel() {
     const conf = rsvpList.filter((r) => r.presenca);
     const rec = rsvpList.filter((r) => !r.presenca);
     return {
-      totalConvites: (listaConvites.length || rsvpList.length) + totalConvitesFornecedores,
+      totalConvites: listaConvites.length || rsvpList.length,
       totalPessoas: rsvpList.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0) + totalFornecedoresFicam,
       totalConfirmados: conf.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0) + totalFornecedoresFicam,
       totalRecusaram: rec.reduce((acc: number, r: RsvpAdminItem) => acc + (r.totalPessoas || 1), 0),

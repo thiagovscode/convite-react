@@ -51,7 +51,7 @@ export function DashboardTab({ stats }: DashboardTabProps) {
           value={fmtNumber(stats.totalConfirmados)}
           sub={
             stats.totalFornecedoresConfirmados && stats.totalFornecedoresConfirmados > 0
-              ? `presenças garantidas (${stats.totalFornecedoresConfirmados} fornecedores)`
+              ? `presenças garantidas (inclui ${stats.totalFornecedoresConfirmados} fornecedores)`
               : "presenças garantidas"
           }
           color="green"
