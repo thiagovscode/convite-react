@@ -817,8 +817,9 @@ export function AdminPanel() {
         }
         const familia = c.familia || "";
         const observacao = c.observacao || "";
-        const dataConfirmacao = c.dataConfirmacao;
-        const conviteRespondido = c.status === "CONFIRMADO" || c.status === "RECUSADO" || !!dataConfirmacao;
+        const conviteRespondido = c.status === "CONFIRMADO" || c.status === "RECUSADO" || !!c.dataConfirmacao;
+        const dataConfirmacaoConvite =
+          c.dataConfirmacao || (conviteRespondido ? (c as any).updatedAt : undefined);
 
         if (Array.isArray(c.membros) && c.membros.length > 0) {
           c.membros.forEach((m: any, idx: number) => {
@@ -849,6 +850,10 @@ export function AdminPanel() {
               nomesProcessados.add(m.nome.trim().toLowerCase());
             }
 
+            const respondidoMembro = conviteRespondido || status !== "PENDENTE";
+            const dataConfirmacaoMembro =
+              dataConfirmacaoConvite || (status === "CONFIRMADO" ? m.dataHoraCheckin : undefined);
+
             itens.push({
               id: `${c.id || codigo}-${m.id || idx}`,
               codigoConvite: codigo,
@@ -861,8 +866,8 @@ export function AdminPanel() {
               familia,
               observacao,
               criancaAte6Anos: m.criancaAte6Anos,
-              dataConfirmacao,
-              respondido: conviteRespondido || status !== "PENDENTE",
+              dataConfirmacao: respondidoMembro ? dataConfirmacaoMembro : undefined,
+              respondido: respondidoMembro,
             });
           });
         }
@@ -871,24 +876,29 @@ export function AdminPanel() {
 
     const rsvpList: RsvpAdminItem[] = data?.data || data?.rsvps || [];
     rsvpList.forEach((r) => {
-      // Se o RSVP possui observação, repassa para o convidado correspondente já cadastrado
-      if (r.observacao) {
-        const telR = r.telefone ? r.telefone.replace(/\D/g, "") : "";
-        const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
-        const itemExistente = itens.find(
-          (it) =>
-            (nomeR && it.nome.trim().toLowerCase() === nomeR) ||
-            (telR && it.telefone && it.telefone.replace(/\D/g, "") === telR)
-        );
-        if (itemExistente && !itemExistente.observacao) {
-          itemExistente.observacao = r.observacao;
-        }
+      const cod = (r as any).codigoConvite;
+      const telR = r.telefone ? r.telefone.replace(/\D/g, "") : "";
+      const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
+      const dataRsvp = r.updatedAt || r.createdAt;
+
+      // Se o RSVP possui observação ou data de confirmação, repassa para os convidados correspondentes
+      if (r.observacao || dataRsvp) {
+        itens.forEach((it) => {
+          const matchCod = cod && it.codigoConvite && it.codigoConvite.toLowerCase() === String(cod).toLowerCase();
+          const matchNome = nomeR && it.nome.trim().toLowerCase() === nomeR;
+          const matchTel = telR && it.telefone && it.telefone.replace(/\D/g, "") === telR;
+          if (matchCod || matchNome || matchTel) {
+            if (r.observacao && !it.observacao) {
+              it.observacao = r.observacao;
+            }
+            if (dataRsvp && !it.dataConfirmacao && it.status !== "PENDENTE") {
+              it.dataConfirmacao = dataRsvp;
+            }
+          }
+        });
       }
 
       // Só adiciona se tiver código de convite novo que não conste na lista oficial e o convidado não tiver sido processado
-      const cod = (r as any).codigoConvite;
-      const nomeR = r.nome ? r.nome.trim().toLowerCase() : "";
-      const telR = r.telefone ? r.telefone.replace(/\D/g, "") : "";
 
       if (cod && !codigosProcessados.has(cod.toLowerCase()) && !nomesProcessados.has(nomeR) && (!telR || !telefonesProcessados.has(telR))) {
         codigosProcessados.add(cod.toLowerCase());
@@ -906,6 +916,7 @@ export function AdminPanel() {
           telefone: r.telefone,
           status,
           observacao: r.observacao,
+          dataConfirmacao: dataRsvp,
           respondido: true,
         });
 
@@ -924,6 +935,7 @@ export function AdminPanel() {
                 telefone: r.telefone,
                 status,
                 criancaAte6Anos: a.criancaAte6Anos,
+                dataConfirmacao: dataRsvp,
                 respondido: true,
               });
             }

@@ -51,6 +51,49 @@ export function RsvpTab({
 }: RsvpTabProps) {
   const filtroStatus = statusFilter;
   const [copiado, setCopiado] = useState(false);
+  const [ordenacaoData, setOrdenacaoData] = useState<"padrao" | "recentes" | "antigos">("padrao");
+
+  const parseDataConfirmacaoMs = (dataIso?: string): number | null => {
+    if (!dataIso || !dataIso.trim()) return null;
+    const raw = dataIso.trim();
+    const normalizada =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) && !raw.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(raw)
+        ? `${raw}Z`
+        : raw;
+    const ms = Date.parse(normalizada);
+    return Number.isNaN(ms) ? null : ms;
+  };
+
+  const formatarDataConfirmacao = (dataIso?: string): string => {
+    const ms = parseDataConfirmacaoMs(dataIso);
+    if (ms === null) return "—";
+    try {
+      const d = new Date(ms);
+      const dataStr = d.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "America/Sao_Paulo",
+      });
+      const horaStr = d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
+      return `${dataStr} às ${horaStr}`;
+    } catch {
+      return "—";
+    }
+  };
+
+  const alternarOrdenacaoColuna = () => {
+    setOrdenacaoData((atual) => {
+      if (atual === "padrao") return "recentes";
+      if (atual === "recentes") return "antigos";
+      return "padrao";
+    });
+    onPageChange?.(0);
+  };
 
   const totalConfirmados = useMemo(
     () => respostas.filter((r) => r.status === "CONFIRMADO").length,
@@ -70,9 +113,9 @@ export function RsvpTab({
   );
   const totalGeral = respostas.length;
 
-  // Filtragem combinada por busca textual e por status
+  // Filtragem combinada por busca textual, status e ordenação por data de confirmação
   const itensFiltrados = useMemo(() => {
-    return respostas.filter((item) => {
+    const filtrados = respostas.filter((item) => {
       // Filtro de status
       if (filtroStatus === "respondidos") {
         if (item.status !== "CONFIRMADO" && item.status !== "RECUSADO") return false;
@@ -94,6 +137,7 @@ export function RsvpTab({
         const faixa = (item.faixaEtaria || "").toLowerCase();
         const familia = (item.familia || "").toLowerCase();
         const observacao = (item.observacao || "").toLowerCase();
+        const dataFormatada = formatarDataConfirmacao(item.dataConfirmacao).toLowerCase();
 
         const match =
           nome.includes(termo) ||
@@ -102,14 +146,29 @@ export function RsvpTab({
           telefone.includes(termo) ||
           faixa.includes(termo) ||
           familia.includes(termo) ||
-          observacao.includes(termo);
+          observacao.includes(termo) ||
+          dataFormatada.includes(termo);
 
         if (!match) return false;
       }
 
       return true;
     });
-  }, [respostas, filtroStatus, search]);
+
+    if (ordenacaoData === "padrao") return filtrados;
+
+    return [...filtrados].sort((a, b) => {
+      const msA = parseDataConfirmacaoMs(a.dataConfirmacao);
+      const msB = parseDataConfirmacaoMs(b.dataConfirmacao);
+
+      // Mantém quem possui data de confirmação no topo e quem ainda não possui no final
+      if (msA === null && msB === null) return 0;
+      if (msA === null) return 1;
+      if (msB === null) return -1;
+
+      return ordenacaoData === "recentes" ? msB - msA : msA - msB;
+    });
+  }, [respostas, filtroStatus, search, ordenacaoData]);
 
   const totalRegistros = itensFiltrados.length;
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / Math.max(pageSize, 1)));
@@ -122,7 +181,7 @@ export function RsvpTab({
   }, [itensFiltrados, page, pageSize]);
 
   const exportarCsv = () => {
-    const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
+    const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Data Confirmação", "Status RSVP"];
     const rows = itensFiltrados.map((item) => [
       item.codigoConvite,
       item.nome,
@@ -130,6 +189,7 @@ export function RsvpTab({
       item.participaCortejo,
       item.faixaEtaria,
       item.telefone || "",
+      formatarDataConfirmacao(item.dataConfirmacao),
       item.status,
     ]);
 
@@ -151,7 +211,7 @@ export function RsvpTab({
   };
 
   const copiarTabela = () => {
-    const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Status RSVP"];
+    const headers = ["Código", "Nome", "Papel", "Participa do Cortejo", "Faixa Etária", "Telefone", "Data Confirmação", "Status RSVP"];
     const rows = itensFiltrados.map((item) => [
       item.codigoConvite,
       item.nome,
@@ -159,6 +219,7 @@ export function RsvpTab({
       item.participaCortejo,
       item.faixaEtaria,
       item.telefone || "",
+      formatarDataConfirmacao(item.dataConfirmacao),
       item.status,
     ]);
 
@@ -203,72 +264,120 @@ export function RsvpTab({
 
       {/* Painel Principal */}
       <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
-        {/* Controles: Busca e Filtro de Status */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-[#F0EAE0]">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Filtrar por código, nome, papel, faixa etária, telefone..."
-            className="w-full md:w-96 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
-          />
+        {/* Controles: Busca, Filtro de Status e Ordenação por Data */}
+        <div className="flex flex-col gap-3 pb-2 border-b border-[#F0EAE0]">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Filtrar por código, nome, papel, faixa etária, telefone..."
+              className="w-full md:w-96 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
+            />
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange?.("todos")}
+                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  filtroStatus === "todos"
+                    ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
+                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                }`}
+              >
+                Todos ({totalGeral})
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange?.("respondidos")}
+                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  filtroStatus === "respondidos"
+                    ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
+                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                }`}
+              >
+                Respondidos ({totalRespondidos})
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange?.("confirmados")}
+                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  filtroStatus === "confirmados"
+                    ? "bg-emerald-900 text-white shadow-xs"
+                    : "bg-emerald-50 border border-emerald-200 text-emerald-900 hover:border-emerald-700"
+                }`}
+              >
+                Confirmados ({totalConfirmados})
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange?.("recusados")}
+                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  filtroStatus === "recusados"
+                    ? "bg-rose-900 text-white shadow-xs"
+                    : "bg-rose-50 border border-rose-200 text-rose-900 hover:border-rose-700"
+                }`}
+              >
+                Recusados ({totalRecusados})
+              </button>
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange?.("pendentes")}
+                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  filtroStatus === "pendentes"
+                    ? "bg-amber-900 text-white shadow-xs"
+                    : "bg-amber-50 border border-amber-200 text-amber-900 hover:border-amber-700"
+                }`}
+              >
+                Pendentes ({totalPendentes})
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-1.5 flex-wrap pt-1">
+            <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold mr-1">
+              Ordenar por confirmação:
+            </span>
             <button
               type="button"
-              onClick={() => onStatusFilterChange?.("todos")}
-              className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
-                filtroStatus === "todos"
+              onClick={() => {
+                setOrdenacaoData("recentes");
+                onPageChange?.(0);
+              }}
+              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-semibold transition-all cursor-pointer ${
+                ordenacaoData === "recentes"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
                   : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
               }`}
             >
-              Todos ({totalGeral})
+              Mais novos ↓
             </button>
             <button
               type="button"
-              onClick={() => onStatusFilterChange?.("respondidos")}
-              className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
-                filtroStatus === "respondidos"
+              onClick={() => {
+                setOrdenacaoData("antigos");
+                onPageChange?.(0);
+              }}
+              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-semibold transition-all cursor-pointer ${
+                ordenacaoData === "antigos"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
                   : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
               }`}
             >
-              Respondidos ({totalRespondidos})
+              Mais antigos ↑
             </button>
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange?.("confirmados")}
-              className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
-                filtroStatus === "confirmados"
-                  ? "bg-emerald-900 text-white shadow-xs"
-                  : "bg-emerald-50 border border-emerald-200 text-emerald-900 hover:border-emerald-700"
-              }`}
-            >
-              Confirmados ({totalConfirmados})
-            </button>
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange?.("recusados")}
-              className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
-                filtroStatus === "recusados"
-                  ? "bg-rose-900 text-white shadow-xs"
-                  : "bg-rose-50 border border-rose-200 text-rose-900 hover:border-rose-700"
-              }`}
-            >
-              Recusados ({totalRecusados})
-            </button>
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange?.("pendentes")}
-              className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
-                filtroStatus === "pendentes"
-                  ? "bg-amber-900 text-white shadow-xs"
-                  : "bg-amber-50 border border-amber-200 text-amber-900 hover:border-amber-700"
-              }`}
-            >
-              Pendentes ({totalPendentes})
-            </button>
+            {ordenacaoData !== "padrao" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOrdenacaoData("padrao");
+                  onPageChange?.(0);
+                }}
+                className="text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-medium text-[#8C7A6B] hover:text-[#261811] cursor-pointer"
+              >
+                Limpar ordem
+              </button>
+            )}
           </div>
         </div>
 
@@ -318,6 +427,10 @@ export function RsvpTab({
                       <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Telefone:</span>
                       <span>{item.telefone || "—"}</span>
                     </div>
+                    <div className="col-span-2">
+                      <span className="text-[0.64rem] uppercase tracking-wider text-[#705E51] block">Data da Confirmação:</span>
+                      <span>{formatarDataConfirmacao(item.dataConfirmacao)}</span>
+                    </div>
                   </div>
 
                   {item.observacao && (
@@ -356,6 +469,23 @@ export function RsvpTab({
                     </th>
                     <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
                       Telefone
+                    </th>
+                    <th className="text-left px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
+                      <button
+                        type="button"
+                        onClick={alternarOrdenacaoColuna}
+                        className="inline-flex items-center gap-1 uppercase tracking-[0.18em] text-[#6B5A4D] hover:text-[#261811] cursor-pointer"
+                        title="Clique para ordenar pelos mais novos ou mais antigos a confirmarem"
+                      >
+                        <span>Data Confirmação</span>
+                        <span className="text-xs">
+                          {ordenacaoData === "recentes"
+                            ? "↓"
+                            : ordenacaoData === "antigos"
+                            ? "↑"
+                            : "↕"}
+                        </span>
+                      </button>
                     </th>
                     <th className="text-center px-4 py-3 text-[0.64rem] font-sans tracking-[0.18em] uppercase text-[#6B5A4D] font-semibold">
                       Status RSVP
@@ -404,6 +534,9 @@ export function RsvpTab({
                       <td className="px-4 py-3.5 text-xs font-sans text-[#6B5A4D] whitespace-nowrap">
                         {item.telefone || "—"}
                       </td>
+                      <td className="px-4 py-3.5 text-xs font-sans text-[#6B5A4D] whitespace-nowrap">
+                        {formatarDataConfirmacao(item.dataConfirmacao)}
+                      </td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
                         <StatusBadge status={item.status} />
                       </td>
@@ -412,7 +545,7 @@ export function RsvpTab({
 
                   {!itensDaPagina.length && (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-xs font-serif italic text-[#705E51]">
+                      <td colSpan={8} className="py-10 text-center text-xs font-serif italic text-[#705E51]">
                         Nenhum convidado encontrado com os termos digitados.
                       </td>
                     </tr>
