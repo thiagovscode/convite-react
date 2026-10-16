@@ -78,6 +78,26 @@ export function instalarRenovacaoAutomaticaDeSessao(): void {
   if (typeof window === "undefined" || (window as any).__fetchComRenovacao) return;
   (window as any).__fetchComRenovacao = true;
 
+  // Sincroniza encerramento de sessão entre múltiplas abas abertas
+  window.addEventListener("storage", (e: StorageEvent) => {
+    if (
+      (e.key === CONVITE_ADMIN_TOKEN_KEY ||
+        e.key === CONVITE_ADMIN_REFRESH_KEY ||
+        e.key === RECEPCAO_JWT_STORAGE_KEY ||
+        e.key === RECEPCAO_REFRESH_STORAGE_KEY) &&
+      !e.newValue
+    ) {
+      const semAdmin =
+        !localStorage.getItem(CONVITE_ADMIN_TOKEN_KEY) &&
+        !localStorage.getItem(CONVITE_ADMIN_REFRESH_KEY);
+      const semRecepcao =
+        !lerToken(RECEPCAO_JWT_STORAGE_KEY) && !lerToken(RECEPCAO_REFRESH_STORAGE_KEY);
+      if (semAdmin && semRecepcao) {
+        window.dispatchEvent(new CustomEvent("sessao-jwt-expirada"));
+      }
+    }
+  });
+
   const fetchOriginal = window.fetch.bind(window);
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {

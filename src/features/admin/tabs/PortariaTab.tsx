@@ -5,6 +5,7 @@ import {
   registrarCheckinBackend,
   getFilaOfflineCheckins,
   sincronizarFilaOffline,
+  buscarRelatorioAuditoriaBackend,
   checkinMembroFornecedorBackend,
   validarCredencialQrBackend,
   registrarPresencaQrBackend,
@@ -37,8 +38,12 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
   useEffect(() => {
     atualizarContadorOffline();
+    // Pré-carrega silenciosamente a lista completa no cache local para busca offline imediata se o 4G/Wi-Fi oscilar
+    void buscarRelatorioAuditoriaBackend();
 
-    const handleOnline = async () => {
+    const tentarSincronizarFila = async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      if (getFilaOfflineCheckins().length === 0) return;
       setSincronizandoOffline(true);
       await sincronizarFilaOffline();
       setSincronizandoOffline(false);
@@ -46,8 +51,20 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
       onRefreshData?.();
     };
 
+    const handleOnline = () => {
+      void tentarSincronizarFila();
+      void buscarRelatorioAuditoriaBackend();
+    };
+
+    const intervalOffline = window.setInterval(() => {
+      void tentarSincronizarFila();
+    }, 30000);
+
     window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
+    return () => {
+      window.clearInterval(intervalOffline);
+      window.removeEventListener("online", handleOnline);
+    };
   }, []);
 
   useEffect(() => {

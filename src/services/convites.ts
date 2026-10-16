@@ -548,7 +548,22 @@ export async function buscarRelatorioAuditoriaBackend(): Promise<RelatorioAudito
       headers: getRecepcaoAuthHeaders()
     });
     if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
-      return await res.json();
+      const data: RelatorioAuditoria = await res.json();
+      if (data && Array.isArray(data.familias) && data.familias.length > 0) {
+        salvarNoCacheOffline(
+          data.familias.map((f) => ({
+            id: f.id,
+            codigo: f.codigo,
+            familia: f.familia,
+            telefone: f.telefone,
+            status: f.statusRsvp,
+            papel: f.papel,
+            membros: f.membros || [],
+            confirmado: f.statusRsvp === "CONFIRMADO",
+          }))
+        );
+      }
+      return data;
     }
   } catch (err) {
     console.error("Erro ao buscar relatório de auditoria:", err);
