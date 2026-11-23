@@ -426,15 +426,25 @@ export function FornecedoresTab({
     });
   }, [fornecedores, buscaDebounced]);
 
+  const totalProfissionais = fornecedores.reduce((acc, f) => acc + (f.equipe?.length || 0), 0);
+  const totalPresentesGeral = fornecedores.reduce(
+    (acc, f) => acc + (f.equipe?.filter((m) => m.presente).length || 0),
+    0
+  );
+  const totalFicaFimGeral = fornecedores.reduce(
+    (acc, f) => acc + (f.equipe?.filter((m) => m.permaneceAteFim).length || 0),
+    0
+  );
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8DFD5] pb-4">
         <div>
-          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
-            {isNoivos ? "Gestão de Equipes & Contratos" : "Portaria & Chegada"}
+          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#6B5A4D] font-semibold mb-1">
+            {isNoivos ? "Gestão de Equipes & Contratos" : "Portaria & Chegada de Staff"}
           </p>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
+          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-normal">
             Fornecedores &amp; Profissionais
           </h1>
         </div>
@@ -443,20 +453,57 @@ export function FornecedoresTab({
           <button
             type="button"
             onClick={handleAbrirNovo}
-            className="inline-flex items-center justify-center gap-2 bg-[#261811] text-[#FAF7F2] text-xs font-sans tracking-wider uppercase px-4 py-2.5 rounded-[6px] font-semibold cursor-pointer hover:bg-[#3D271D] transition-colors shadow-xs"
+            className="inline-flex items-center justify-center gap-2 bg-[#261811] text-[#FAF7F2] text-xs font-sans tracking-wider uppercase px-4 py-2.5 rounded-[8px] font-semibold cursor-pointer hover:bg-[#1A100B] transition-colors shadow-xs min-h-[40px]"
           >
             <span>+</span> Novo Fornecedor
           </button>
         )}
       </div>
 
+      {/* Resumo Rápido de Equipes */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-3.5 shadow-xs">
+          <span className="text-[0.62rem] font-sans uppercase tracking-wider text-[#6B5A4D] font-semibold block">
+            Empresas / Equipes
+          </span>
+          <strong className="font-serif text-2xl text-[#261811] font-normal mt-0.5 block">
+            {fornecedores.length}
+          </strong>
+        </div>
+        <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-3.5 shadow-xs">
+          <span className="text-[0.62rem] font-sans uppercase tracking-wider text-[#6B5A4D] font-semibold block">
+            Total de Profissionais
+          </span>
+          <strong className="font-serif text-2xl text-[#261811] font-normal mt-0.5 block">
+            {totalProfissionais}
+          </strong>
+        </div>
+        <div className="bg-emerald-50/70 border border-emerald-200 rounded-[12px] p-3.5 shadow-xs">
+          <span className="text-[0.62rem] font-sans uppercase tracking-wider text-emerald-900 font-semibold block">
+            Presentes no Local
+          </span>
+          <strong className="font-serif text-2xl text-emerald-950 font-normal mt-0.5 block">
+            {totalPresentesGeral} <span className="text-sm font-sans font-normal text-emerald-800">/ {totalProfissionais}</span>
+          </strong>
+        </div>
+        <div className="bg-amber-50/70 border border-amber-200 rounded-[12px] p-3.5 shadow-xs">
+          <span className="text-[0.62rem] font-sans uppercase tracking-wider text-amber-900 font-semibold block">
+            🍽️ Ficam até o Fim
+          </span>
+          <strong className="font-serif text-2xl text-amber-950 font-normal mt-0.5 block">
+            {totalFicaFimGeral}
+          </strong>
+        </div>
+      </div>
+
       {sucessoMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-[8px] text-xs font-sans flex items-center justify-between">
-          <span>{sucessoMsg}</span>
+        <div role="status" className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-[8px] text-xs font-sans font-medium flex items-center justify-between shadow-xs">
+          <span>✓ {sucessoMsg}</span>
           <button
             type="button"
             onClick={() => setSucessoMsg("")}
             className="text-emerald-700 hover:text-emerald-950 font-bold ml-2 cursor-pointer"
+            aria-label="Fechar mensagem"
           >
             Fechar
           </button>
@@ -490,14 +537,27 @@ export function FornecedoresTab({
       )}
 
       {/* Barra de Busca */}
-      <div className="bg-white border border-[#E8DFD5] rounded-[10px] p-3 shadow-xs">
-        <input
-          type="text"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por empresa, responsável, categoria ou profissional da equipe..."
-          className="w-full bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
-        />
+      <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-3.5 shadow-xs">
+        <div className="relative">
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por empresa, responsável, categoria ou profissional da equipe..."
+            aria-label="Buscar fornecedores"
+            className="w-full bg-[#FAF7F2] focus:bg-white border border-[#D8CDC0] pl-3.5 pr-9 py-2.5 text-xs font-sans text-[#261811] rounded-[8px] focus:outline-none focus:border-[#261811] transition-colors min-h-[40px]"
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B5A4D] hover:text-[#261811] text-xs font-bold p-1 cursor-pointer"
+              aria-label="Limpar busca"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Lista de Fornecedores */}

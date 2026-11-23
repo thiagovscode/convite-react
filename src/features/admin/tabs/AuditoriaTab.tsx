@@ -321,67 +321,82 @@ export function AuditoriaTab({ relatorio, fornecedores, loading, onRefresh }: Au
           </div>
         </div>
 
-        {/* Tabela de Convidados */}
+        {/* Listagem de Convidados (Mobile Cards + Desktop Table) */}
         {loading ? (
-          <div className="py-12 text-center text-[#8C7A6B] font-serif text-sm">
-            Carregando lista de convidados do buffet...
+          <div className="py-14 flex flex-col items-center justify-center gap-3 text-[#6B5A4D] font-serif text-sm">
+            <div className="w-7 h-7 border-2 border-[#261811] border-t-transparent rounded-full animate-spin" />
+            <span>Carregando lista de convidados do buffet...</span>
           </div>
         ) : convidadosFiltrados.length === 0 ? (
-          <div className="py-12 text-center border border-dashed border-[#D8CDC0] rounded-[8px] bg-[#FAF7F2]">
-            <p className="font-serif text-base text-[#261811]">
+          <div className="py-12 px-4 text-center border border-dashed border-[#D8CDC0] rounded-[12px] bg-[#FAF7F2]/60 space-y-2">
+            <p className="font-serif text-lg text-[#261811]">
               Nenhum convidado encontrado
             </p>
-            <p className="font-serif italic text-xs text-[#8C7A6B] mt-1">
+            <p className="font-sans text-xs text-[#6B5A4D]">
               Verifique os filtros aplicados ou digite outro termo na busca.
             </p>
+            {(busca || filtroPresenca !== "TODOS" || filtroIdade !== "TODOS") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBusca("");
+                  setFiltroPresenca("TODOS");
+                  setFiltroIdade("TODOS");
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-[#261811] text-[#FAF7F2] text-xs font-sans uppercase tracking-wider font-semibold rounded-[8px] cursor-pointer"
+              >
+                Limpar Filtros
+              </button>
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm font-serif">
-              <thead>
-                <tr className="border-b border-[#E8DFD5] text-[#8C7A6B] text-[0.66rem] font-sans uppercase tracking-[0.14em]">
-                  <th className="py-3 px-3">Convidado</th>
-                  <th className="py-3 px-3">Família</th>
-                  <th className="py-3 px-3">Categoria</th>
-                  <th className="py-3 px-3">Papel</th>
-                  <th className="py-3 px-3 text-right">Status de Presença</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F0EAE1]">
-                {convidadosFiltrados.map((c) => {
-                  const isPresente = Boolean(c.presenteCheckin);
-                  const horaCheckin = formatarHora(c.dataHoraCheckin);
+          <>
+            {/* Mobile Cards (< 640px) */}
+            <div className="block sm:hidden divide-y divide-[#E8DFD5]">
+              {convidadosFiltrados.map((c) => {
+                const isPresente = Boolean(c.presenteCheckin);
+                const horaCheckin = formatarHora(c.dataHoraCheckin);
 
-                  return (
-                    <tr
-                      key={c.id}
-                      className={`hover:bg-[#FAF7F2] transition-colors ${
-                        isPresente ? "bg-[#F9FCFA]" : ""
-                      }`}
-                    >
-                      <td className="py-3 px-3 font-medium text-[#261811]">
-                        <span>{c.nome}</span>
-                      </td>
-
-                      <td className="py-3 px-3 text-[#6B5A4D]">
-                        <span className="truncate max-w-[180px] block" title={c.familia}>
-                          {c.familia}
+                return (
+                  <div
+                    key={c.id}
+                    className={`py-3.5 px-2 space-y-2 rounded-[8px] ${
+                      isPresente ? "bg-emerald-50/30" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <strong className="font-serif text-base text-[#261811] font-medium block leading-snug">
+                          {c.nome}
+                        </strong>
+                        <span className="text-xs font-sans text-[#6B5A4D] block">
+                          {c.familia} · <span className="font-mono">#{c.codigoConvite}</span>
                         </span>
-                      </td>
+                      </div>
+                      {isPresente ? (
+                        <span className="inline-flex items-center gap-1 text-[0.65rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300 font-semibold shrink-0">
+                          <span>✓ No Salão</span>
+                          {horaCheckin && <span className="font-normal">({horaCheckin})</span>}
+                        </span>
+                      ) : (
+                        <span className="inline-block text-[0.65rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#FAF7F2] text-[#6B5A4D] border border-[#D8CDC0] shrink-0">
+                          Aguardando
+                        </span>
+                      )}
+                    </div>
 
-                      <td className="py-3 px-3">
-                        {c.criancaAte6Anos ? (
-                          <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 font-semibold">
-                            Criança (≤ 6 anos)
-                          </span>
-                        ) : (
-                          <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#6B5A4D] border border-[#E0D5C7]">
-                            Adulto
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-3 text-[#786455] text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {c.criancaAte6Anos ? (
+                        <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 font-semibold">
+                          Criança (≤ 6 anos)
+                        </span>
+                      ) : (
+                        <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#543D30] border border-[#E0D5C7]">
+                          Adulto
+                        </span>
+                      )}
+                      <span className="text-xs font-sans text-[#6B5A4D]">
+                        ·{" "}
                         {c.isFornecedor ? (
                           <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-violet-50 text-violet-800 border border-violet-200 font-semibold">
                             {c.papel}
@@ -389,28 +404,90 @@ export function AuditoriaTab({ relatorio, fornecedores, loading, onRefresh }: Au
                         ) : (
                           c.papel || "Convidado"
                         )}
-                      </td>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                      <td className="py-3 px-3 text-right">
-                        {isPresente ? (
-                          <span className="inline-flex items-center gap-1 text-[0.66rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-[4px] bg-[#EBF5EE] text-[#1E6B37] border border-[#C2DFCE] font-semibold">
-                            <span>No Salão</span>
-                            {horaCheckin && (
-                              <span className="font-normal text-[#1E6B37]/80">({horaCheckin})</span>
-                            )}
+            {/* Desktop Table (>= 640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm font-serif">
+                <thead>
+                  <tr className="border-b border-[#E8DFD5] bg-[#FAF7F2] text-[#543D30] text-[0.66rem] font-sans uppercase tracking-[0.14em] font-semibold">
+                    <th className="py-3 px-3.5">Convidado</th>
+                    <th className="py-3 px-3.5">Família</th>
+                    <th className="py-3 px-3.5">Categoria</th>
+                    <th className="py-3 px-3.5">Papel</th>
+                    <th className="py-3 px-3.5 text-right">Status de Presença</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F0EAE1]">
+                  {convidadosFiltrados.map((c) => {
+                    const isPresente = Boolean(c.presenteCheckin);
+                    const horaCheckin = formatarHora(c.dataHoraCheckin);
+
+                    return (
+                      <tr
+                        key={c.id}
+                        className={`hover:bg-[#FAF7F2] transition-colors ${
+                          isPresente ? "bg-emerald-50/30" : ""
+                        }`}
+                      >
+                        <td className="py-3 px-3.5 font-medium text-[#261811]">
+                          <span>{c.nome}</span>
+                        </td>
+
+                        <td className="py-3 px-3.5 text-[#543D30]">
+                          <span className="truncate max-w-[200px] block" title={c.familia}>
+                            {c.familia}
                           </span>
-                        ) : (
-                          <span className="inline-block text-[0.66rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-[4px] bg-[#F5EFE6] text-[#8C7A6B] border border-[#E5DACD]">
-                            Aguardando
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+
+                        <td className="py-3 px-3.5">
+                          {c.criancaAte6Anos ? (
+                            <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 font-semibold">
+                              Criança (≤ 6 anos)
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#543D30] border border-[#E0D5C7]">
+                              Adulto
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-3.5 text-[#543D30] text-xs font-sans">
+                          {c.isFornecedor ? (
+                            <span className="inline-block text-[0.62rem] font-sans tracking-wider uppercase px-2 py-0.5 rounded bg-violet-50 text-violet-800 border border-violet-200 font-semibold">
+                              {c.papel}
+                            </span>
+                          ) : (
+                            c.papel || "Convidado"
+                          )}
+                        </td>
+
+                        <td className="py-3 px-3.5 text-right">
+                          {isPresente ? (
+                            <span className="inline-flex items-center gap-1 text-[0.66rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300 font-semibold">
+                              <span>✓ No Salão</span>
+                              {horaCheckin && (
+                                <span className="font-normal text-emerald-900">({horaCheckin})</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[0.66rem] font-sans uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#F5EFE6] text-[#6B5A4D] border border-[#E5DACD]">
+                              Aguardando
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

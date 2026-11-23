@@ -478,19 +478,32 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
     }
   };
 
+  const totalSelecionadosAtualmente = conviteAtual?.membros
+    ? conviteAtual.membros.filter((m) => !!selecaoPresenca[m.id]).length
+    : 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#705E51] font-semibold mb-1">
-          Portaria &amp; Acolhimento
-        </p>
-        <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
-          Controle de Entrada dos Convidados
-        </h1>
+      <div className="border-b border-[#E8DFD5] pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#6B5A4D] font-semibold mb-1">
+            Portaria &amp; Acolhimento
+          </p>
+          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-normal">
+            Controle de Entrada dos Convidados
+          </h1>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-xs font-sans text-[#543D30] bg-white px-3 py-1.5 rounded-full border border-[#E8DFD5] self-start sm:self-auto">
+          <span className="w-2 h-2 rounded-full bg-emerald-600" />
+          Leitor QR Code &amp; Busca Nominal Ativos
+        </span>
       </div>
 
       {filaOffline > 0 && (
-        <div className="bg-amber-50 border border-amber-300 rounded-[8px] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 font-sans shadow-xs">
+        <div
+          role="status"
+          className="bg-amber-50 border border-amber-300 rounded-[10px] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 font-sans shadow-xs"
+        >
           <div className="flex items-center gap-2.5">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span>
@@ -511,34 +524,41 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                 setMensagemSucesso(`${resultado.sincronizados} check-in(s) sincronizado(s) com sucesso com o servidor!`);
               }
             }}
-            className="px-3.5 py-1.5 bg-amber-900 text-white rounded-[6px] font-semibold text-[0.7rem] uppercase tracking-wider hover:bg-amber-950 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto shrink-0"
+            className="px-3.5 py-1.5 bg-amber-900 text-white rounded-[8px] font-semibold text-[0.7rem] uppercase tracking-wider hover:bg-amber-950 transition-colors disabled:opacity-50 cursor-pointer self-start sm:self-auto shrink-0"
           >
             {sincronizandoOffline ? "Sincronizando..." : "Sincronizar Agora"}
           </button>
         </div>
       )}
 
-      <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={cameraAberta ? pararCamera : iniciarCamera}
-            className="inline-flex items-center justify-center gap-2 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] px-5 py-3 font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] cursor-pointer min-h-[48px] shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>{cameraAberta ? "Fechar Câmera" : "Escanear QR Code"}</span>
-          </button>
+      <div className="bg-white border border-[#E8DFD5] rounded-[14px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={cameraAberta ? pararCamera : iniciarCamera}
+              className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[10px] cursor-pointer min-h-[48px] transition-all shadow-xs ${
+                cameraAberta
+                  ? "bg-rose-800 hover:bg-rose-900 text-white"
+                  : "bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2]"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{cameraAberta ? "Fechar Câmera" : "Escanear QR Code"}</span>
+            </button>
 
-          <label className="inline-flex items-center justify-center gap-2 bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] text-[#543D30] px-4 py-3 font-sans text-xs tracking-[0.12em] uppercase font-medium rounded-[8px] cursor-pointer min-h-[48px] shrink-0">
-            <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>Foto do QR Code</span>
-            <input type="file" accept="image/*" onChange={handleEscanearArquivo} className="hidden" />
-          </label>
+            <label className="inline-flex items-center justify-center gap-2 bg-[#FAF7F2] hover:bg-[#EFE8DC] border border-[#D8CDC0] text-[#543D30] px-4 py-3 font-sans text-xs tracking-[0.12em] uppercase font-semibold rounded-[10px] cursor-pointer min-h-[48px] shrink-0 transition-colors">
+              <svg className="w-4 h-4 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Foto do QR Code</span>
+              <span className="sm:hidden">Foto QR</span>
+              <input type="file" accept="image/*" onChange={handleEscanearArquivo} className="hidden" />
+            </label>
+          </div>
 
           <form
             onSubmit={(e) => {
@@ -548,18 +568,34 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
             }}
             className="flex-1 flex gap-2"
           >
-            <input
-              ref={inputBuscaRef}
-              type="text"
-              value={codigoInput}
-              onChange={(e) => setCodigoInput(e.target.value)}
-              placeholder="Buscar por sobrenome, nome ou código..."
-              className="flex-1 bg-[#FAF7F2] border border-[#D8CDC0] px-4 py-3 text-[#261811] font-serif text-sm focus:outline-none focus:border-[#261811] focus:bg-white rounded-[8px] transition-colors"
-            />
+            <div className="relative flex-1">
+              <input
+                ref={inputBuscaRef}
+                type="text"
+                value={codigoInput}
+                onChange={(e) => setCodigoInput(e.target.value)}
+                placeholder="Buscar convidado por nome, sobrenome ou código..."
+                aria-label="Buscar convidado por nome, sobrenome ou código"
+                className="w-full h-full min-h-[48px] bg-[#FAF7F2] focus:bg-white border border-[#D8CDC0] pl-4 pr-9 py-3 text-[#261811] font-sans text-sm focus:outline-none focus:border-[#261811] rounded-[10px] transition-colors"
+              />
+              {codigoInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCodigoInput("");
+                    inputBuscaRef.current?.focus();
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B5A4D] hover:text-[#261811] text-xs font-bold p-1.5 cursor-pointer"
+                  aria-label="Limpar campo de busca"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button
               type="submit"
               disabled={loadingBusca}
-              className="bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] px-5 py-3 font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] cursor-pointer disabled:opacity-50 min-h-[48px]"
+              className="bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] px-5 py-3 font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[10px] cursor-pointer disabled:opacity-50 min-h-[48px] shrink-0 shadow-xs"
             >
               {loadingBusca ? "Buscando..." : "Localizar"}
             </button>
@@ -570,10 +606,10 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
           <div className="pt-2">
             <div
               id="qr-reader-portaria-feature-container"
-              className="max-w-[340px] mx-auto overflow-hidden rounded-[8px] border border-[#D8CDC0]"
+              className="max-w-[340px] mx-auto overflow-hidden rounded-[12px] border-2 border-[#261811]"
             />
             {cameraIniciando && (
-              <p className="text-center text-xs font-serif italic text-[#8C7A6B] mt-2">
+              <p className="text-center text-xs font-serif italic text-[#6B5A4D] mt-2">
                 Iniciando câmera do dispositivo...
               </p>
             )}
@@ -581,19 +617,22 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
         )}
 
         {cameraErro && (
-          <div className="p-3 bg-amber-50 border border-amber-300 rounded-[6px] text-xs text-amber-950 font-serif">
+          <div role="alert" className="p-3.5 bg-amber-50 border border-amber-300 rounded-[8px] text-xs text-amber-950 font-sans">
             {cameraErro}
           </div>
         )}
 
         {erroCheckin && (
-          <div className="p-3 bg-rose-50 border border-rose-300 rounded-[6px] text-xs text-rose-950 font-serif">
+          <div role="alert" className="p-3.5 bg-rose-50 border border-rose-300 rounded-[8px] text-xs text-rose-950 font-sans font-medium">
             {erroCheckin}
           </div>
         )}
 
         {mensagemSucesso && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-[6px] text-xs font-sans text-emerald-950 font-semibold flex items-center justify-between">
+          <div
+            role="status"
+            className="p-4 bg-emerald-50 border border-emerald-300 rounded-[10px] text-xs sm:text-sm font-sans text-emerald-950 font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs"
+          >
             <span>{mensagemSucesso}</span>
             <button
               type="button"
@@ -604,9 +643,9 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                 setResultadosBusca([]);
                 inputBuscaRef.current?.focus();
               }}
-              className="text-xs uppercase underline tracking-wider cursor-pointer ml-3"
+              className="self-start sm:self-auto text-xs uppercase bg-emerald-800 hover:bg-emerald-950 text-white px-3.5 py-1.5 rounded-[6px] tracking-wider cursor-pointer shrink-0 transition-colors"
             >
-              Próximo Convidado
+              Próximo Convidado →
             </button>
           </div>
         )}
@@ -614,12 +653,12 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
 
       {/* LISTA DE RESULTADOS QUANDO HOUVER MÚLTIPLOS CONVITES ENCONTRADOS */}
       {resultadosBusca.length > 0 && !conviteAtual && (
-        <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+        <div className="bg-white border border-[#E8DFD5] rounded-[14px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#EAE0D5] pb-3">
-            <span className="font-sans text-[0.66rem] tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold block">
+            <span className="font-sans text-[0.68rem] tracking-[0.18em] uppercase text-[#543D30] font-semibold block">
               Resultados da Busca ({resultadosBusca.length})
             </span>
-            <span className="text-xs font-serif italic text-[#8C7A6B]">
+            <span className="text-xs font-serif italic text-[#6B5A4D]">
               Selecione o participante ou família para abrir a ficha de entrada:
             </span>
           </div>
@@ -633,27 +672,27 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               return (
                 <div
                   key={c.id || c.codigo}
-                  className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF7F2]/60 p-3 rounded-[8px] transition-colors"
+                  className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF7F2]/70 p-3 rounded-[10px] transition-colors"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <strong className="font-serif text-lg text-[#261811]">{c.familia}</strong>
-                      <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                      <span className="font-mono text-xs bg-[#FAF7F2] border border-[#D8CDC0] px-2 py-0.5 rounded text-[#261811] font-semibold">
                         #{c.codigo}
                       </span>
                     </div>
 
-                    <p className="text-xs font-sans text-[#6B5A4D]">
-                      <span className="text-[#8C7A6B]">Membros: </span>
+                    <p className="text-xs font-sans text-[#543D30] leading-relaxed">
+                      <span className="text-[#6B5A4D] font-medium">Membros: </span>
                       {c.membros?.map((m, idx) => (
                         <span key={m.id || idx}>
                           {idx > 0 && ", "}
-                          <strong className="text-[#261811] font-normal">{m.nome}</strong>
+                          <strong className="text-[#261811] font-medium">{m.nome}</strong>
                           {m.papel && m.papel !== "Convidado" && (
-                            <span className="text-[#8C7A6B] font-semibold"> [{m.papel}]</span>
+                            <span className="text-[#6B5A4D] font-semibold"> [{m.papel}]</span>
                           )}
                           {m.presenteCheckin && (
-                            <span className="text-emerald-800 font-semibold"> (Presente)</span>
+                            <span className="text-emerald-800 font-semibold"> (✓ No Salão)</span>
                           )}
                         </span>
                       ))}
@@ -663,10 +702,10 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                   <button
                     type="button"
                     onClick={() => selecionarConvite(c)}
-                    className={`px-4 py-2.5 text-xs font-sans tracking-wider uppercase font-semibold rounded-[6px] cursor-pointer whitespace-nowrap ${
+                    className={`px-4 py-2.5 text-xs font-sans tracking-wider uppercase font-semibold rounded-[8px] cursor-pointer whitespace-nowrap min-h-[40px] ${
                       todosEntraram
-                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
-                        : "bg-[#261811] hover:bg-[#1A100B] text-white"
+                        ? "bg-stone-100 text-stone-700 border border-stone-300 hover:bg-stone-200"
+                        : "bg-[#261811] hover:bg-[#1A100B] text-white shadow-xs"
                     }`}
                   >
                     {todosEntraram ? "Ver Ficha (Já Entraram)" : "Abrir Ficha de Entrada →"}
@@ -679,29 +718,38 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
       )}
 
       {conviteAtual && (
-        <div className="bg-white border-2 border-[#261811] rounded-[12px] p-5 sm:p-8 shadow-[0_8px_30px_-8px_rgba(38,24,17,0.1)] space-y-6">
+        <div className="bg-white border-2 border-[#261811] rounded-[14px] p-5 sm:p-8 shadow-[0_8px_30px_-8px_rgba(38,24,17,0.12)] space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAE0D5] pb-4">
             <div>
-              <span className="font-sans text-[0.66rem] tracking-[0.2em] uppercase text-[#8C7A6B] font-semibold block">
+              <span className="font-sans text-[0.66rem] tracking-[0.2em] uppercase text-[#6B5A4D] font-semibold block">
                 Ficha de Entrada Oficial
               </span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#261811] font-normal">
                 {conviteAtual.familia}
               </h2>
             </div>
-            <span className="font-mono text-sm font-bold bg-[#FAF7F2] px-3 py-1 rounded-[6px] border border-[#D8CDC0]">
-              #{conviteAtual.codigo}
-            </span>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="font-mono text-sm font-bold bg-[#FAF7F2] px-3 py-1.5 rounded-[8px] border border-[#D8CDC0]">
+                #{conviteAtual.codigo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setConviteAtual(null)}
+                className="text-xs font-sans text-[#6B5A4D] hover:text-[#261811] px-2.5 py-1.5 rounded-[8px] border border-transparent hover:border-[#D8CDC0] cursor-pointer"
+              >
+                Fechar Ficha
+              </button>
+            </div>
           </div>
 
           {/* BOTÃO MASTER DE 1 TOQUE: CONFIRMAR ENTRADA DE TODOS */}
-          <div className="p-4 bg-[#FAF7F2] border border-[#E8DFD5] rounded-[10px] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 bg-emerald-50/60 border border-emerald-200 rounded-[12px] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-left">
-              <strong className="font-serif text-lg text-[#261811] block">
-                Entrada Rápida da Família
+              <strong className="font-serif text-lg sm:text-xl text-[#261811] block">
+                Entrada Rápida da Família Completa
               </strong>
-              <p className="font-serif italic text-xs text-[#6B5A4D]">
-                Toque no botão para confirmar a entrada de todos os convidados de uma só vez:
+              <p className="font-sans text-xs text-[#543D30] mt-0.5">
+                Confirme a entrada de todos os {conviteAtual.membros?.length || 0} membros deste convite com 1 toque:
               </p>
             </div>
 
@@ -709,18 +757,20 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
               type="button"
               disabled={salvandoCheckin}
               onClick={() => salvarPresenca(true)}
-              className="w-full sm:w-auto px-6 py-3.5 bg-[#1E6B37] hover:bg-[#16532A] text-white font-sans text-xs tracking-[0.16em] uppercase font-semibold rounded-[8px] shadow-sm cursor-pointer disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3.5 bg-[#1E6B37] hover:bg-[#16532A] text-white font-sans text-xs tracking-[0.16em] uppercase font-semibold rounded-[10px] shadow-sm cursor-pointer disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2 shrink-0"
             >
-              <span>Sincronizado</span>
+              <span>✓</span>
               <span>{salvandoCheckin ? "Confirmando..." : "Confirmar Entrada de Todos"}</span>
             </button>
           </div>
 
           {/* Lista Nominal de Membros */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-sans text-[#8C7A6B]">
-              <span className="font-semibold uppercase tracking-wider">Membros do Convite:</span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-sans text-[#543D30]">
+              <span className="font-semibold uppercase tracking-wider">
+                Seleção Individual ({totalSelecionadosAtualmente} de {conviteAtual.membros?.length || 0} marcados):
+              </span>
+              <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -728,7 +778,7 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                     conviteAtual.membros?.forEach((m) => (s[m.id] = true));
                     setSelecaoPresenca(s);
                   }}
-                  className="underline text-[#261811] cursor-pointer"
+                  className="font-semibold underline text-[#261811] cursor-pointer"
                 >
                   Marcar Todos
                 </button>
@@ -740,59 +790,69 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
                     conviteAtual.membros?.forEach((m) => (s[m.id] = false));
                     setSelecaoPresenca(s);
                   }}
-                  className="underline text-[#6B5A4D] cursor-pointer"
+                  className="underline text-[#6B5A4D] hover:text-[#261811] cursor-pointer"
                 >
                   Desmarcar Todos
                 </button>
               </div>
             </div>
 
-            <div className="divide-y divide-[#EAE0D5] border border-[#E8DFD5] rounded-[8px] overflow-hidden bg-white">
+            <div className="divide-y divide-[#EAE0D5] border border-[#E8DFD5] rounded-[10px] overflow-hidden bg-white">
               {conviteAtual.membros?.map((m) => {
                 const isSel = !!selecaoPresenca[m.id];
                 return (
                   <div
                     key={m.id}
+                    role="checkbox"
+                    aria-checked={isSel}
+                    tabIndex={0}
                     onClick={() => setSelecaoPresenca((p) => ({ ...p, [m.id]: !p[m.id] }))}
-                    className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                      isSel ? "bg-emerald-50/50" : "hover:bg-[#FAF7F2]"
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        setSelecaoPresenca((p) => ({ ...p, [m.id]: !p[m.id] }));
+                      }
+                    }}
+                    className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer transition-colors select-none ${
+                      isSel ? "bg-emerald-50/60" : "hover:bg-[#FAF7F2]"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3.5">
                       <input
                         type="checkbox"
                         checked={isSel}
+                        tabIndex={-1}
                         onChange={() => {}}
-                        className="w-4 h-4 accent-[#261811] cursor-pointer"
+                        className="w-5 h-5 accent-[#261811] cursor-pointer rounded"
                       />
                       <div>
-                        <span className="font-serif text-base text-[#261811] font-medium block">
+                        <span className="font-serif text-base sm:text-lg text-[#261811] font-medium block leading-snug">
                           {m.nome}
                         </span>
-                        <div className="flex items-center gap-2 text-[0.68rem] font-sans text-[#8C7A6B] flex-wrap mt-0.5">
+                        <div className="flex items-center gap-2 text-[0.7rem] font-sans text-[#6B5A4D] flex-wrap mt-0.5">
                           {m.papel && m.papel !== "Convidado" && m.papel !== "Convidado comum" && (
                             <span className="bg-[#261811] text-[#FAF7F2] px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[0.6rem]">
                               {m.papel}
                             </span>
                           )}
-                          {m.criancaAte6Anos && <span className="text-amber-800 font-medium">Criança (≤ 6 anos)</span>}
+                          {m.criancaAte6Anos && <span className="text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-medium">Criança (≤ 6 anos)</span>}
                           {m.confirmadoRsvp === true && (
-                            <span className="text-emerald-800 font-semibold">Confirmou</span>
+                            <span className="text-emerald-800 font-semibold">✓ Confirmou RSVP</span>
                           )}
-                          {m.confirmadoRsvp === false && <span className="text-rose-800 font-bold">Recusou</span>}
+                          {m.confirmadoRsvp === false && <span className="text-rose-800 font-bold">✕ Recusou RSVP</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span
-                        className={`text-[0.65rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold border ${
+                        className={`text-[0.66rem] font-sans tracking-wider uppercase px-3 py-1 rounded-full font-semibold border ${
                           m.presenteCheckin
-                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                            : "bg-gray-100 text-gray-700 border-gray-300"
+                            ? "bg-emerald-100 text-emerald-950 border-emerald-300"
+                            : "bg-stone-100 text-stone-700 border-stone-300"
                         }`}
                       >
-                        {m.presenteCheckin ? "Já no Local" : "Aguardando"}
+                        {m.presenteCheckin ? "✓ Já no Local" : "Aguardando"}
                       </span>
                       {m.presenteCheckin && m.dataHoraCheckin && (
                         <span className="text-[0.65rem] font-sans text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -806,16 +866,18 @@ export function PortariaTab({ onRefreshData }: PortariaTabProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
-              <span className="text-xs font-serif italic text-[#8C7A6B]">
+              <span className="text-xs font-serif italic text-[#6B5A4D]">
                 Marque ou desmarque individualmente quem está entrando agora e confirme abaixo.
               </span>
               <button
                 type="button"
                 disabled={salvandoCheckin}
                 onClick={() => salvarPresenca(false)}
-                className="w-full sm:w-auto px-6 py-3 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[8px] cursor-pointer disabled:opacity-50 min-h-[44px]"
+                className="w-full sm:w-auto px-6 py-3.5 bg-[#261811] hover:bg-[#1A100B] text-[#FAF7F2] font-sans text-xs tracking-[0.14em] uppercase font-semibold rounded-[10px] cursor-pointer disabled:opacity-50 min-h-[48px] shadow-xs"
               >
-                {salvandoCheckin ? "Gravando Entrada..." : "Confirmar Membros Selecionados"}
+                {salvandoCheckin
+                  ? "Registrando..."
+                  : `Confirmar Membros Selecionados (${totalSelecionadosAtualmente})`}
               </button>
             </div>
           </div>

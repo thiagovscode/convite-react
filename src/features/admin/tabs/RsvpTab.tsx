@@ -232,12 +232,12 @@ export function RsvpTab({
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8DFD5] pb-4">
         <div>
-          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#8C7A6B] font-semibold mb-1">
+          <p className="text-[0.66rem] font-sans tracking-[0.22em] uppercase text-[#6B5A4D] font-semibold mb-1">
             Confirmações &amp; Respostas Individuais
           </p>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-light">
+          <h1 className="font-serif text-2xl sm:text-3xl text-[#261811] font-normal">
             Lista Oficial de Respostas
           </h1>
         </div>
@@ -246,43 +246,56 @@ export function RsvpTab({
           <button
             type="button"
             onClick={copiarTabela}
-            className="text-xs font-sans tracking-wider uppercase px-3.5 py-2.5 rounded-[6px] font-semibold bg-white border border-[#D8CDC0] text-[#261811] hover:border-[#261811] transition-colors cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1.5 text-xs font-sans tracking-wider uppercase px-3.5 py-2.5 rounded-[8px] font-semibold bg-white border border-[#D8CDC0] text-[#261811] hover:bg-[#FAF7F2] hover:border-[#261811] transition-colors cursor-pointer shadow-xs min-h-[38px]"
             title="Copiar dados formatados para colar no Excel ou Google Sheets"
           >
-            {copiado ? "Copiado!" : "Copiar Tabela"}
+            <span>{copiado ? "✓ Tabela Copiada!" : "📋 Copiar Tabela"}</span>
           </button>
           <button
             type="button"
             onClick={exportarCsv}
-            className="text-xs font-sans tracking-wider uppercase px-4 py-2.5 rounded-[6px] font-semibold bg-[#261811] text-[#FAF7F2] hover:bg-[#3d271c] transition-colors cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1.5 text-xs font-sans tracking-wider uppercase px-4 py-2.5 rounded-[8px] font-semibold bg-[#261811] text-[#FAF7F2] hover:bg-[#1A100B] transition-colors cursor-pointer shadow-xs min-h-[38px]"
             title="Exportar respostas filtradas para arquivo CSV"
           >
-            Exportar CSV
+            <span>⬇ Exportar CSV</span>
           </button>
         </div>
       </div>
 
       {/* Painel Principal */}
-      <div className="bg-white border border-[#E8DFD5] rounded-[12px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
+      <div className="bg-white border border-[#E8DFD5] rounded-[14px] p-5 sm:p-7 shadow-[0_4px_30px_-8px_rgba(38,24,17,0.06)] space-y-4">
         {/* Controles: Busca, Filtro de Status e Ordenação por Data */}
-        <div className="flex flex-col gap-3 pb-2 border-b border-[#F0EAE0]">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Filtrar por código, nome, papel, faixa etária, telefone..."
-              className="w-full md:w-96 bg-[#FAF7F2] border border-[#D8CDC0] px-3.5 py-2 text-xs font-serif text-[#261811] rounded-[6px] focus:outline-none focus:border-[#261811]"
-            />
+        <div className="flex flex-col gap-3 pb-3 border-b border-[#F0EAE0]">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="relative w-full lg:w-96">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Filtrar por código, nome, papel, faixa etária, telefone..."
+                aria-label="Filtrar lista de respostas"
+                className="w-full bg-[#FAF7F2] focus:bg-white border border-[#D8CDC0] pl-3.5 pr-9 py-2.5 text-xs font-sans text-[#261811] rounded-[8px] focus:outline-none focus:border-[#261811] transition-colors min-h-[40px]"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B5A4D] hover:text-[#261811] text-xs font-bold p-1 cursor-pointer"
+                  aria-label="Limpar filtro de busca"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
                 onClick={() => onStatusFilterChange?.("todos")}
-                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`text-[0.68rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[8px] font-semibold transition-all cursor-pointer ${
                   filtroStatus === "todos"
                     ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
-                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#543D30] hover:border-[#261811]"
                 }`}
               >
                 Todos ({totalGeral})
@@ -290,10 +303,10 @@ export function RsvpTab({
               <button
                 type="button"
                 onClick={() => onStatusFilterChange?.("respondidos")}
-                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`text-[0.68rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[8px] font-semibold transition-all cursor-pointer ${
                   filtroStatus === "respondidos"
                     ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
-                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                    : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#543D30] hover:border-[#261811]"
                 }`}
               >
                 Respondidos ({totalRespondidos})
@@ -301,7 +314,7 @@ export function RsvpTab({
               <button
                 type="button"
                 onClick={() => onStatusFilterChange?.("confirmados")}
-                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`text-[0.68rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[8px] font-semibold transition-all cursor-pointer ${
                   filtroStatus === "confirmados"
                     ? "bg-emerald-900 text-white shadow-xs"
                     : "bg-emerald-50 border border-emerald-200 text-emerald-900 hover:border-emerald-700"
@@ -312,7 +325,7 @@ export function RsvpTab({
               <button
                 type="button"
                 onClick={() => onStatusFilterChange?.("recusados")}
-                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`text-[0.68rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[8px] font-semibold transition-all cursor-pointer ${
                   filtroStatus === "recusados"
                     ? "bg-rose-900 text-white shadow-xs"
                     : "bg-rose-50 border border-rose-200 text-rose-900 hover:border-rose-700"
@@ -323,7 +336,7 @@ export function RsvpTab({
               <button
                 type="button"
                 onClick={() => onStatusFilterChange?.("pendentes")}
-                className={`text-[0.7rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`text-[0.68rem] font-sans tracking-wider uppercase px-3 py-1.5 rounded-[8px] font-semibold transition-all cursor-pointer ${
                   filtroStatus === "pendentes"
                     ? "bg-amber-900 text-white shadow-xs"
                     : "bg-amber-50 border border-amber-200 text-amber-900 hover:border-amber-700"
@@ -335,7 +348,7 @@ export function RsvpTab({
           </div>
 
           <div className="flex items-center justify-end gap-1.5 flex-wrap pt-1">
-            <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#8C7A6B] font-semibold mr-1">
+            <span className="text-[0.66rem] font-sans uppercase tracking-wider text-[#6B5A4D] font-semibold mr-1">
               Ordenar por confirmação:
             </span>
             <button
@@ -344,10 +357,10 @@ export function RsvpTab({
                 setOrdenacaoData("recentes");
                 onPageChange?.(0);
               }}
-              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-semibold transition-all cursor-pointer ${
+              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 ordenacaoData === "recentes"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
-                  : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                  : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#543D30] hover:border-[#261811]"
               }`}
             >
               Mais novos ↓
@@ -358,10 +371,10 @@ export function RsvpTab({
                 setOrdenacaoData("antigos");
                 onPageChange?.(0);
               }}
-              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-semibold transition-all cursor-pointer ${
+              className={`text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
                 ordenacaoData === "antigos"
                   ? "bg-[#261811] text-[#FAF7F2] shadow-xs"
-                  : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#6B5A4D] hover:border-[#261811]"
+                  : "bg-[#FAF7F2] border border-[#E8DFD5] text-[#543D30] hover:border-[#261811]"
               }`}
             >
               Mais antigos ↑
@@ -373,7 +386,7 @@ export function RsvpTab({
                   setOrdenacaoData("padrao");
                   onPageChange?.(0);
                 }}
-                className="text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[5px] font-medium text-[#8C7A6B] hover:text-[#261811] cursor-pointer"
+                className="text-[0.68rem] font-sans tracking-wider uppercase px-2.5 py-1 rounded-[6px] font-medium text-[#6B5A4D] hover:text-[#261811] cursor-pointer"
               >
                 Limpar ordem
               </button>
@@ -382,8 +395,9 @@ export function RsvpTab({
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-8 h-8 border-2 border-[#261811] border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-serif italic text-[#6B5A4D]">Carregando lista oficial de respostas...</span>
           </div>
         ) : (
           <>

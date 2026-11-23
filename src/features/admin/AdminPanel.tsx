@@ -1062,7 +1062,7 @@ export function AdminPanel() {
               </div>
             )}
 
-            {activeTab === "dashboard" && <DashboardTab stats={stats} />}
+            {activeTab === "dashboard" && <DashboardTab stats={stats} onNavigateTab={setActiveTab} />}
 
             {activeTab === "convites" && (
               <ConvitesTab
